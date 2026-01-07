@@ -199,44 +199,64 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: isMe ? chinguTheme?.primaryGradient : null,
-          color: isMe ? null : theme.cardColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              message['text'] ?? '',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: isMe ? Colors.white : theme.colorScheme.onSurface,
+            if (isMe) ...[
+              // TODO: Implement actual status logic (sending/sent/read)
+              // This is a UI placeholder for the status icon
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, right: 4),
+                child: Icon(
+                  Icons.done_all, // Placeholder for 'Read' status
+                  size: 16,
+                  color: theme.colorScheme.primary, // Active color for 'Read', grey for 'Sent'
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              timeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 10,
+            ],
+            Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: isMe ? chinguTheme?.primaryGradient : null,
+                color: isMe ? null : theme.cardColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
+                  bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.shadowColor.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message['text'] ?? '',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    timeText,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
