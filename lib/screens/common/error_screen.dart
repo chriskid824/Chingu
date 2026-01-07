@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_colors_minimal.dart';
+import 'package:chingu/core/theme/app_theme.dart';
 
 class ErrorScreen extends StatelessWidget {
   const ErrorScreen({super.key});
   
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
     return Scaffold(
-      backgroundColor: AppColorsMinimal.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: AppColorsMinimal.transparentGradient,
+          gradient: chinguTheme?.transparentGradient,
         ),
         child: SafeArea(
           child: Padding(
@@ -27,8 +30,8 @@ class ErrorScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColorsMinimal.error.withOpacity(0.2),
-                      AppColorsMinimal.error.withOpacity(0.1),
+                      theme.colorScheme.error.withOpacity(0.2),
+                      theme.colorScheme.error.withOpacity(0.1),
                     ],
                   ),
                   shape: BoxShape.circle,
@@ -36,34 +39,34 @@ class ErrorScreen extends StatelessWidget {
                 child: Icon(
                   Icons.error_outline_rounded,
                   size: 60,
-                  color: AppColorsMinimal.error,
+                  color: theme.colorScheme.error,
                 ),
               ),
               const SizedBox(height: 32),
               Text(
                 '糟糕！出錯了',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: AppColorsMinimal.textPrimary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 '很抱歉，發生了一些問題\n請稍後再試',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColorsMinimal.textSecondary,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   height: 1.5,
                 ),
               ),
               const SizedBox(height: 40),
               Container(
                 decoration: BoxDecoration(
-                  gradient: AppColorsMinimal.primaryGradient,
+                  gradient: chinguTheme?.primaryGradient,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColorsMinimal.primary.withOpacity(0.3),
+                      color: theme.colorScheme.primary.withOpacity(0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -84,7 +87,7 @@ class ErrorScreen extends StatelessWidget {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () {},
-                child: Text('返回首頁', style: TextStyle(color: AppColorsMinimal.textSecondary)),
+                child: Text('返回首頁', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
               ),
               ],
             ),
@@ -94,8 +97,3 @@ class ErrorScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
