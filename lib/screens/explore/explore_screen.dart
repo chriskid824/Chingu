@@ -7,7 +7,6 @@ class ExploreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
