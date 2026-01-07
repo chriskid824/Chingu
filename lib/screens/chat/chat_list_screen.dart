@@ -102,6 +102,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
               color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
           ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.matching),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+            child: const Text('開始聊天'),
+          ),
         ],
       ),
     );
