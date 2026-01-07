@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/theme/app_colors.dart';
-import 'package:chingu/core/theme/app_colors_minimal.dart';
 
 /// 主題對比預覽頁面
 /// 左側：原本的橙色風格
@@ -26,7 +25,7 @@ class ThemeComparison extends StatelessWidget {
                   child: _ThemePreview(
                     title: '原本風格（溫暖橙）',
                     theme: AppTheme.themeFor(AppThemePreset.orange),
-                    primaryColor: AppColors.primary,
+                    showGradientShowcase: false,
                     colorName: '#FF6B35',
                   ),
                 ),
@@ -35,7 +34,7 @@ class ThemeComparison extends StatelessWidget {
                   child: _ThemePreview(
                     title: '極簡風格（靛藍紫）',
                     theme: AppTheme.themeFor(AppThemePreset.minimal),
-                    primaryColor: AppColorsMinimal.primary,
+                    showGradientShowcase: true,
                     colorName: '#6366F1',
                   ),
                 ),
@@ -49,14 +48,14 @@ class ThemeComparison extends StatelessWidget {
               _ThemePreview(
                 title: '原本風格（溫暖橙）',
                 theme: AppTheme.themeFor(AppThemePreset.orange),
-                primaryColor: AppColors.primary,
+                showGradientShowcase: false,
                 colorName: '#FF6B35',
               ),
               const Divider(height: 32, thickness: 2),
               _ThemePreview(
                 title: '極簡風格（靛藍紫）',
                 theme: AppTheme.themeFor(AppThemePreset.minimal),
-                primaryColor: AppColorsMinimal.primary,
+                showGradientShowcase: true,
                 colorName: '#6366F1',
               ),
             ],
@@ -70,13 +69,13 @@ class ThemeComparison extends StatelessWidget {
 class _ThemePreview extends StatelessWidget {
   final String title;
   final ThemeData theme;
-  final Color primaryColor;
+  final bool showGradientShowcase;
   final String colorName;
 
   const _ThemePreview({
     required this.title,
     required this.theme,
-    required this.primaryColor,
+    required this.showGradientShowcase,
     required this.colorName,
   });
 
@@ -86,6 +85,7 @@ class _ThemePreview extends StatelessWidget {
       data: theme,
       child: Builder(
         builder: (context) {
+          // Initialize chinguTheme if needed here, but we can access it via Theme.of(context) inside
           return Container(
             color: theme.scaffoldBackgroundColor,
             child: ListView(
@@ -112,9 +112,9 @@ class _ThemePreview extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 漸層效果展示（僅極簡風格）
-                if (primaryColor == AppColorsMinimal.primary)
+                if (showGradientShowcase)
                   _buildGradientShowcase(context),
-                if (primaryColor == AppColorsMinimal.primary)
+                if (showGradientShowcase)
                   const SizedBox(height: 24),
 
                 // 按鈕展示
@@ -255,7 +255,7 @@ class _ThemePreview extends StatelessWidget {
                 Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: primaryColor,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       child: const Icon(Icons.person, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
@@ -305,7 +305,7 @@ class _ThemePreview extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: '標籤文字',
                 hintText: '請輸入內容',
-                prefixIcon: Icon(Icons.person, color: primaryColor),
+                prefixIcon: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
               ),
             ),
             const SizedBox(height: 16),
@@ -313,7 +313,7 @@ class _ThemePreview extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: 'Email',
                 hintText: 'example@email.com',
-                prefixIcon: Icon(Icons.email, color: primaryColor),
+                prefixIcon: Icon(Icons.email, color: Theme.of(context).colorScheme.primary),
                 suffixIcon: const Icon(Icons.check_circle, color: Colors.green),
               ),
             ),
@@ -415,6 +415,7 @@ class _ThemePreview extends StatelessWidget {
   }
 
   Widget _buildGradientShowcase(BuildContext context) {
+    final chinguTheme = Theme.of(context).extension<ChinguTheme>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -431,7 +432,7 @@ class _ThemePreview extends StatelessWidget {
         Container(
           height: 120,
           decoration: BoxDecoration(
-            gradient: AppColorsMinimal.primaryGradient,
+            gradient: chinguTheme?.primaryGradient ?? const LinearGradient(colors: [Colors.blue, Colors.purple]),
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Center(
@@ -451,9 +452,9 @@ class _ThemePreview extends StatelessWidget {
         Container(
           height: 120,
           decoration: BoxDecoration(
-            gradient: AppColorsMinimal.transparentGradient,
+            gradient: chinguTheme?.transparentGradient ?? const LinearGradient(colors: [Colors.transparent, Colors.transparent]),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColorsMinimal.primaryLight.withOpacity(0.3)),
+            border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
           ),
           child: Center(
             child: Text(
@@ -468,7 +469,7 @@ class _ThemePreview extends StatelessWidget {
         Container(
           height: 120,
           decoration: BoxDecoration(
-            gradient: AppColorsMinimal.glassGradient,
+            gradient: chinguTheme?.glassGradient ?? const LinearGradient(colors: [Colors.white24, Colors.white10]),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withOpacity(0.5)),
           ),
@@ -485,7 +486,7 @@ class _ThemePreview extends StatelessWidget {
         Container(
           height: 120,
           decoration: BoxDecoration(
-            gradient: AppColorsMinimal.secondaryGradient,
+            gradient: chinguTheme?.secondaryGradient ?? const LinearGradient(colors: [Colors.purple, Colors.pink]),
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Center(
