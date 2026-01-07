@@ -118,7 +118,11 @@ class AppRouter {
       
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
-        return MaterialPageRoute(builder: (_) => const MainScreen());
+        final args = settings.arguments;
+        final initialIndex = args is Map<String, dynamic> ? args['initialIndex'] as int? : null;
+        return MaterialPageRoute(
+          builder: (_) => MainScreen(initialIndex: initialIndex),
+        );
       
       // ==================== 首頁子頁面 ====================
       case AppRoutes.home:
