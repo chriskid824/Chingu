@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -66,7 +65,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('請選擇地區'),
-          backgroundColor: AppColorsMinimal.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -105,7 +104,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('個人資料設定完成！🎉'),
-          backgroundColor: AppColorsMinimal.success,
+          backgroundColor: Theme.of(context).extension<ChinguTheme>()?.success ?? Colors.green,
         ),
       );
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -116,7 +115,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('提交失敗，請稍後再試'),
-          backgroundColor: AppColorsMinimal.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }

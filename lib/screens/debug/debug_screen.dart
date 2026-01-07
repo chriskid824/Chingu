@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
-import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 
@@ -113,7 +112,7 @@ class _DebugScreenState extends State<DebugScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.storage_rounded, size: 64, color: AppColorsMinimal.primary),
+            Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 24),
             const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -134,7 +133,7 @@ class _DebugScreenState extends State<DebugScreen> {
                 icon: const Icon(Icons.add_to_photos_rounded),
                 label: const Text('生成測試數據 (Seeder)'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorsMinimal.primary,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),

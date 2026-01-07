@@ -25,7 +25,7 @@ class GradientButton extends StatelessWidget {
     final chinguTheme = theme.extension<ChinguTheme>();
     
     final effectiveGradient = gradient ?? chinguTheme?.primaryGradient ?? 
-        const LinearGradient(colors: [Colors.blue, Colors.blueAccent]);
+        LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]);
 
     return Container(
       width: width,
