@@ -1,0 +1,10 @@
+# System Instructions for Chingu Project
+
+> [!IMPORTANT]
+> **Workflow Rules**:
+> 1. **Modification Summary**: After every code modification or task completion, you MUST summarize the changes in **Traditional Chinese (繁體中文)**.
+> 2. **Verification**: Always **restart the test environment** (run `flutter run`) after applying changes to ensure the user can immediately test the updates. **You MUST verify that the restart command executed successfully and the app is running.**
+> 3. **Testing Guide**: When asking the user to test, provide a clear list of **which screens** were modified and **how to navigate** to them.
+
+# Project Context
+- **Theme**: Dark Minimal Theme. Use `Theme.of(context)` and `ChinguTheme` extension. Avoid direct `AppColorsMinimal` usage if possible.

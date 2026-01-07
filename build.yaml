@@ -1,0 +1,10 @@
+targets:
+  $default:
+    builders:
+      widgetbook_generator:
+        enabled: true
+        options:
+          path: demo
+
+
+
