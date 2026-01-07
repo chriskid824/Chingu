@@ -4,7 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
-import 'package:intl/intl.dart';
+import 'package:chingu/widgets/message_bubble.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatDetailScreen extends StatefulWidget {
@@ -177,7 +177,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   itemBuilder: (context, index) {
                     final message = messages[index];
                     final isMe = message['senderId'] == currentUserId;
-                    return _buildMessageBubble(context, message, isMe);
+                    return MessageBubble(
+                      message: message,
+                      isMe: isMe,
+                    );
                   },
                 );
               },
@@ -185,62 +188,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
           _buildMessageInput(context),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble(BuildContext context, Map<String, dynamic> message, bool isMe) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
-    final timestamp = message['timestamp'] as Timestamp?;
-    final timeText = timestamp != null
-        ? DateFormat('HH:mm').format(timestamp.toDate())
-        : '';
-
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: isMe ? chinguTheme?.primaryGradient : null,
-          color: isMe ? null : theme.cardColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              message['text'] ?? '',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: isMe ? Colors.white : theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              timeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
