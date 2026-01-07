@@ -48,7 +48,67 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             colorScheme: theme.colorScheme.copyWith(
               primary: theme.colorScheme.primary,
               onPrimary: Colors.white,
+              surface: theme.cardColor,
               onSurface: theme.colorScheme.onSurface,
+            ),
+            dialogTheme: DialogTheme(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              backgroundColor: theme.cardColor,
+              elevation: 0,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary,
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            datePickerTheme: DatePickerThemeData(
+              headerBackgroundColor: theme.colorScheme.primary,
+              headerForegroundColor: Colors.white,
+              backgroundColor: theme.cardColor,
+              surfaceTintColor: Colors.transparent,
+              headerHeadlineStyle: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              dayStyle: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+              todayBackgroundColor: MaterialStateProperty.all(Colors.transparent),
+              todayForegroundColor: MaterialStateProperty.all(theme.colorScheme.primary),
+              dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return theme.colorScheme.primary;
+                }
+                return Colors.transparent;
+              }),
+              dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Colors.white;
+                }
+                return theme.colorScheme.onSurface;
+              }),
+              yearStyle: TextStyle(
+                color: theme.colorScheme.onSurface,
+              ),
+              yearForegroundColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Colors.white;
+                }
+                return theme.colorScheme.onSurface;
+              }),
+              yearBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.selected)) {
+                  return theme.colorScheme.primary;
+                }
+                return Colors.transparent;
+              }),
             ),
           ),
           child: child!,
@@ -74,7 +134,39 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             colorScheme: theme.colorScheme.copyWith(
               primary: theme.colorScheme.primary,
               onPrimary: Colors.white,
+              surface: theme.cardColor,
               onSurface: theme.colorScheme.onSurface,
+              secondaryContainer: theme.colorScheme.primary.withOpacity(0.2),
+              onSecondaryContainer: theme.colorScheme.primary,
+              surfaceVariant: theme.colorScheme.surfaceVariant,
+            ),
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: theme.cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              dayPeriodTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.6)),
+              dayPeriodColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? theme.colorScheme.primary : Colors.transparent),
+              dialHandColor: theme.colorScheme.primary,
+              dialBackgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+              hourMinuteTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? theme.colorScheme.primary : theme.colorScheme.onSurface),
+              hourMinuteColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? theme.colorScheme.primary.withOpacity(0.15) : theme.colorScheme.surfaceVariant.withOpacity(0.3)),
+              entryModeIconColor: theme.colorScheme.primary,
+              inputDecorationTheme: InputDecorationTheme(
+                 filled: true,
+                 fillColor: theme.cardColor,
+                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary)),
+                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary, width: 2)),
+              ),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary,
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
           child: child!,
