@@ -301,6 +301,21 @@ class _MatchingScreenState extends State<MatchingScreen> {
             },
             child: const Text('重新整理'),
           ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () {
+              final authProvider = context.read<AuthProvider>();
+              final currentUser = authProvider.userModel;
+              if (currentUser != null) {
+                context.read<MatchingProvider>().resetHistory(currentUser);
+              }
+            },
+            icon: Icon(Icons.restore_rounded, color: theme.colorScheme.secondary),
+            label: Text(
+              '重置滑動紀錄 (開發測試用)',
+              style: TextStyle(color: theme.colorScheme.secondary),
+            ),
+          ),
         ],
       ),
     );

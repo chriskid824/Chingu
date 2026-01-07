@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 極簡風格配色系統
-/// 靈感來源: Dribbble Smart Fitness App - Minimal Health Dashboard (Dark Mode)
-/// 特點: 深灰/黑色系背景、靛藍紫色系強調色、柔和陰影
+/// 極簡風格配色系統 - 淺色主題
+/// 靈感來源: Dribbble Smart Fitness App - Minimal Health Dashboard
+/// 特點: 純白/淺灰背景、淺紫藍色系強調色、柔和陰影
 class AppColorsMinimal {
   // ==================== 主色系 ====================
   

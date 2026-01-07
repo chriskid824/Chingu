@@ -32,8 +32,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   
   // 配對偏好
   String _preferredMatchType = 'any';
-  double _minAge = 25;
-  double _maxAge = 35;
+  double _minAge = 18;
+  double _maxAge = 50;
   int _budgetRange = 1;
   
   bool _isSubmitting = false;

@@ -215,6 +215,25 @@ class MatchingService {
 
     return score.round();
   }
+
+  ///清除該用戶的所有滑動記錄 (重置配對歷史)
+  ///僅用於開發測試或用戶重置功能
+  Future<void> clearSwipeHistory(String userId) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. 刪除該用戶的主動滑動記錄
+      final mySwipes = await _swipesCollection.where('userId', isEqualTo: userId).get();
+      for (var doc in mySwipes.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+      print('已清除用戶 $userId 的 ${mySwipes.docs.length} 條滑動記錄');
+    } catch (e) {
+      throw Exception('清除滑動記錄失敗: $e');
+    }
+  }
 }
 
 

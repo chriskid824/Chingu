@@ -97,6 +97,18 @@ class MatchingProvider with ChangeNotifier {
     _isLoading = value;
     notifyListeners();
   }
+
+  /// 重置配對歷史 (測試用)
+  Future<void> resetHistory(UserModel currentUser) async {
+    try {
+      _setLoading(true);
+      await _matchingService.clearSwipeHistory(currentUser.uid);
+      await loadCandidates(currentUser);
+    } catch (e) {
+      _errorMessage = '重置失敗: $e';
+      _setLoading(false);
+    }
+  }
 }
 
 
