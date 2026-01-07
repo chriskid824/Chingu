@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/widgets/onboarding_progress.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -59,7 +60,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+    // Unused but kept to match surrounding code style if needed later
+    // final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -77,24 +79,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Progress Indicator
-              Row(
-                children: List.generate(4, (index) {
-                  return Expanded(
-                    child: Container(
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        gradient: index == 0 ? chinguTheme?.primaryGradient : null,
-                        color: index == 0 ? null : theme.colorScheme.outline.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 32),
-              Text('步驟 1/4', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.5))),
+              // Unified Progress Indicator
+              const OnboardingProgress(currentStep: 1, totalSteps: 4),
               const SizedBox(height: 8),
               Text(
                 '基本資料',
@@ -112,20 +98,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   labelText: '姓名',
                   hintText: '請輸入您的姓名',
                   prefixIcon: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary),
-                  filled: true,
-                  fillColor: theme.cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -144,20 +116,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   labelText: '年齡',
                   hintText: '請輸入您的年齡',
                   prefixIcon: Icon(Icons.cake_rounded, color: theme.colorScheme.primary),
-                  filled: true,
-                  fillColor: theme.cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -172,18 +130,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 16),
               
-              // 性別
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              // 性別 - Simplified to just the selection without extra box
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, bottom: 8),
+                    child: Text(
                       '性別',
                       style: TextStyle(
                         fontSize: 14,
@@ -191,35 +144,38 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('男'),
-                            value: 'male',
-                            groupValue: _selectedGender,
-                            onChanged: (value) {
-                              setState(() => _selectedGender = value);
-                            },
-                            activeColor: theme.colorScheme.primary,
-                          ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('男'),
+                          value: 'male',
+                          groupValue: _selectedGender,
+                          onChanged: (value) {
+                            setState(() => _selectedGender = value);
+                          },
+                          activeColor: theme.colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
                         ),
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('女'),
-                            value: 'female',
-                            groupValue: _selectedGender,
-                            onChanged: (value) {
-                              setState(() => _selectedGender = value);
-                            },
-                            activeColor: theme.colorScheme.primary,
-                          ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('女'),
+                          value: 'female',
+                          groupValue: _selectedGender,
+                          onChanged: (value) {
+                            setState(() => _selectedGender = value);
+                          },
+                          activeColor: theme.colorScheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               
@@ -230,20 +186,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   labelText: '職業',
                   hintText: '例如：軟體工程師',
                   prefixIcon: Icon(Icons.work_outline_rounded, color: theme.colorScheme.primary),
-                  filled: true,
-                  fillColor: theme.cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
