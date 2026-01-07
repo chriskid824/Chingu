@@ -6,6 +6,7 @@ import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/matching_provider.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/screens/matching/match_success_screen.dart';
+import 'package:chingu/widgets/match_card.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key});
@@ -158,7 +159,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                               },
                               background: _buildSwipeBackground(theme, true), // 左邊背景 (右滑時顯示) -> 喜歡
                               secondaryBackground: _buildSwipeBackground(theme, false), // 右邊背景 (左滑時顯示) -> 不喜歡
-                              child: _buildCard(context, user),
+                              child: MatchCard(user: user),
                             );
                           }).toList().reversed.toList(), // 反轉列表，讓第一個元素在 Stack 的最上面
                         ),
@@ -319,151 +320,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
       alignment: alignment,
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Icon(icon, color: color, size: 48),
-    );
-  }
-
-  Widget _buildCard(BuildContext context, UserModel user) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: chinguTheme?.shadowLight ?? Colors.black12,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 圖片 (如果有頭像URL，否則顯示漸層)
-            user.avatarUrl != null 
-                ? Image.network(user.avatarUrl!, fit: BoxFit.cover)
-                : Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.grey[300]!,
-                          Colors.grey[400]!,
-                        ],
-                      ),
-                    ),
-                    child: Icon(Icons.person_rounded, size: 100, color: Colors.white),
-                  ),
-            
-            // 漸層遮罩
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.2),
-                    Colors.black.withOpacity(0.8),
-                  ],
-                  stops: const [0.5, 0.7, 1.0],
-                ),
-              ),
-            ),
-            
-            // 內容
-            Positioned(
-              bottom: 24,
-              left: 24,
-              right: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 匹配度標籤 (假設值)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      '92% 匹配',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // 名字和年齡
-                  Row(
-                    children: [
-                      Text(
-                        '${user.name}, ${user.age}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (user.subscription == 'premium')
-                        const Icon(Icons.verified_rounded, color: Colors.blue, size: 24),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // 職業
-                  Row(
-                    children: [
-                      const Icon(Icons.work_outline_rounded, color: Colors.white70, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        user.job,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // 興趣標籤
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: user.interests.take(3).map((interest) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        child: Text(
-                          interest,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
