@@ -4,6 +4,7 @@ import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/widgets/onboarding_progress.dart';
 
 // 台灣城市和地區資料
 const Map<String, List<String>> cityDistrictMap = {
@@ -132,30 +133,7 @@ class _LocationScreenState extends State<LocationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Progress Indicator
-              Row(
-                children: List.generate(4, (index) {
-                  return Expanded(
-                    child: Container(
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        gradient: chinguTheme?.primaryGradient,
-                        // 全都顯示為完成（因為這是最後一步）
-                        // 實際上這裡應該是前3個為完成，這個為完成
-                        // Wait, if it is step 4, then all 3 previous should be done.
-                        // And this one is active.
-                        // Let's match the style of previous screens.
-                        // Previous: index <= currentStepIndex ? gradient : null
-                        // Step 4 is index 3. So index <= 3 (all) will be gradient.
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 32),
-              Text('步驟 4/4', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.5))),
+              const OnboardingProgressWidget(currentStep: 4),
               const SizedBox(height: 8),
               Text(
                 '地區資訊',
