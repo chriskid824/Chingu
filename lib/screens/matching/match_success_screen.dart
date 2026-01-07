@@ -78,7 +78,7 @@ class _MatchSuccessScreenState extends State<MatchSuccessScreen> with SingleTick
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   colors: [
-                    chinguTheme?.primaryGradient.colors.first.withOpacity(0.3) ?? Colors.purple.withOpacity(0.3),
+                    chinguTheme?.primaryGradient.colors.first.withOpacity(0.3) ?? theme.colorScheme.primary.withOpacity(0.3),
                     Colors.transparent,
                   ],
                   center: Alignment.center,
@@ -170,7 +170,7 @@ class _MatchSuccessScreenState extends State<MatchSuccessScreen> with SingleTick
                         ),
                         child: Icon(
                           Icons.favorite_rounded,
-                          color: chinguTheme?.primaryGradient.colors.first ?? Colors.pink,
+                          color: chinguTheme?.primaryGradient.colors.first ?? theme.colorScheme.primary,
                           size: 32,
                         ),
                       ),
@@ -204,7 +204,7 @@ class _MatchSuccessScreenState extends State<MatchSuccessScreen> with SingleTick
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: chinguTheme?.primaryGradient.colors.first ?? Colors.purple,
+                          foregroundColor: chinguTheme?.primaryGradient.colors.first ?? theme.colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
