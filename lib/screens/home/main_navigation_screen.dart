@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_colors_minimal.dart';
+import 'package:chingu/core/theme/app_theme.dart';
 import 'home_screen.dart';
 import '../matching/matching_screen.dart';
 import '../events/events_list_screen.dart';
@@ -33,18 +33,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
     return Scaffold(
-      backgroundColor: AppColorsMinimal.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           boxShadow: [
             BoxShadow(
-              color: AppColorsMinimal.shadowMedium,
+              color: chinguTheme?.shadowMedium ?? Colors.black12,
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -58,8 +61,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 _currentIndex = index;
               });
             },
-            selectedItemColor: AppColorsMinimal.primary,
-            unselectedItemColor: AppColorsMinimal.textTertiary,
+            selectedItemColor: theme.colorScheme.primary,
+            unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.5),
             type: BottomNavigationBarType.fixed,
             elevation: 0,
             backgroundColor: Colors.transparent,

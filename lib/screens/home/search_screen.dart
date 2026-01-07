@@ -1,40 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_colors_minimal.dart';
+import 'package:chingu/core/theme/app_theme.dart';
 
 class SearchScreen extends StatelessWidget {
   const SearchScreen({super.key});
   
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
     return Scaffold(
-      backgroundColor: AppColorsMinimal.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.cardColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_rounded),
           onPressed: () => Navigator.of(context).pop(),
-          color: AppColorsMinimal.textPrimary,
+          color: theme.colorScheme.onSurface,
         ),
         title: Container(
           height: 45,
           decoration: BoxDecoration(
-            color: AppColorsMinimal.surface,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColorsMinimal.surfaceVariant),
+            border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
           ),
           child: TextField(
             decoration: InputDecoration(
               hintText: '搜尋用戶、興趣...',
-              hintStyle: TextStyle(color: AppColorsMinimal.textTertiary),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
               border: InputBorder.none,
               prefixIcon: Icon(
                 Icons.search_rounded,
-                color: AppColorsMinimal.primary,
+                color: theme.colorScheme.primary,
               ),
               suffixIcon: Icon(
                 Icons.tune_rounded,
-                color: AppColorsMinimal.secondary,
+                color: chinguTheme?.secondary ?? theme.colorScheme.secondary,
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
@@ -53,16 +56,16 @@ class SearchScreen extends StatelessWidget {
               children: [
                 Icon(
                   Icons.whatshot_rounded,
-                  color: AppColorsMinimal.warning,
+                  color: chinguTheme?.warning ?? Colors.orange,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   '熱門搜尋',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColorsMinimal.textPrimary,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -76,11 +79,11 @@ class SearchScreen extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildTagChip('義式料理', Icons.local_pizza_rounded, AppColorsMinimal.primary),
-                _buildTagChip('日本料理', Icons.ramen_dining_rounded, AppColorsMinimal.error),
-                _buildTagChip('咖啡廳', Icons.local_cafe_rounded, AppColorsMinimal.warning),
-                _buildTagChip('火鍋', Icons.soup_kitchen_rounded, AppColorsMinimal.secondary),
-                _buildTagChip('燒烤', Icons.outdoor_grill_rounded, AppColorsMinimal.success),
+                _buildTagChip('義式料理', Icons.local_pizza_rounded, theme.colorScheme.primary),
+                _buildTagChip('日本料理', Icons.ramen_dining_rounded, theme.colorScheme.error),
+                _buildTagChip('咖啡廳', Icons.local_cafe_rounded, chinguTheme?.warning ?? Colors.orange),
+                _buildTagChip('火鍋', Icons.soup_kitchen_rounded, chinguTheme?.secondary ?? theme.colorScheme.secondary),
+                _buildTagChip('燒烤', Icons.outdoor_grill_rounded, chinguTheme?.success ?? Colors.green),
               ],
             ),
           ),
@@ -98,25 +101,25 @@ class SearchScreen extends StatelessWidget {
               children: [
                 Icon(
                   Icons.history_rounded,
-                  color: AppColorsMinimal.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   '最近搜尋',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColorsMinimal.textPrimary,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () {},
-                  child: const Text(
+                  child: Text(
                     '清除',
                     style: TextStyle(
-                      color: AppColorsMinimal.textTertiary,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
                       fontSize: 13,
                     ),
                   ),
@@ -131,19 +134,22 @@ class SearchScreen extends StatelessWidget {
             child: ListView(
               children: [
                 _buildSearchHistoryItem(
+                  context,
                   Icons.person_rounded,
                   '王小華',
-                  AppColorsMinimal.primary,
+                  theme.colorScheme.primary,
                 ),
                 _buildSearchHistoryItem(
+                  context,
                   Icons.location_on_rounded,
                   '信義區 義式餐廳',
-                  AppColorsMinimal.secondary,
+                  chinguTheme?.secondary ?? theme.colorScheme.secondary,
                 ),
                 _buildSearchHistoryItem(
+                  context,
                   Icons.person_rounded,
                   '李小美',
-                  AppColorsMinimal.success,
+                  chinguTheme?.success ?? Colors.green,
                 ),
               ],
             ),
@@ -187,13 +193,16 @@ class SearchScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildSearchHistoryItem(IconData icon, String text, Color color) {
+  Widget _buildSearchHistoryItem(BuildContext context, IconData icon, String text, Color color) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColorsMinimal.surfaceVariant),
+        border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
       ),
       child: ListTile(
         leading: Container(
@@ -211,16 +220,16 @@ class SearchScreen extends StatelessWidget {
         ),
         title: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
-            color: AppColorsMinimal.textPrimary,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         trailing: IconButton(
           icon: Icon(
             Icons.close_rounded,
             size: 20,
-            color: AppColorsMinimal.textTertiary,
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
           ),
           onPressed: () {},
         ),
