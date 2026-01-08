@@ -3,11 +3,51 @@ import 'package:chingu/core/theme/app_theme.dart';
 
 class IcebreakerScreen extends StatelessWidget {
   const IcebreakerScreen({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // Define topics with specific lively colors
+    final List<Map<String, dynamic>> topics = [
+      {
+        'title': '美食探索',
+        'question': '你最喜歡的餐廳是哪一家？',
+        'icon': Icons.restaurant_menu_rounded,
+        'color': const Color(0xFFFF7043), // Deep Orange
+      },
+      {
+        'title': '旅遊經驗',
+        'question': '你去過最難忘的地方是哪裡？',
+        'icon': Icons.flight_takeoff_rounded,
+        'color': const Color(0xFF42A5F5), // Blue
+      },
+      {
+        'title': '電影音樂',
+        'question': '最近有看什麼好看的電影嗎？',
+        'icon': Icons.movie_filter_rounded,
+        'color': const Color(0xFFAB47BC), // Purple
+      },
+      {
+        'title': '興趣愛好',
+        'question': '你平常喜歡做什麼休閒活動？',
+        'icon': Icons.sports_esports_rounded,
+        'color': const Color(0xFF66BB6A), // Green
+      },
+      {
+        'title': '工作生活',
+        'question': '你的工作中最有趣的部分是什麼？',
+        'icon': Icons.work_outline_rounded,
+        'color': const Color(0xFF5C6BC0), // Indigo
+      },
+      {
+        'title': '寵物',
+        'question': '你有養寵物嗎？',
+        'icon': Icons.pets_rounded,
+        'color': const Color(0xFF8D6E63), // Brown
+      },
+    ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -66,42 +106,13 @@ class IcebreakerScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _buildTopicCard(
-              context,
-              Icons.restaurant_menu,
-              '美食探索',
-              '你最喜歡的餐廳是哪一家？',
-            ),
-            _buildTopicCard(
-              context,
-              Icons.travel_explore,
-              '旅遊經驗',
-              '你去過最難忘的地方是哪裡？',
-            ),
-            _buildTopicCard(
-              context,
-              Icons.movie,
-              '電影音樂',
-              '最近有看什麼好看的電影嗎？',
-            ),
-            _buildTopicCard(
-              context,
-              Icons.sports_soccer,
-              '興趣愛好',
-              '你平常喜歡做什麼休閒活動？',
-            ),
-            _buildTopicCard(
-              context,
-              Icons.work,
-              '工作生活',
-              '你的工作中最有趣的部分是什麼？',
-            ),
-            _buildTopicCard(
-              context,
-              Icons.pets,
-              '寵物',
-              '你有養寵物嗎？',
-            ),
+            ...topics.map((topic) => _buildTopicCard(
+                  context,
+                  topic['icon'] as IconData,
+                  topic['title'] as String,
+                  topic['question'] as String,
+                  topic['color'] as Color,
+                )),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: () {},
@@ -118,25 +129,25 @@ class IcebreakerScreen extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildTopicCard(BuildContext context, IconData icon, String title, String question) {
+
+  Widget _buildTopicCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String question,
+    Color color,
+  ) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
-    
-    final colors = [
-      theme.colorScheme.primary, 
-      chinguTheme?.secondary ?? Colors.purple, 
-      chinguTheme?.success ?? Colors.green, 
-      chinguTheme?.warning ?? Colors.orange
-    ];
-    final color = colors[title.hashCode % colors.length];
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
+        border: Border.all(
+          color: color.withOpacity(0.2), // Subtle colored border
+        ),
         boxShadow: [
           BoxShadow(
             color: chinguTheme?.shadowLight ?? Colors.black12,
@@ -156,12 +167,20 @@ class IcebreakerScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                    colors: [color, color.withOpacity(0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: color),
+                child: Icon(icon, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -185,7 +204,11 @@ class IcebreakerScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.send_rounded, color: color),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: color.withOpacity(0.5),
+              ),
             ],
           ),
         ),
@@ -193,8 +216,3 @@ class IcebreakerScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
