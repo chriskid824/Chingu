@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/utils/image_cache_manager.dart';
 
 class MatchCard extends StatelessWidget {
   final UserModel user;
@@ -34,7 +36,22 @@ class MatchCard extends StatelessWidget {
           children: [
             // Image
             user.avatarUrl != null
-                ? Image.network(user.avatarUrl!, fit: BoxFit.cover)
+                ? CachedNetworkImage(
+                    imageUrl: user.avatarUrl!,
+                    fit: BoxFit.cover,
+                    cacheManager: ImageCacheManager().manager,
+                    placeholder: (context, url) => Container(
+                      color: theme.colorScheme.surfaceVariant,
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: theme.colorScheme.surfaceVariant,
+                      child: Icon(
+                        Icons.error_outline,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  )
                 : Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

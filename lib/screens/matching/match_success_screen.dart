@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/utils/image_cache_manager.dart';
 
 class MatchSuccessScreen extends StatefulWidget {
   final UserModel currentUser;
@@ -269,7 +271,10 @@ class _MatchSuccessScreenState extends State<MatchSuccessScreen> with SingleTick
         ],
         image: DecorationImage(
           image: (url != null && url.isNotEmpty)
-              ? NetworkImage(url)
+              ? CachedNetworkImageProvider(
+                  url,
+                  cacheManager: ImageCacheManager().manager,
+                )
               : const AssetImage('assets/images/placeholder_avatar.png') as ImageProvider,
           fit: BoxFit.cover,
         ),
