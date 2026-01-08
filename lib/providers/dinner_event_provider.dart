@@ -3,7 +3,10 @@ import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/services/dinner_event_service.dart';
 
 class DinnerEventProvider with ChangeNotifier {
-  final DinnerEventService _dinnerEventService = DinnerEventService();
+  final DinnerEventService _dinnerEventService;
+
+  DinnerEventProvider({DinnerEventService? dinnerEventService})
+      : _dinnerEventService = dinnerEventService ?? DinnerEventService();
 
   List<DinnerEventModel> _myEvents = [];
   List<DinnerEventModel> _recommendedEvents = [];
