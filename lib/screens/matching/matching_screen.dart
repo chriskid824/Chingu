@@ -7,6 +7,7 @@ import 'package:chingu/providers/matching_provider.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/screens/matching/match_success_screen.dart';
 import 'package:chingu/widgets/match_card.dart';
+import 'package:chingu/widgets/swipeable_card.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key});
@@ -16,6 +17,8 @@ class MatchingScreen extends StatefulWidget {
 }
 
 class _MatchingScreenState extends State<MatchingScreen> {
+  final SwipeableCardController _swipeController = SwipeableCardController();
+
   @override
   void initState() {
     super.initState();
@@ -110,55 +113,49 @@ class _MatchingScreenState extends State<MatchingScreen> {
                           children: candidates.asMap().entries.map((entry) {
                             final index = entry.key;
                             final user = entry.value;
-                            
+
                             // 只顯示前3張卡片
                             if (index >= 3) return const SizedBox.shrink();
-                            
-                            // 計算偏移和透明度，製造堆疊效果
-                            final reverseIndex = index; // 0 是最上面
-                            final offset = Offset(reverseIndex * 4.0, reverseIndex * 4.0);
-                            final scale = 1.0 - (reverseIndex * 0.05);
-                            
-                            // 注意：列表的第一個元素應該顯示在最上面，但在 Stack 中最後一個元素顯示在最上面
-                            // 所以我們應該反轉順序或者只渲染第一個
-                            // 為了簡化，我們這裡只顯示第一個（當前候選人），背景可以放一個假卡片增加層次感
-                            
-                            // 修改邏輯：只顯示最上面一張卡片，背景放一張裝飾
+
+                            // 背景卡片邏輯
                             if (index > 0) {
-                               return Transform.translate(
-                                offset: const Offset(10, 10),
+                              // 計算偏移和縮放
+                              // index 1: scale 0.95, offset (0, 10)
+                              // index 2: scale 0.90, offset (0, 20)
+                              final double scale = 1.0 - (index * 0.05);
+                              final double dy = index * 10.0;
+
+                              return Transform.translate(
+                                offset: Offset(0, dy),
                                 child: Transform.scale(
-                                  scale: 0.95,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(
-                                        color: chinguTheme?.surfaceVariant ?? Colors.grey[200]!,
-                                      ),
-                                    ),
-                                  ),
+                                  scale: scale,
+                                  child: MatchCard(user: user),
                                 ),
                               );
                             }
 
-                            return Dismissible(
+                            // 頂層卡片 (index == 0)
+                            return SwipeableCard(
                               key: Key(user.uid),
-                              direction: DismissDirection.horizontal,
-                              onDismissed: (direction) {
-                                // 修正方向：startToEnd (右滑) -> Like, endToStart (左滑) -> Dislike
-                                final isLikeCorrect = direction == DismissDirection.startToEnd;
-                                
+                              controller: _swipeController,
+                              onSwipeRight: () {
                                 if (authProvider.uid != null) {
                                   _handleSwipe(
                                     authProvider.uid!,
                                     user,
-                                    isLikeCorrect,
+                                    true,
                                   );
                                 }
                               },
-                              background: _buildSwipeBackground(theme, true), // 左邊背景 (右滑時顯示) -> 喜歡
-                              secondaryBackground: _buildSwipeBackground(theme, false), // 右邊背景 (左滑時顯示) -> 不喜歡
+                              onSwipeLeft: () {
+                                if (authProvider.uid != null) {
+                                  _handleSwipe(
+                                    authProvider.uid!,
+                                    user,
+                                    false,
+                                  );
+                                }
+                              },
                               child: MatchCard(user: user),
                             );
                           }).toList().reversed.toList(), // 反轉列表，讓第一個元素在 Stack 的最上面
@@ -180,11 +177,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                             chinguTheme?.error ?? Colors.red,
                             () {
                               if (candidates.isNotEmpty && authProvider.uid != null) {
-                                _handleSwipe(
-                                  authProvider.uid!,
-                                  candidates.first,
-                                  false,
-                                );
+                                _swipeController.swipeLeft();
                               }
                             },
                           ),
@@ -194,13 +187,8 @@ class _MatchingScreenState extends State<MatchingScreen> {
                             Icons.star_rounded,
                             chinguTheme?.warning ?? Colors.amber,
                             () {
-                              // 超級喜歡功能 (暫時當作喜歡)
                               if (candidates.isNotEmpty && authProvider.uid != null) {
-                                _handleSwipe(
-                                  authProvider.uid!,
-                                  candidates.first,
-                                  true,
-                                );
+                                _swipeController.swipeRight();
                               }
                             },
                             isSmall: true,
@@ -212,11 +200,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                             chinguTheme?.success ?? Colors.green,
                             () {
                               if (candidates.isNotEmpty && authProvider.uid != null) {
-                                _handleSwipe(
-                                  authProvider.uid!,
-                                  candidates.first,
-                                  true,
-                                );
+                                _swipeController.swipeRight();
                               }
                             },
                           ),
@@ -318,23 +302,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSwipeBackground(ThemeData theme, bool isLike) {
-    final color = isLike ? Colors.green : Colors.red;
-    final icon = isLike ? Icons.favorite_rounded : Icons.close_rounded;
-    final alignment = isLike ? Alignment.centerLeft : Alignment.centerRight;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color),
-      ),
-      alignment: alignment,
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Icon(icon, color: color, size: 48),
     );
   }
 
