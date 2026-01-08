@@ -17,6 +17,7 @@ import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
+import '../../screens/onboarding/notification_permission_screen.dart';
 // 配對模組
 import '../../screens/matching/matching_screen.dart';
 import '../../screens/matching/user_detail_screen.dart';
@@ -62,6 +63,7 @@ class AppRoutes {
   static const String interestsSelection = '/interests-selection';
   static const String preferences = '/preferences';
   static const String location = '/location';
+  static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   
   // 配對模組
@@ -141,6 +143,9 @@ class AppRouter {
       case AppRoutes.location:
         return MaterialPageRoute(builder: (_) => const LocationScreen());
       
+      case AppRoutes.notificationPermission:
+        return MaterialPageRoute(builder: (_) => const NotificationPermissionScreen());
+
       case AppRoutes.profileDetail:
         return MaterialPageRoute(builder: (_) => const ProfileDetailScreen());
       

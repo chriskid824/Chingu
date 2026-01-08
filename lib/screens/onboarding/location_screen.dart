@@ -98,7 +98,7 @@ class _LocationScreenState extends State<LocationScreen> {
         ),
       );
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.mainNavigation,
+        AppRoutes.notificationPermission,
         (route) => false,
       );
     } else {
