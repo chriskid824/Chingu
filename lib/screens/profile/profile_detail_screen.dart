@@ -185,6 +185,10 @@ class ProfileDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 資料完整度
+                      _buildCompletenessIndicator(context, user),
+                      const SizedBox(height: 24),
+
                       _buildSectionTitle(context, '關於我'),
                       const SizedBox(height: 12),
                       Text(
@@ -334,5 +338,119 @@ class ProfileDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildCompletenessIndicator(BuildContext context, UserModel user) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+    final percent = user.profileCompleteness / 100.0;
+
+    // 如果完整度 100%，可以選擇隱藏或顯示完成狀態。這裡選擇隱藏，除非你想給獎勵。
+    // 但根據需求 "引導用戶完善資料"，通常是未完成時顯示。
+    // 不過為了讓用戶有成就感，100% 時可以顯示簡單的狀態，或者就隱藏。
+    // 這裡我們選擇如果 < 100% 才顯示詳細引導，如果是 100% 則顯示一個小的完成徽章或隱藏。
+    // 為了簡單起見，我們總是顯示，但在 100% 時顯示鼓勵訊息。
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: chinguTheme?.shadowLight ?? Colors.black12,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: chinguTheme?.surfaceVariant ?? Colors.grey[200]!,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '資料完整度',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '${user.profileCompleteness}%',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: percent,
+              backgroundColor: theme.colorScheme.surfaceVariant,
+              color: theme.colorScheme.primary,
+              minHeight: 8,
+            ),
+          ),
+          if (percent < 1.0) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getCompletenessHint(user),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+             const SizedBox(height: 12),
+             Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 16,
+                  color: Colors.green,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '太棒了！你的資料已填寫完整！',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getCompletenessHint(UserModel user) {
+    if (user.avatarUrl == null || user.avatarUrl!.isEmpty) return '上傳大頭貼以增加配對成功率！';
+    if (user.bio == null || user.bio!.isEmpty) return '填寫自我介紹讓大家更認識你！';
+    if (user.interests.length < 3) return '新增更多興趣標籤（至少3個）！';
+    if (user.job.isEmpty) return '填寫職業資訊！';
+    if (user.city.isEmpty || user.district.isEmpty) return '完善居住地資訊！';
+    return '完善資料可以獲得更多關注喔！';
   }
 }

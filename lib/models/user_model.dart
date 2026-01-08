@@ -212,5 +212,36 @@ class UserModel {
         return '不限';
     }
   }
+
+  /// 計算資料完整度百分比 (0-100)
+  int get profileCompleteness {
+    int score = 0;
+
+    // 基本資料 (10%) - 姓名、年齡、性別通常必填，這裡假設都有
+    if (name.isNotEmpty && age > 0) score += 10;
+
+    // 職業 (10%)
+    if (job.isNotEmpty) score += 10;
+
+    // 地點 (10%)
+    if (city.isNotEmpty && district.isNotEmpty) score += 10;
+
+    // 興趣 (20%) - 至少3個
+    if (interests.isNotEmpty) {
+      if (interests.length >= 3) {
+        score += 20;
+      } else {
+        score += 10;
+      }
+    }
+
+    // 自我介紹 (20%)
+    if (bio != null && bio!.isNotEmpty) score += 20;
+
+    // 大頭貼 (30%)
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) score += 30;
+
+    return score;
+  }
 }
 
