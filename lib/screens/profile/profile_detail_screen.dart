@@ -1,12 +1,89 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_header.dart';
-import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 
-class ProfileDetailScreen extends StatelessWidget {
+class ProfileDetailScreen extends StatefulWidget {
   const ProfileDetailScreen({super.key});
+
+  @override
+  State<ProfileDetailScreen> createState() => _ProfileDetailScreenState();
+}
+
+class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _handleAvatarEdit(String uid) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('user_avatars')
+          .child('${uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      // Use putData for better cross-platform support (web/mobile) if needed,
+      // but putFile is standard for mobile. We'll use readAsBytes to be safe
+      // or File(image.path). Let's use putData to avoid path issues in some envs.
+      final bytes = await image.readAsBytes();
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
+
+      final uploadTask = storageRef.putData(bytes, metadata);
+
+      // Update UI with upload progress if desired, but simple loading spinner is fine for now
+      await uploadTask;
+
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Update User Data
+      if (mounted) {
+        final success = await context.read<AuthProvider>().updateUserData({
+          'avatarUrl': downloadUrl,
+        });
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('頭像更新成功')),
+          );
+        } else {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('頭像更新失敗，請稍後再試')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading avatar: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('上傳失敗: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,30 +168,69 @@ class ProfileDetailScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Container(
-                            width: 100,
-                            height: 100,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
+                        Stack(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Container(
+                                width: 100,
+                                height: 100,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: user.avatarUrl != null
+                                    ? CircleAvatar(
+                                        backgroundImage: NetworkImage(user.avatarUrl!),
+                                        radius: 50,
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                              ),
                             ),
-                            child: user.avatarUrl != null
-                                ? CircleAvatar(
-                                    backgroundImage: NetworkImage(user.avatarUrl!),
-                                    radius: 50,
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    size: 60,
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: InkWell(
+                                onTap: _isUploading ? null : () => _handleAvatarEdit(user.uid),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
                                     color: theme.colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
                                   ),
-                          ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (_isUploading)
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -145,7 +261,6 @@ class ProfileDetailScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        // Debug Button
                         // Debug Button
                         Container(
                           decoration: BoxDecoration(
