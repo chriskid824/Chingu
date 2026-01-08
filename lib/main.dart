@@ -10,6 +10,8 @@ import 'providers/dinner_event_provider.dart';
 import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -19,6 +21,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 初始化通知服務
+  FirebaseMessaging.onBackgroundMessage(NotificationService.backgroundHandler);
+  await NotificationService.instance.initialize();
 
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
