@@ -5,9 +5,17 @@ import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/chat_service.dart';
 
 class MatchingService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
-  final ChatService _chatService = ChatService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+  final ChatService _chatService;
+
+  MatchingService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+    ChatService? chatService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService(),
+        _chatService = chatService ?? ChatService();
 
   // 記錄喜歡/不喜歡的集合
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
