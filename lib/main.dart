@@ -45,6 +45,7 @@ class ChinguApp extends StatelessWidget {
           return MaterialApp(
             title: 'Chingu - 6人晚餐社交',
             debugShowCheckedModeBanner: false,
+            navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
