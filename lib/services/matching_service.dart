@@ -4,18 +4,21 @@ import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
 
+/// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService = FirestoreService();
   final ChatService _chatService = ChatService();
 
-  // 記錄喜歡/不喜歡的集合
+  /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
 
   /// 獲取推薦的配對用戶
   ///
-  /// [currentUser] 當前用戶
-  /// [limit] 限制數量
+  /// [currentUser] 當前用戶模型
+  /// [limit] 返回的最大數量，預設為 10
+  ///
+  /// 返回包含 'user' (UserModel) 和 'score' (int) 的 Map 列表
   Future<List<Map<String, dynamic>>> getMatches(UserModel currentUser, {int limit = 10}) async {
     try {
       print('=== MatchingService.getMatches 開始 ===');
@@ -86,6 +89,11 @@ class MatchingService {
   }
 
   /// 記錄滑動操作 (喜歡/不喜歡)
+  ///
+  /// [userId] 操作用戶 ID
+  /// [targetUserId] 被滑動的目標用戶 ID
+  /// [isLike] 是否喜歡 (true: 喜歡, false: 不喜歡/跳過)
+  ///
   /// 返回配對結果: { 'isMatch': bool, 'chatRoomId': String?, 'partner': UserModel? }
   Future<Map<String, dynamic>> recordSwipe(String userId, String targetUserId, bool isLike) async {
     try {
@@ -124,7 +132,12 @@ class MatchingService {
     }
   }
 
-  /// 檢查是否雙向配對成功
+  /// 檢查是否雙向配對成功 (私有方法)
+  ///
+  /// [userId] 用戶 A ID
+  /// [targetUserId] 用戶 B ID
+  ///
+  /// 如果雙方互相關注則返回 true
   Future<bool> _checkMutualMatch(String userId, String targetUserId) async {
     try {
       // 檢查對方是否已經喜歡我
@@ -148,6 +161,10 @@ class MatchingService {
   }
 
   /// 處理配對成功
+  ///
+  /// [user1Id] 用戶 1 ID
+  /// [user2Id] 用戶 2 ID
+  ///
   /// 返回新創建的聊天室 ID
   Future<String> _handleMatchSuccess(String user1Id, String user2Id) async {
     // 更新雙方的 totalMatches
@@ -159,12 +176,20 @@ class MatchingService {
   }
 
   /// 獲取已滑過的用戶 ID 列表
+  ///
+  /// [userId] 用戶 ID
+  /// 返回已滑過的目標用戶 ID 列表
   Future<List<String>> _getSwipedUserIds(String userId) async {
     final query = await _swipesCollection.where('userId', isEqualTo: userId).get();
     return query.docs.map((doc) => doc['targetUserId'] as String).toList();
   }
 
   /// 硬性條件過濾 (性別、年齡)
+  ///
+  /// [current] 當前用戶
+  /// [candidate] 候選用戶
+  ///
+  /// 如果符合硬性條件返回 true
   bool _passesHardFilters(UserModel current, UserModel candidate) {
     // 性別偏好過濾
     if (current.preferredMatchType == 'opposite') {
@@ -183,6 +208,11 @@ class MatchingService {
   }
 
   /// 計算匹配分數 (0-100)
+  ///
+  /// [current] 當前用戶
+  /// [candidate] 候選用戶
+  ///
+  /// 返回匹配分數
   int _calculateMatchScore(UserModel current, UserModel candidate) {
     double score = 0;
 
@@ -216,8 +246,11 @@ class MatchingService {
     return score.round();
   }
 
-  ///清除該用戶的所有滑動記錄 (重置配對歷史)
-  ///僅用於開發測試或用戶重置功能
+  /// 清除該用戶的所有滑動記錄 (重置配對歷史)
+  ///
+  /// 僅用於開發測試或用戶重置功能
+  ///
+  /// [userId] 用戶 ID
   Future<void> clearSwipeHistory(String userId) async {
     try {
       final batch = _firestore.batch();
@@ -235,5 +268,3 @@ class MatchingService {
     }
   }
 }
-
-
