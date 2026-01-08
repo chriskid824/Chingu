@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/widgets/gradient_button.dart';
 
 class EventDetailScreen extends StatelessWidget {
   const EventDetailScreen({super.key});
@@ -32,6 +33,22 @@ class EventDetailScreen extends StatelessWidget {
               onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.share_rounded,
+                    size: 18,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 8),
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -234,6 +251,25 @@ class EventDetailScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: GradientButton(
+            text: '立即報名',
+            onPressed: () {},
+          ),
+        ),
       ),
     );
   }
