@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/services/dinner_event_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DinnerEventProvider with ChangeNotifier {
   final DinnerEventService _dinnerEventService = DinnerEventService();
@@ -10,10 +11,17 @@ class DinnerEventProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Pagination state
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
   List<DinnerEventModel> get myEvents => _myEvents;
   List<DinnerEventModel> get recommendedEvents => _recommendedEvents;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
 
   /// 創建活動
   Future<bool> createEvent({
@@ -62,7 +70,7 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
-  /// 獲取推薦活動
+  /// 獲取推薦活動（初始加載或刷新）
   Future<void> fetchRecommendedEvents({
     required String city,
     required int budgetRange,
@@ -70,15 +78,57 @@ class DinnerEventProvider with ChangeNotifier {
   }) async {
     try {
       _setLoading(true);
-      _recommendedEvents = await _dinnerEventService.getRecommendedEvents(
+      // 重置分頁狀態
+      _lastDocument = null;
+      _hasMore = true;
+
+      final result = await _dinnerEventService.getRecommendedEvents(
         city: city,
         budgetRange: budgetRange,
         excludeEventIds: excludeEventIds,
       );
+
+      _recommendedEvents = result['events'] as List<DinnerEventModel>;
+      _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+      _hasMore = result['hasMore'] as bool;
+
       _setLoading(false);
     } catch (e) {
       debugPrint('獲取推薦活動失敗: $e');
       _setLoading(false);
+    }
+  }
+
+  /// 加載更多推薦活動
+  Future<void> loadMoreRecommendedEvents({
+    required String city,
+    required int budgetRange,
+    List<String> excludeEventIds = const [],
+  }) async {
+    if (_isLoadingMore || !_hasMore || _lastDocument == null) return;
+
+    try {
+      _isLoadingMore = true;
+      notifyListeners();
+
+      final result = await _dinnerEventService.getRecommendedEvents(
+        city: city,
+        budgetRange: budgetRange,
+        excludeEventIds: excludeEventIds,
+        lastDocument: _lastDocument,
+      );
+
+      final newEvents = result['events'] as List<DinnerEventModel>;
+      _recommendedEvents.addAll(newEvents);
+      _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+      _hasMore = result['hasMore'] as bool;
+
+      _isLoadingMore = false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('加載更多推薦活動失敗: $e');
+      _isLoadingMore = false;
+      notifyListeners();
     }
   }
 
