@@ -4,7 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
-import 'package:chingu/widgets/onboarding_progress_indicator.dart';
+import 'package:chingu/widgets/onboarding_progress_bar.dart';
 
 class InterestsSelectionScreen extends StatefulWidget {
   const InterestsSelectionScreen({super.key});
@@ -16,8 +16,6 @@ class InterestsSelectionScreen extends StatefulWidget {
 class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
   final Set<String> _selectedInterests = {};
   final TextEditingController _bioController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
 
   final List<Map<String, dynamic>> _interestOptions = [
     {'name': '美食', 'icon': Icons.restaurant_rounded},
@@ -35,19 +33,8 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-    });
-  }
-
-  @override
   void dispose() {
     _bioController.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -93,7 +80,10 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Progress Indicator
-            const OnboardingProgressIndicator(currentStep: 2),
+            const OnboardingProgressBar(
+              totalSteps: 4,
+              currentStep: 2,
+            ),
             const SizedBox(height: 8),
             Text(
               '興趣選擇',
@@ -108,39 +98,12 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
               style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 24),
-
-            // Search Bar
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '搜尋興趣...',
-                prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.onSurface.withOpacity(0.5)),
-                filled: true,
-                fillColor: theme.cardColor,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: theme.colorScheme.outline),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
             
             // 興趣選擇
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _interestOptions
-                  .where((interest) => (interest['name'] as String).toLowerCase().contains(_searchQuery.toLowerCase()))
-                  .map((interest) {
+              children: _interestOptions.map((interest) {
                 final isSelected = _selectedInterests.contains(interest['name']);
                 return FilterChip(
                   selected: isSelected,

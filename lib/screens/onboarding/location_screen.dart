@@ -4,6 +4,7 @@ import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/widgets/onboarding_progress_bar.dart';
 
 // 台灣城市和地區資料
 const Map<String, List<String>> cityDistrictMap = {
@@ -31,12 +32,37 @@ class _LocationScreenState extends State<LocationScreen> {
   List<String> _availableDistricts = cityDistrictMap['台北市']!;
 
   bool _isSubmitting = false;
+  bool _isLoadingLocation = false;
 
   @override
   void initState() {
     super.initState();
     // 預設選擇第一個地區
     _selectedDistrict = _availableDistricts.first;
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+
+    // 模擬定位過程
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    setState(() {
+      _selectedCity = '台北市';
+      _availableDistricts = cityDistrictMap['台北市']!;
+      _selectedDistrict = '中正區';
+      _isLoadingLocation = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('已定位至：台北市中正區'),
+        backgroundColor: Theme.of(context).extension<ChinguTheme>()?.success ?? Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _onCityChanged(String? newCity) {
@@ -133,29 +159,10 @@ class _LocationScreenState extends State<LocationScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Progress Indicator
-              Row(
-                children: List.generate(4, (index) {
-                  return Expanded(
-                    child: Container(
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        gradient: chinguTheme?.primaryGradient,
-                        // 全都顯示為完成（因為這是最後一步）
-                        // 實際上這裡應該是前3個為完成，這個為完成
-                        // Wait, if it is step 4, then all 3 previous should be done.
-                        // And this one is active.
-                        // Let's match the style of previous screens.
-                        // Previous: index <= currentStepIndex ? gradient : null
-                        // Step 4 is index 3. So index <= 3 (all) will be gradient.
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  );
-                }),
+              const OnboardingProgressBar(
+                totalSteps: 4,
+                currentStep: 4,
               ),
-              const SizedBox(height: 32),
-              Text('步驟 4/4', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.5))),
               const SizedBox(height: 8),
               Text(
                 '地區資訊',
@@ -176,6 +183,36 @@ class _LocationScreenState extends State<LocationScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
+              // 使用當前位置按鈕
+              OutlinedButton.icon(
+                onPressed: _isLoadingLocation ? null : _useCurrentLocation,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: theme.colorScheme.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: _isLoadingLocation
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.primary,
+                        ),
+                      )
+                    : Icon(Icons.my_location, color: theme.colorScheme.primary),
+                label: Text(
+                  _isLoadingLocation ? '定位中...' : '使用當前位置',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // 城市下拉選單
               Container(
