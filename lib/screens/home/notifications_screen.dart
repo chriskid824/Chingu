@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import '../../services/notification_service.dart';
+import '../../models/notification_model.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -49,6 +51,18 @@ class NotificationsScreen extends StatelessWidget {
             '王小華 喜歡了您的個人資料',
             '2 小時前',
             isUnread: true,
+            onTap: () => NotificationService.instance.handleNotificationClick(
+              NotificationModel(
+                id: '1',
+                userId: 'user1',
+                type: 'match',
+                title: 'New Like',
+                message: '王小華 喜歡了您的個人資料',
+                createdAt: DateTime.now(),
+                actionType: 'open_match',
+                actionData: 'user_123',
+              ),
+            ),
           ),
           _buildNotificationItem(
             context,
@@ -57,6 +71,18 @@ class NotificationsScreen extends StatelessWidget {
             '李小美 傳送了一則訊息給您',
             '3 小時前',
             isUnread: true,
+            onTap: () => NotificationService.instance.handleNotificationClick(
+              NotificationModel(
+                id: '2',
+                userId: 'user1',
+                type: 'message',
+                title: 'New Message',
+                message: '李小美 傳送了一則訊息給您',
+                createdAt: DateTime.now(),
+                actionType: 'open_chat',
+                actionData: 'room_123',
+              ),
+            ),
           ),
           _buildNotificationItem(
             context,
@@ -65,6 +91,18 @@ class NotificationsScreen extends StatelessWidget {
             '您與 陳大明 的晚餐預約已確認',
             '昨天',
             isUnread: false,
+            onTap: () => NotificationService.instance.handleNotificationClick(
+              NotificationModel(
+                id: '3',
+                userId: 'user1',
+                type: 'event',
+                title: 'Event Confirmed',
+                message: '您與 陳大明 的晚餐預約已確認',
+                createdAt: DateTime.now(),
+                actionType: 'open_event',
+                actionData: 'event_123',
+              ),
+            ),
           ),
           _buildNotificationItem(
             context,
@@ -73,6 +111,7 @@ class NotificationsScreen extends StatelessWidget {
             '恭喜！您獲得了新的成就徽章',
             '2 天前',
             isUnread: false,
+            onTap: () {}, // System notification, no navigation
           ),
           _buildNotificationItem(
             context,
@@ -81,6 +120,17 @@ class NotificationsScreen extends StatelessWidget {
             '林小芳 想要與您配對',
             '3 天前',
             isUnread: false,
+            onTap: () => NotificationService.instance.handleNotificationClick(
+              NotificationModel(
+                id: '5',
+                userId: 'user1',
+                type: 'match',
+                title: 'New Match Request',
+                message: '林小芳 想要與您配對',
+                createdAt: DateTime.now(),
+                actionType: 'open_match',
+              ),
+            ),
           ),
           _buildNotificationItem(
             context,
@@ -89,6 +139,17 @@ class NotificationsScreen extends StatelessWidget {
             '本週三晚餐報名即將截止',
             '4 天前',
             isUnread: false,
+            onTap: () => NotificationService.instance.handleNotificationClick(
+              NotificationModel(
+                id: '6',
+                userId: 'user1',
+                type: 'event',
+                title: 'Event Reminder',
+                message: '本週三晚餐報名即將截止',
+                createdAt: DateTime.now(),
+                actionType: 'open_event',
+              ),
+            ),
           ),
         ],
       ),
@@ -102,24 +163,27 @@ class NotificationsScreen extends StatelessWidget {
     String message,
     String time, {
     required bool isUnread,
+    required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: isUnread ? theme.colorScheme.primary.withOpacity(0.05) : theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isUnread
-              ? theme.colorScheme.primary.withOpacity(0.2)
-              : chinguTheme?.surfaceVariant ?? theme.dividerColor,
-          width: 1,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: isUnread ? theme.colorScheme.primary.withOpacity(0.05) : theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isUnread
+                ? theme.colorScheme.primary.withOpacity(0.2)
+                : chinguTheme?.surfaceVariant ?? theme.dividerColor,
+            width: 1,
+          ),
         ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -151,16 +215,17 @@ class NotificationsScreen extends StatelessWidget {
             ),
           ),
         ),
-        trailing: isUnread
-            ? Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  gradient: chinguTheme?.primaryGradient,
-                  shape: BoxShape.circle,
-                ),
-              )
-            : null,
+          trailing: isUnread
+              ? Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    gradient: chinguTheme?.primaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                )
+              : null,
+        ),
       ),
     );
   }
