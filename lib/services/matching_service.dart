@@ -12,6 +12,65 @@ class MatchingService {
   // 記錄喜歡/不喜歡的集合
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
 
+  // 用戶學習偏好的集合
+  CollectionReference get _preferencesCollection => _firestore.collection('user_learned_preferences');
+
+  /// 更新用戶的學習偏好
+  Future<void> _updateLearnedPreferences(String userId, String targetUserId, bool isLike) async {
+    // 目前只從喜歡的行為中學習，避免過度懲罰
+    if (!isLike) return;
+
+    try {
+      // 1. 獲取目標用戶資料
+      final targetUserDoc = await _firestore.collection('users').doc(targetUserId).get();
+      if (!targetUserDoc.exists) return;
+
+      final targetUser = UserModel.fromMap(targetUserDoc.data()!, targetUserId);
+
+      // 2. 獲取當前偏好
+      final prefsRef = _preferencesCollection.doc(userId);
+      final prefsDoc = await prefsRef.get();
+      Map<String, dynamic> prefs = prefsDoc.exists ? (prefsDoc.data() as Map<String, dynamic>) : {};
+
+      // 3. 更新興趣權重
+      Map<String, dynamic> interestWeights = Map<String, dynamic>.from(prefs['interests'] ?? {});
+      for (var interest in targetUser.interests) {
+        interestWeights[interest] = (interestWeights[interest] ?? 0) + 1;
+      }
+
+      // 4. 更新區域權重
+      Map<String, dynamic> districtWeights = Map<String, dynamic>.from(prefs['districts'] ?? {});
+      if (targetUser.district.isNotEmpty) {
+        districtWeights[targetUser.district] = (districtWeights[targetUser.district] ?? 0) + 1;
+      }
+
+      // 5. 保存更新
+      await prefsRef.set({
+        'interests': interestWeights,
+        'districts': districtWeights,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+    } catch (e) {
+      print('更新學習偏好失敗: $e');
+      // 失敗不影響主流程，僅記錄錯誤
+    }
+  }
+
+  /// 獲取用戶的學習偏好
+  Future<Map<String, dynamic>> _getLearnedPreferences(String userId) async {
+    try {
+      final doc = await _preferencesCollection.doc(userId).get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return {};
+    } catch (e) {
+      print('獲取學習偏好失敗: $e');
+      return {};
+    }
+  }
+
   /// 獲取推薦的配對用戶
   ///
   /// [currentUser] 當前用戶
@@ -38,7 +97,13 @@ class MatchingService {
       final swipedIds = await _getSwipedUserIds(currentUser.uid);
       print('已滑過 ${swipedIds.length} 個用戶');
 
-      // 3. 過濾和評分
+      // 3. 獲取用戶學習偏好
+      final learnedPreferences = await _getLearnedPreferences(currentUser.uid);
+      if (learnedPreferences.isNotEmpty) {
+        print('已獲取學習偏好: 興趣 ${learnedPreferences['interests']?.length ?? 0} 個, 地區 ${learnedPreferences['districts']?.length ?? 0} 個');
+      }
+
+      // 4. 過濾和評分
       List<Map<String, dynamic>> scoredMatches = [];
 
       for (var candidate in candidates) {
@@ -61,7 +126,11 @@ class MatchingService {
         }
 
         // 計算匹配分數
-        final score = _calculateMatchScore(currentUser, candidate);
+        final score = _calculateMatchScore(
+          currentUser,
+          candidate,
+          learnedPreferences: learnedPreferences,
+        );
 
         print('加入候選人: ${candidate.name}, 分數: $score');
         scoredMatches.add({
@@ -72,10 +141,10 @@ class MatchingService {
 
       print('過濾後剩餘 ${scoredMatches.length} 個候選人');
 
-      // 4. 排序 (分數高到低)
+      // 5. 排序 (分數高到低)
       scoredMatches.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
 
-      // 5. 返回前 N 個
+      // 6. 返回前 N 個
       final result = scoredMatches.take(limit).toList();
       print('最終返回 ${result.length} 個候選人');
       return result;
@@ -95,6 +164,11 @@ class MatchingService {
         'isLike': isLike,
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // 更新學習偏好
+      if (isLike) {
+        await _updateLearnedPreferences(userId, targetUserId, isLike);
+      }
 
       // 如果是喜歡，檢查是否配對成功 (對方也喜歡我)
       if (isLike) {
@@ -183,8 +257,32 @@ class MatchingService {
   }
 
   /// 計算匹配分數 (0-100)
-  int _calculateMatchScore(UserModel current, UserModel candidate) {
+  int _calculateMatchScore(UserModel current, UserModel candidate, {Map<String, dynamic>? learnedPreferences}) {
     double score = 0;
+
+    // 0. 學習偏好加權 (最多 30 分)
+    if (learnedPreferences != null) {
+      double learnedScore = 0;
+
+      // 興趣加權
+      final interestWeights = learnedPreferences['interests'] as Map<String, dynamic>? ?? {};
+      for (var interest in candidate.interests) {
+        if (interestWeights.containsKey(interest)) {
+          // 每個已學習的興趣 +2 分，最多 +15
+          learnedScore += 2;
+        }
+      }
+
+      // 地點加權
+      final districtWeights = learnedPreferences['districts'] as Map<String, dynamic>? ?? {};
+      if (districtWeights.containsKey(candidate.district)) {
+        // 如果這個地區被喜歡過多次，加分
+        final weight = districtWeights[candidate.district] as int? ?? 0;
+        learnedScore += (weight * 2).clamp(0, 15);
+      }
+
+      score += learnedScore.clamp(0, 30);
+    }
 
     // 1. 興趣匹配 (40%)
     // 計算共同興趣數量
