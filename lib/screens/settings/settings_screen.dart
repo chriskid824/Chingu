@@ -85,7 +85,9 @@ class SettingsScreen extends StatelessWidget {
           const Divider(),
           // App Settings
           _buildSectionTitle(context, '應用程式'),
-          _buildListTile(context, Icons.language, '語言', () {}, trailing: ' 繁體中文'),
+          _buildListTile(context, Icons.language, '語言', () {
+            Navigator.of(context).pushNamed(AppRoutes.languageSettings);
+          }, trailing: ' 繁體中文'),
           _buildListTile(context, Icons.bug_report, '開發者工具', () {
             Navigator.of(context).pushNamed(AppRoutes.debug);
           }),
