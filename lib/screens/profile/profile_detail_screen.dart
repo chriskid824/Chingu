@@ -4,6 +4,7 @@ import 'package:chingu/widgets/gradient_header.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/models/user_model.dart';
 
 class ProfileDetailScreen extends StatelessWidget {
   const ProfileDetailScreen({super.key});
@@ -185,6 +186,9 @@ class ProfileDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildStatsSection(context, user),
+                      const SizedBox(height: 32),
+
                       _buildSectionTitle(context, '關於我'),
                       const SizedBox(height: 12),
                       Text(
@@ -333,6 +337,65 @@ class ProfileDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatsSection(BuildContext context, UserModel user) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(context, user.totalMatches.toString(), '配對成功'),
+          _buildVerticalDivider(context),
+          _buildStatItem(context, user.likesReceived.toString(), '喜歡'),
+          _buildVerticalDivider(context),
+          _buildStatItem(context, user.averageRating.toStringAsFixed(1), '評分'),
+          _buildVerticalDivider(context),
+          _buildStatItem(context, user.totalDinners.toString(), '參加聚餐'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context, String value, String label) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerticalDivider(BuildContext context) {
+    return Container(
+      height: 30,
+      width: 1,
+      color: Theme.of(context).dividerColor.withOpacity(0.5),
     );
   }
 }
