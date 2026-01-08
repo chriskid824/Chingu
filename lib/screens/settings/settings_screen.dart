@@ -20,9 +20,10 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
+          _buildHeader(context),
           // Profile Section
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Row(
               children: [
                 Container(
@@ -141,6 +142,91 @@ class SettingsScreen extends StatelessWidget {
             iconColor: theme.colorScheme.error,
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(top: 32, bottom: 16),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Decorative circles
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.primary.withOpacity(0.03),
+            ),
+          ),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.primary.withOpacity(0.08),
+            ),
+          ),
+          // Main Icon
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: chinguTheme?.primaryGradient ??
+                  LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.tune_rounded,
+              size: 40,
+              color: Colors.white,
+            ),
+          ),
+          // Floating small icons/dots
+          Positioned(
+            top: 10,
+            right: 10,
+            child: SizedBox(
+               width: 160,
+               height: 160,
+               child: Stack(
+                 children: [
+                    Positioned(
+                      top: 40,
+                      right: 30,
+                      child: Icon(
+                        Icons.notifications_none_rounded,
+                        size: 24,
+                        color: theme.colorScheme.primary.withOpacity(0.4),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 40,
+                      left: 30,
+                      child: Icon(
+                        Icons.shield_outlined,
+                        size: 20,
+                        color: theme.colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
+                 ]
+               )
+            ),
+          ),
         ],
       ),
     );
