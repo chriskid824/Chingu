@@ -85,13 +85,16 @@ class MatchingService {
     }
   }
 
-  /// 記錄滑動操作 (喜歡/不喜歡)
+  /// 記錄滑動操作 (喜歡/不喜歡/超級喜歡)
   /// 返回配對結果: { 'isMatch': bool, 'chatRoomId': String?, 'partner': UserModel? }
-  Future<Map<String, dynamic>> recordSwipe(String userId, String targetUserId, bool isLike) async {
+  Future<Map<String, dynamic>> recordSwipe(String userId, String targetUserId, String swipeType) async {
     try {
+      final isLike = swipeType == 'like' || swipeType == 'super_like';
+
       await _swipesCollection.add({
         'userId': userId,
         'targetUserId': targetUserId,
+        'type': swipeType,
         'isLike': isLike,
         'timestamp': FieldValue.serverTimestamp(),
       });
@@ -232,6 +235,36 @@ class MatchingService {
       print('已清除用戶 $userId 的 ${mySwipes.docs.length} 條滑動記錄');
     } catch (e) {
       throw Exception('清除滑動記錄失敗: $e');
+    }
+  }
+
+  /// 獲取配對歷史
+  Future<List<Map<String, dynamic>>> getSwipeHistory(String userId) async {
+    try {
+      final query = await _swipesCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      List<Map<String, dynamic>> history = [];
+
+      for (var doc in query.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final targetUserId = data['targetUserId'] as String;
+
+        // 獲取對方資料
+        final userDoc = await _firestore.collection('users').doc(targetUserId).get();
+        if (userDoc.exists) {
+            final user = UserModel.fromFirestore(userDoc);
+            history.add({
+                'swipe': data,
+                'user': user,
+            });
+        }
+      }
+      return history;
+    } catch (e) {
+      throw Exception('獲取歷史失敗: $e');
     }
   }
 }

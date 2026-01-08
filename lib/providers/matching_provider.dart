@@ -6,11 +6,15 @@ class MatchingProvider with ChangeNotifier {
   final MatchingService _matchingService = MatchingService();
 
   List<UserModel> _candidates = [];
+  List<Map<String, dynamic>> _history = [];
   bool _isLoading = false;
+  bool _isHistoryLoading = false;
   String? _errorMessage;
 
   List<UserModel> get candidates => _candidates;
+  List<Map<String, dynamic>> get history => _history;
   bool get isLoading => _isLoading;
+  bool get isHistoryLoading => _isHistoryLoading;
   String? get errorMessage => _errorMessage;
 
   /// 載入候選人
@@ -60,16 +64,17 @@ class MatchingProvider with ChangeNotifier {
     }
   }
 
-  /// 處理喜歡/不喜歡
+  /// 處理喜歡/不喜歡/超級喜歡
+  /// [swipeType]: 'like', 'dislike', 'super_like'
   /// 如果配對成功，返回配對資訊 { 'chatRoomId': String, 'partner': UserModel }
-  Future<Map<String, dynamic>?> swipe(String userId, String targetUserId, bool isLike) async {
+  Future<Map<String, dynamic>?> swipe(String userId, String targetUserId, String swipeType) async {
     try {
       // 樂觀更新 UI：先從列表中移除
       _candidates.removeWhere((user) => user.uid == targetUserId);
       notifyListeners();
 
       // 後台執行記錄
-      final result = await _matchingService.recordSwipe(userId, targetUserId, isLike);
+      final result = await _matchingService.recordSwipe(userId, targetUserId, swipeType);
       
       if (result['isMatch'] == true) {
         return {
@@ -107,6 +112,25 @@ class MatchingProvider with ChangeNotifier {
     } catch (e) {
       _errorMessage = '重置失敗: $e';
       _setLoading(false);
+    }
+  }
+
+  /// 載入配對歷史
+  Future<void> loadMatchHistory(String userId) async {
+    try {
+      _isHistoryLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      _history = await _matchingService.getSwipeHistory(userId);
+
+      _isHistoryLoading = false;
+      notifyListeners();
+    } catch (e) {
+      print('載入歷史失敗: $e');
+      _errorMessage = e.toString();
+      _isHistoryLoading = false;
+      notifyListeners();
     }
   }
 }

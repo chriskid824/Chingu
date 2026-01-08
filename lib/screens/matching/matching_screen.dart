@@ -29,11 +29,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
     });
   }
 
-  Future<void> _handleSwipe(String userId, UserModel targetUser, bool isLike) async {
+  Future<void> _handleSwipe(String userId, UserModel targetUser, String swipeType) async {
     final result = await context.read<MatchingProvider>().swipe(
       userId,
       targetUser.uid,
-      isLike,
+      swipeType,
     );
 
     if (result != null && mounted) {
@@ -147,13 +147,13 @@ class _MatchingScreenState extends State<MatchingScreen> {
                               direction: DismissDirection.horizontal,
                               onDismissed: (direction) {
                                 // 修正方向：startToEnd (右滑) -> Like, endToStart (左滑) -> Dislike
-                                final isLikeCorrect = direction == DismissDirection.startToEnd;
+                                final swipeType = direction == DismissDirection.startToEnd ? 'like' : 'dislike';
                                 
                                 if (authProvider.uid != null) {
                                   _handleSwipe(
                                     authProvider.uid!,
                                     user,
-                                    isLikeCorrect,
+                                    swipeType,
                                   );
                                 }
                               },
@@ -183,7 +183,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                 _handleSwipe(
                                   authProvider.uid!,
                                   candidates.first,
-                                  false,
+                                  'dislike',
                                 );
                               }
                             },
@@ -194,12 +194,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
                             Icons.star_rounded,
                             chinguTheme?.warning ?? Colors.amber,
                             () {
-                              // 超級喜歡功能 (暫時當作喜歡)
+                              // 超級喜歡功能
                               if (candidates.isNotEmpty && authProvider.uid != null) {
                                 _handleSwipe(
                                   authProvider.uid!,
                                   candidates.first,
-                                  true,
+                                  'super_like',
                                 );
                               }
                             },
@@ -215,7 +215,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                 _handleSwipe(
                                   authProvider.uid!,
                                   candidates.first,
-                                  true,
+                                  'like',
                                 );
                               }
                             },
