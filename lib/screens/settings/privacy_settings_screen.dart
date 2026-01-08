@@ -80,11 +80,59 @@ class PrivacySettingsScreen extends StatelessWidget {
             trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
             onTap: () {},
           ),
-          ListTile(
-            leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-            title: Text('刪除帳號', style: TextStyle(color: theme.colorScheme.error)),
-            trailing: Icon(Icons.chevron_right, color: theme.colorScheme.error),
-            onTap: () {},
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.delete_forever_outlined, color: theme.colorScheme.error),
+                title: Text(
+                  '刪除帳號',
+                  style: TextStyle(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  '此動作無法復原',
+                  style: TextStyle(
+                    color: theme.colorScheme.error.withOpacity(0.8),
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: Icon(Icons.chevron_right, color: theme.colorScheme.error),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('刪除帳號'),
+                      content: const Text('您確定要刪除帳號嗎？所有資料將被永久刪除且無法復原。'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('取消'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            // TODO: Implement delete account logic
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('功能尚未開放')),
+                            );
+                          },
+                          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                          child: const Text('刪除'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
