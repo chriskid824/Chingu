@@ -21,10 +21,11 @@ class HelpCenterScreen extends StatelessWidget {
         children: [
           // Search Bar
           TextField(
-            decoration: InputDecoration(
+            readOnly: true,
+            onTap: () {}, // TODO: Implement search functionality
+            decoration: const InputDecoration(
               hintText: '搜尋問題...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: Icon(Icons.search),
             ),
           ),
           const SizedBox(height: 24),
@@ -110,7 +111,7 @@ class HelpCenterScreen extends StatelessWidget {
   Widget _buildFAQCategory(BuildContext context, IconData icon, String title, String subtitle) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
