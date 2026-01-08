@@ -8,10 +8,13 @@ class ChatProvider with ChangeNotifier {
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
   String? _errorMessage;
+  // TODO: 實作真實的未讀訊息計數。目前預設為 0，等待後端支援。
+  final int _totalUnreadCount = 0;
 
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int get totalUnreadCount => _totalUnreadCount;
 
   /// 載入用戶的聊天室列表
   Future<void> loadChatRooms(String userId) async {
