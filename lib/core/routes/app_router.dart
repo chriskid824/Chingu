@@ -15,6 +15,7 @@ import '../../screens/profile/profile_setup_screen.dart';
 import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
+import '../../screens/profile/profile_preview_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 // 配對模組
@@ -63,6 +64,7 @@ class AppRoutes {
   static const String preferences = '/preferences';
   static const String location = '/location';
   static const String profileDetail = '/profile-detail';
+  static const String profilePreview = '/profile-preview';
   
   // 配對模組
   static const String matching = '/matching';
@@ -144,6 +146,9 @@ class AppRouter {
       case AppRoutes.profileDetail:
         return MaterialPageRoute(builder: (_) => const ProfileDetailScreen());
       
+      case AppRoutes.profilePreview:
+        return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
