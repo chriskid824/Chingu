@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import '../../firebase_options.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -34,12 +38,42 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     _controller.forward();
     
-    // 3秒後跳轉到登入頁面
-    Future.delayed(const Duration(seconds: 3), () {
+    // 初始化服務
+    _initializeServices();
+  }
+
+  Future<void> _initializeServices() async {
+    // 最小展示時間 2 秒，避免畫面閃爍
+    final minDelay = Future.delayed(const Duration(seconds: 2));
+
+    try {
+      // 1. 初始化 Firebase
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      // 2. 初始化日期格式化
+      await initializeDateFormatting('zh_TW', null);
+
+      // 等待最小展示時間
+      await minDelay;
+
+      if (!mounted) return;
+
+      // 3. 檢查登入狀態並導航
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.mainNavigation);
+      } else {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+      }
+    } catch (e) {
+      debugPrint('初始化失敗: $e');
+      // 出錯時導向登入頁面作為備案
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(AppRoutes.login);
       }
-    });
+    }
   }
 
   @override
