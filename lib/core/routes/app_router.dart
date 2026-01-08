@@ -23,6 +23,7 @@ import '../../screens/matching/user_detail_screen.dart';
 import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
 import '../../screens/matching/match_success_screen.dart';
+import '../../screens/matching/match_history_screen.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
@@ -70,6 +71,7 @@ class AppRoutes {
   static const String matchesList = '/matches-list';
   static const String filter = '/filter';
   static const String matchSuccess = '/match-success';
+  static const String matchHistory = '/match-history';
   
   // 活動模組
   static const String eventsList = '/events-list';
@@ -157,6 +159,9 @@ class AppRouter {
       case AppRoutes.filter:
         return MaterialPageRoute(builder: (_) => const FilterScreen());
       
+      case AppRoutes.matchHistory:
+        return MaterialPageRoute(builder: (_) => const MatchHistoryScreen());
+
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
         return MaterialPageRoute(builder: (_) => const EventsListScreen());

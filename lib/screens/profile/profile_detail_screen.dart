@@ -215,7 +215,29 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
                       _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
                       
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
+
+                      // 配對歷史按鈕
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(AppRoutes.matchHistory);
+                          },
+                          icon: Icon(Icons.history_rounded, color: theme.colorScheme.primary),
+                          label: Text('配對歷史', style: TextStyle(color: theme.colorScheme.primary)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.primary,
+                            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
                       
                       // 登出按鈕
                       SizedBox(
