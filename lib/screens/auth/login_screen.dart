@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/utils/form_validators.dart';
 import '../../core/routes/app_router.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -178,15 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '請輸入電子郵件';
-                    }
-                    if (!value.contains('@')) {
-                      return '請輸入有效的電子郵件';
-                    }
-                    return null;
-                  },
+                  validator: FormValidators.validateEmail,
                 ),
                 
                 const SizedBox(height: 16),
@@ -219,15 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '請輸入密碼';
-                    }
-                    if (value.length < 6) {
-                      return '密碼長度至少需要 6 個字元';
-                    }
-                    return null;
-                  },
+                  validator: (value) => FormValidators.validatePassword(value),
                 ),
                 
                 const SizedBox(height: 8),
