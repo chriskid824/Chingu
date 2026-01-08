@@ -31,6 +31,7 @@ class UserModel {
   // 統計資料
   final int totalDinners;
   final int totalMatches;
+  final int likesReceived;
   final double averageRating;
 
   UserModel({
@@ -57,6 +58,7 @@ class UserModel {
     this.subscription = 'free',
     this.totalDinners = 0,
     this.totalMatches = 0,
+    this.likesReceived = 0,
     this.averageRating = 0.0,
   });
 
@@ -92,6 +94,7 @@ class UserModel {
       subscription: map['subscription'] ?? 'free',
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
+      likesReceived: map['likesReceived'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
     );
   }
@@ -121,6 +124,7 @@ class UserModel {
       'subscription': subscription,
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
+      'likesReceived': likesReceived,
       'averageRating': averageRating,
     };
   }
@@ -148,6 +152,7 @@ class UserModel {
     String? subscription,
     int? totalDinners,
     int? totalMatches,
+    int? likesReceived,
     double? averageRating,
   }) {
     return UserModel(
@@ -174,6 +179,7 @@ class UserModel {
       subscription: subscription ?? this.subscription,
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
+      likesReceived: likesReceived ?? this.likesReceived,
       averageRating: averageRating ?? this.averageRating,
     );
   }
