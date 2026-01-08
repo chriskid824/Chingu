@@ -26,7 +26,6 @@ import '../../screens/matching/match_success_screen.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
-import '../../screens/events/create_event_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
 // 聊天模組
@@ -75,7 +74,6 @@ class AppRoutes {
   // 活動模組
   static const String eventsList = '/events-list';
   static const String eventDetail = '/event-detail';
-  static const String createEvent = '/create-event';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
   
@@ -165,9 +163,6 @@ class AppRouter {
       
       case AppRoutes.eventDetail:
         return MaterialPageRoute(builder: (_) => const EventDetailScreen());
-      
-      case AppRoutes.createEvent:
-        return MaterialPageRoute(builder: (_) => const CreateEventScreen());
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
