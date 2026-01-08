@@ -5,7 +5,34 @@ import 'package:chingu/widgets/event_card.dart';
 
 class EventsListScreen extends StatelessWidget {
   const EventsListScreen({super.key});
-  
+
+  static const List<Map<String, dynamic>> _upcomingEvents = [
+    {
+      'title': '6人晚餐聚會',
+      'date': '2025/10/15',
+      'time': '19:00',
+      'budget': 'NT\$ 500-800 / 人',
+      'location': '台北市信義區',
+    },
+    {
+      'title': '6人晚餐聚會',
+      'date': '2025/10/18',
+      'time': '18:30',
+      'budget': 'NT\$ 800-1200 / 人',
+      'location': '台北市大安區',
+    },
+  ];
+
+  static const List<Map<String, dynamic>> _pastEvents = [
+    {
+      'title': '6人晚餐聚會',
+      'date': '2025/10/01',
+      'time': '19:30',
+      'budget': 'NT\$ 600-900 / 人',
+      'location': '台北市中山區',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -76,46 +103,27 @@ class EventsListScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildEventsList(BuildContext context, bool isUpcoming) {
-    return ListView(
+    final events = isUpcoming ? _upcomingEvents : _pastEvents;
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/15',
-          time: '19:00',
-          budget: 'NT\$ 500-800 / 人',
-          location: '台北市信義區',
+      itemCount: events.length,
+      itemBuilder: (context, index) {
+        final event = events[index];
+        return EventCard(
+          title: event['title'] as String,
+          date: event['date'] as String,
+          time: event['time'] as String,
+          budget: event['budget'] as String,
+          location: event['location'] as String,
           isUpcoming: isUpcoming,
           onTap: () {
             Navigator.of(context).pushNamed(AppRoutes.eventDetail);
           },
-        ),
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/18',
-          time: '18:30',
-          budget: 'NT\$ 800-1200 / 人',
-          location: '台北市大安區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        if (!isUpcoming)
-          EventCard(
-            title: '6人晚餐聚會',
-            date: '2025/10/01',
-            time: '19:30',
-            budget: 'NT\$ 600-900 / 人',
-            location: '台北市中山區',
-            isUpcoming: isUpcoming,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-            },
-          ),
-      ],
+        );
+      },
     );
   }
 }
