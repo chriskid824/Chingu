@@ -215,10 +215,13 @@ class DinnerEventService {
   /// [city] 城市
   /// [budgetRange] 預算範圍
   /// [excludeEventIds] 排除的活動 ID（如已參加的）
-  Future<List<DinnerEventModel>> getRecommendedEvents({
+  /// [lastDocument] 上一頁最後一個文檔（用於分頁）
+  Future<Map<String, dynamic>> getRecommendedEvents({
     required String city,
     required int budgetRange,
     List<String> excludeEventIds = const [],
+    DocumentSnapshot? lastDocument,
+    int limit = 20,
   }) async {
     try {
       // 查詢同城市、同預算、狀態為 pending 的活動
@@ -226,12 +229,17 @@ class DinnerEventService {
           .where('city', isEqualTo: city)
           .where('budgetRange', isEqualTo: budgetRange)
           .where('status', isEqualTo: 'pending')
-          .orderBy('dateTime') // 按時間排序
-          .limit(20);
+          .orderBy('dateTime'); // 按時間排序
+
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      query = query.limit(limit);
 
       final querySnapshot = await query.get();
 
-      return querySnapshot.docs
+      final events = querySnapshot.docs
           .map((doc) => DinnerEventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .where((event) => 
               !excludeEventIds.contains(event.id) && 
@@ -239,6 +247,12 @@ class DinnerEventService {
               event.dateTime.isAfter(DateTime.now()) // 只顯示未來的活動
           )
           .toList();
+
+      return {
+        'events': events,
+        'lastDocument': querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null,
+        'hasMore': querySnapshot.docs.length == limit,
+      };
     } catch (e) {
       throw Exception('獲取推薦活動失敗: $e');
     }
