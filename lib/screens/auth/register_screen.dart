@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/utils/form_validators.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -175,16 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderSide: BorderSide(color: theme.colorScheme.error),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '請輸入電子郵件';
-                    }
-                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    if (!emailRegex.hasMatch(value.trim())) {
-                      return '請輸入有效的電子郵件';
-                    }
-                    return null;
-                  },
+                  validator: FormValidators.validateEmail,
                 ),
                 const SizedBox(height: 16),
                 
@@ -230,15 +222,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderSide: BorderSide(color: theme.colorScheme.error),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '請輸入密碼';
-                    }
-                    if (value.length < 6) {
-                      return '密碼至少需要 6 個字元';
-                    }
-                    return null;
-                  },
+                  validator: (value) => FormValidators.validatePassword(value),
                 ),
                 const SizedBox(height: 16),
                 
@@ -284,15 +268,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderSide: BorderSide(color: theme.colorScheme.error),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '請再次輸入密碼';
-                    }
-                    if (value != _passwordController.text) {
-                      return '密碼不一致';
-                    }
-                    return null;
-                  },
+                  validator: (value) => FormValidators.validateConfirmPassword(
+                    value,
+                    _passwordController.text,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 

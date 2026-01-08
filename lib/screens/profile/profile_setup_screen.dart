@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/utils/form_validators.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -127,12 +128,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '請輸入姓名';
-                  }
-                  return null;
-                },
+                validator: (value) => FormValidators.validateRequired(value, '請輸入姓名'),
               ),
               const SizedBox(height: 16),
               
@@ -159,16 +155,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '請輸入年齡';
-                  }
-                  final age = int.tryParse(value);
-                  if (age == null || age < 18 || age > 100) {
-                    return '請輸入有效的年齡 (18-100)';
-                  }
-                  return null;
-                },
+                validator: FormValidators.validateAge,
               ),
               const SizedBox(height: 16),
               
@@ -245,12 +232,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '請輸入職業';
-                  }
-                  return null;
-                },
+                validator: (value) => FormValidators.validateRequired(value, '請輸入職業'),
               ),
               const SizedBox(height: 32),
               
