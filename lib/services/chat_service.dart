@@ -1,16 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 
+/// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
 
-  /// 創建聊天室
+  /// 創建或獲取現有聊天室
   /// 
-  /// [user1Id] 用戶 1 ID
-  /// [user2Id] 用戶 2 ID
-  /// 返回聊天室 ID
+  /// 如果兩人之間已存在聊天室，則返回現有 ID。
+  /// 否則創建一個新的聊天室並返回新 ID。
+  ///
+  /// [user1Id] 用戶 1 ID (發起者)
+  /// [user2Id] 用戶 2 ID (接收者)
+  ///
+  /// 返回聊天室文檔 ID
   Future<String> createChatRoom(String user1Id, String user2Id) async {
     try {
       // 1. 檢查是否已存在聊天室

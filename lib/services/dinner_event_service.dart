@@ -245,6 +245,8 @@ class DinnerEventService {
   }
 
   /// 監聽單個活動更新
+  ///
+  /// [eventId] 活動 ID
   Stream<DinnerEventModel?> getEventStream(String eventId) {
     return _eventsCollection.doc(eventId).snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) return null;
