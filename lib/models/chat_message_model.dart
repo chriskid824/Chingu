@@ -8,7 +8,8 @@ class ChatMessageModel {
   final String senderName;
   final String? senderAvatarUrl;
   final String message;
-  final String type; // 'text', 'image', 'system'
+  final String type; // 'text', 'image', 'system', 'audio'
+  final int? duration; // Duration in seconds for audio messages
   final DateTime timestamp;
   final List<String> readBy; // 已讀用戶 UID 列表
 
@@ -20,6 +21,7 @@ class ChatMessageModel {
     this.senderAvatarUrl,
     required this.message,
     this.type = 'text',
+    this.duration,
     required this.timestamp,
     this.readBy = const [],
   });
@@ -40,6 +42,7 @@ class ChatMessageModel {
       senderAvatarUrl: map['senderAvatarUrl'],
       message: map['message'] ?? '',
       type: map['type'] ?? 'text',
+      duration: map['duration'],
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),
     );
@@ -54,6 +57,7 @@ class ChatMessageModel {
       'senderAvatarUrl': senderAvatarUrl,
       'message': message,
       'type': type,
+      'duration': duration,
       'timestamp': Timestamp.fromDate(timestamp),
       'readBy': readBy,
     };
@@ -76,6 +80,7 @@ class ChatMessageModel {
       senderAvatarUrl: senderAvatarUrl,
       message: message,
       type: type,
+      duration: duration,
       timestamp: timestamp,
       readBy: readBy ?? this.readBy,
     );
