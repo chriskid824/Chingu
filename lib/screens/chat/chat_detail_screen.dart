@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/core/routes/app_router.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -129,9 +130,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'gallery') {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.imageGallery,
+                  arguments: {'chatRoomId': _chatRoomId},
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem<String>(
+                  value: 'gallery',
+                  child: Row(
+                    children: [
+                      Icon(Icons.photo_library_outlined,
+                           color: theme.colorScheme.onSurface),
+                      const SizedBox(width: 8),
+                      Text('查看圖片', style: theme.textTheme.bodyMedium),
+                    ],
+                  ),
+                ),
+              ];
+            },
           ),
         ],
       ),
