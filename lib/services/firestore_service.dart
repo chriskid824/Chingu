@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -265,6 +266,48 @@ class FirestoreService {
       await updateUser(uid, {'averageRating': newAverage});
     } catch (e) {
       throw Exception('更新用戶評分失敗: $e');
+    }
+  }
+
+  /// 獲取登入歷史
+  ///
+  /// [uid] 用戶 ID
+  Future<List<LoginHistoryModel>> getLoginHistory(String uid) async {
+    try {
+      final querySnapshot = await _usersCollection
+          .doc(uid)
+          .collection('login_history')
+          .orderBy('timestamp', descending: true)
+          .limit(20)
+          .get();
+
+      final history = querySnapshot.docs
+          .map((doc) => LoginHistoryModel.fromFirestore(doc))
+          .toList();
+
+      // 如果沒有歷史記錄（舊帳戶或未記錄），返回空列表
+      // 實際應用中，可能會在沒有記錄時創建一條基於 lastLogin 的記錄
+      return history;
+    } catch (e) {
+      print('獲取登入歷史失敗: $e');
+      // 出錯時返回空列表，避免中斷 UI
+      return [];
+    }
+  }
+
+  /// 記錄登入歷史
+  ///
+  /// [uid] 用戶 ID
+  /// [history] 歷史記錄
+  Future<void> recordLoginHistory(String uid, LoginHistoryModel history) async {
+    try {
+      await _usersCollection
+          .doc(uid)
+          .collection('login_history')
+          .add(history.toMap());
+    } catch (e) {
+      print('記錄登入歷史失敗: $e');
+      // 記錄失敗不應中斷登入流程
     }
   }
 }
