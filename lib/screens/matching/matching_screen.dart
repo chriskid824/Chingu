@@ -6,6 +6,7 @@ import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/matching_provider.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/screens/matching/match_success_screen.dart';
+import 'package:chingu/widgets/card_stack.dart';
 import 'package:chingu/widgets/match_card.dart';
 
 class MatchingScreen extends StatefulWidget {
@@ -106,62 +107,29 @@ class _MatchingScreenState extends State<MatchingScreen> {
                       child: Container(
                         height: 520,
                         margin: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Stack(
-                          children: candidates.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final user = entry.value;
+                        child: CardStack<UserModel>(
+                          items: candidates,
+                          stackDepth: 3,
+                          keyBuilder: (user) => Key(user.uid),
+                          itemBuilder: (context, user, index) {
+                            // Only show MatchCard content for top card or simplified view for others if needed
+                            // But MatchCard is optimized enough.
+                            return MatchCard(user: user);
+                          },
+                          onSwipe: (user, direction) {
+                            // 修正方向：startToEnd (右滑) -> Like, endToStart (左滑) -> Dislike
+                            final isLikeCorrect = direction == DismissDirection.startToEnd;
                             
-                            // 只顯示前3張卡片
-                            if (index >= 3) return const SizedBox.shrink();
-                            
-                            // 計算偏移和透明度，製造堆疊效果
-                            final reverseIndex = index; // 0 是最上面
-                            final offset = Offset(reverseIndex * 4.0, reverseIndex * 4.0);
-                            final scale = 1.0 - (reverseIndex * 0.05);
-                            
-                            // 注意：列表的第一個元素應該顯示在最上面，但在 Stack 中最後一個元素顯示在最上面
-                            // 所以我們應該反轉順序或者只渲染第一個
-                            // 為了簡化，我們這裡只顯示第一個（當前候選人），背景可以放一個假卡片增加層次感
-                            
-                            // 修改邏輯：只顯示最上面一張卡片，背景放一張裝飾
-                            if (index > 0) {
-                               return Transform.translate(
-                                offset: const Offset(10, 10),
-                                child: Transform.scale(
-                                  scale: 0.95,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(
-                                        color: chinguTheme?.surfaceVariant ?? Colors.grey[200]!,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                            if (authProvider.uid != null) {
+                              _handleSwipe(
+                                authProvider.uid!,
+                                user,
+                                isLikeCorrect,
                               );
                             }
-
-                            return Dismissible(
-                              key: Key(user.uid),
-                              direction: DismissDirection.horizontal,
-                              onDismissed: (direction) {
-                                // 修正方向：startToEnd (右滑) -> Like, endToStart (左滑) -> Dislike
-                                final isLikeCorrect = direction == DismissDirection.startToEnd;
-                                
-                                if (authProvider.uid != null) {
-                                  _handleSwipe(
-                                    authProvider.uid!,
-                                    user,
-                                    isLikeCorrect,
-                                  );
-                                }
-                              },
-                              background: _buildSwipeBackground(theme, true), // 左邊背景 (右滑時顯示) -> 喜歡
-                              secondaryBackground: _buildSwipeBackground(theme, false), // 右邊背景 (左滑時顯示) -> 不喜歡
-                              child: MatchCard(user: user),
-                            );
-                          }).toList().reversed.toList(), // 反轉列表，讓第一個元素在 Stack 的最上面
+                          },
+                          swipeBackground: _buildSwipeBackground(theme, true), // 左邊背景 (右滑時顯示) -> 喜歡
+                          swipeSecondaryBackground: _buildSwipeBackground(theme, false), // 右邊背景 (左滑時顯示) -> 不喜歡
                         ),
                       ),
                     ),
