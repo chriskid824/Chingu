@@ -113,7 +113,8 @@ class ChatProvider with ChangeNotifier {
         'senderId': senderId,
         'text': text,
         'timestamp': timestamp,
-        'isRead': false,
+        'readBy': [senderId], // 使用 readBy 替代 isRead，並標記發送者已讀
+        'reactions': {}, // 初始化空的 reactions
       });
 
       // 2. 更新聊天室最後訊息
@@ -125,6 +126,50 @@ class ChatProvider with ChangeNotifier {
       print('發送訊息失敗: $e');
       rethrow;
     }
+  }
+
+  /// 切換訊息反應
+  Future<void> toggleReaction({
+    required String messageId,
+    required String emoji,
+    required String userId,
+  }) async {
+    final messageRef = _firestore.collection('messages').doc(messageId);
+
+    // 使用 transaction 確保原子性操作
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(messageRef);
+      if (!snapshot.exists) {
+        throw Exception("Message does not exist!");
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      final reactions = data['reactions'] != null
+          ? Map<String, dynamic>.from(data['reactions'])
+          : <String, dynamic>{};
+
+      // 獲取該 emoji 當前的用戶列表
+      List<String> userList = [];
+      if (reactions[emoji] != null) {
+        userList = List<String>.from(reactions[emoji]);
+      }
+
+      if (userList.contains(userId)) {
+        // 如果用戶已經有點擊過，則移除
+        userList.remove(userId);
+        if (userList.isEmpty) {
+          reactions.remove(emoji);
+        } else {
+          reactions[emoji] = userList;
+        }
+      } else {
+        // 如果用戶沒有點擊過，則新增
+        userList.add(userId);
+        reactions[emoji] = userList;
+      }
+
+      transaction.update(messageRef, {'reactions': reactions});
+    });
   }
 
   void _setLoading(bool value) {
