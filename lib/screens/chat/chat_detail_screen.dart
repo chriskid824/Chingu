@@ -4,8 +4,10 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/widgets/typing_indicator.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -20,6 +22,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  Timer? _typingDebounce;
+  bool _isTyping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController.addListener(_onTextChanged);
+  }
 
   @override
   void didChangeDependencies() {
@@ -36,9 +46,48 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   void dispose() {
+    _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
+    _typingDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onTextChanged() {
+    if (_chatRoomId == null) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final currentUserId = authProvider.uid;
+    if (currentUserId == null) return;
+
+    if (_typingDebounce?.isActive ?? false) _typingDebounce!.cancel();
+
+    if (!_isTyping && _messageController.text.isNotEmpty) {
+      _isTyping = true;
+      context.read<ChatProvider>().setTypingStatus(
+        chatRoomId: _chatRoomId!,
+        userId: currentUserId,
+        isTyping: true,
+      );
+    } else if (_isTyping && _messageController.text.isEmpty) {
+      _isTyping = false;
+      context.read<ChatProvider>().setTypingStatus(
+        chatRoomId: _chatRoomId!,
+        userId: currentUserId,
+        isTyping: false,
+      );
+    }
+
+    _typingDebounce = Timer(const Duration(seconds: 2), () {
+      if (_isTyping) {
+        _isTyping = false;
+        context.read<ChatProvider>().setTypingStatus(
+          chatRoomId: _chatRoomId!,
+          userId: currentUserId,
+          isTyping: false,
+        );
+      }
+    });
   }
 
   void _sendMessage() async {
@@ -113,10 +162,35 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              _otherUser!.name,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _otherUser!.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  StreamBuilder<bool>(
+                    stream: context.read<ChatProvider>().getTypingStatusStream(
+                          _chatRoomId!,
+                          _otherUser!.uid,
+                        ),
+                    builder: (context, snapshot) {
+                      if (snapshot.data == true) {
+                        return Text(
+                          '正在輸入...',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontSize: 12,
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
               ),
             ),
           ],
@@ -145,40 +219,87 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 60,
-                          color: theme.colorScheme.onSurface.withOpacity(0.2),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '開始聊天吧！',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          ),
-                        ),
-                      ],
+                final messages = snapshot.data ?? [];
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.all(16),
+                        // 如果沒有訊息，增加 1 個項目來顯示 Empty State (index=1)
+                        // index=0 始終保留給 typing indicator
+                        itemCount: messages.isEmpty ? 2 : messages.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                             // Typing indicator at the bottom (start of list because reversed)
+                             return StreamBuilder<bool>(
+                              stream: context.read<ChatProvider>().getTypingStatusStream(
+                                    _chatRoomId!,
+                                    _otherUser!.uid,
+                                  ),
+                              builder: (context, snapshot) {
+                                if (snapshot.data == true) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: theme.cardColor,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: const TypingIndicator(),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            );
+                          }
+
+                          if (messages.isEmpty) {
+                            if (index == 1) {
+                               return SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.6,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.chat_bubble_outline_rounded,
+                                        size: 60,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.2),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        '開始聊天吧！',
+                                        style: theme.textTheme.bodyLarge?.copyWith(
+                                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }
+
+                          // Adjust index for messages
+                          final messageIndex = index - 1;
+                          if (messageIndex >= messages.length) return const SizedBox.shrink();
+
+                          final message = messages[messageIndex];
+                          final isMe = message['senderId'] == currentUserId;
+                          return _buildMessageBubble(context, message, isMe);
+                        },
+                      ),
                     ),
-                  );
-                }
-
-                final messages = snapshot.data!;
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMe = message['senderId'] == currentUserId;
-                    return _buildMessageBubble(context, message, isMe);
-                  },
+                  ],
                 );
               },
             ),
