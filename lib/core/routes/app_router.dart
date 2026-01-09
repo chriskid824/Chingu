@@ -32,6 +32,7 @@ import '../../screens/events/event_rating_screen.dart';
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
 import '../../screens/chat/icebreaker_screen.dart';
+import '../../screens/chat/sticker_manager_screen.dart';
 // 設定模組
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
@@ -81,6 +82,7 @@ class AppRoutes {
   static const String chatList = '/chat-list';
   static const String chatDetail = '/chat-detail';
   static const String icebreaker = '/icebreaker';
+  static const String stickerManager = '/sticker-manager';
   
   // 設定模組
   static const String settings = '/settings';
@@ -183,6 +185,9 @@ class AppRouter {
       case AppRoutes.icebreaker:
         return MaterialPageRoute(builder: (_) => const IcebreakerScreen());
       
+      case AppRoutes.stickerManager:
+        return MaterialPageRoute(builder: (_) => const StickerManagerScreen());
+
       // ==================== 設定模組 ====================
       case AppRoutes.settings:
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
