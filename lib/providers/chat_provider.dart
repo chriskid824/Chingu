@@ -103,6 +103,9 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    String? replyToMessageId,
+    String? replyToMessageText,
+    String? replyToSenderName,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -114,6 +117,9 @@ class ChatProvider with ChangeNotifier {
         'text': text,
         'timestamp': timestamp,
         'isRead': false,
+        'replyToMessageId': replyToMessageId,
+        'replyToMessageText': replyToMessageText,
+        'replyToSenderName': replyToSenderName,
       });
 
       // 2. 更新聊天室最後訊息
