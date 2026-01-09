@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
@@ -52,12 +53,13 @@ class NotificationSettingsScreen extends StatelessWidget {
             onChanged: (v) {},
             activeColor: theme.colorScheme.primary,
           ),
-          SwitchListTile(
-            title: const Text('顯示訊息預覽'),
-            subtitle: Text('在通知中顯示訊息內容', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: false,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
+          ListTile(
+            title: const Text('通知預覽設定'),
+            subtitle: Text('管理通知顯示內容', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.notificationPreview);
+            },
           ),
           const Divider(),
           _buildSectionTitle(context, '活動通知'),
