@@ -267,6 +267,28 @@ class FirestoreService {
       throw Exception('更新用戶評分失敗: $e');
     }
   }
+
+  /// 提交用戶舉報
+  Future<void> submitUserReport({
+    required String reporterId,
+    required String reportedUserId,
+    required String reason,
+    required String description,
+  }) async {
+    try {
+      await _firestore.collection('reports').add({
+        'reporterId': reporterId,
+        'reportedUserId': reportedUserId,
+        'reason': reason,
+        'description': description,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'pending', // pending, reviewed, resolved
+        'type': 'user_report',
+      });
+    } catch (e) {
+      throw Exception('提交舉報失敗: $e');
+    }
+  }
 }
 
 

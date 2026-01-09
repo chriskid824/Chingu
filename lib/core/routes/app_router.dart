@@ -40,6 +40,7 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
+import '../../screens/profile/report_user_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -89,6 +90,7 @@ class AppRoutes {
   static const String notificationSettings = '/notification-settings';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
+  static const String reportUser = '/report-user';
 }
 
 /// 應用程式路由配置
@@ -198,9 +200,25 @@ class AppRouter {
       
       case AppRoutes.helpCenter:
         return MaterialPageRoute(builder: (_) => const HelpCenterScreen());
-      
+
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.reportUser:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null) {
+          return MaterialPageRoute(
+            builder: (_) => Scaffold(
+              body: Center(child: Text('Error: Missing arguments for report user')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => ReportUserScreen(
+            reportedUserId: args['reportedUserId'],
+            reportedUserName: args['reportedUserName'],
+          ),
+        );
       
       // ==================== 404 ====================
       default:
