@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/widgets/reply_message_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -20,6 +21,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+
+  // State for replying
+  Map<String, dynamic>? _replyMessage;
 
   @override
   void didChangeDependencies() {
@@ -41,6 +45,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.dispose();
   }
 
+  void _cancelReply() {
+    setState(() {
+      _replyMessage = null;
+    });
+  }
+
   void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _chatRoomId == null) return;
@@ -50,13 +60,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     if (currentUser == null) return;
 
+    // Capture reply info before clearing
+    final replyToMessageId = _replyMessage?['id'];
+    final replyToMessageText = _replyMessage?['text'];
+    // Determine the sender name for the reply
+    String? replyToSenderName;
+    if (_replyMessage != null) {
+       final isReplyToMe = _replyMessage!['senderId'] == currentUser.uid;
+       replyToSenderName = isReplyToMe ? '你' : (_otherUser?.name ?? '未知');
+    }
+
     _messageController.clear();
+    _cancelReply();
 
     try {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
         text: text,
+        replyToMessageId: replyToMessageId,
+        replyToMessageText: replyToMessageText,
+        replyToSenderName: replyToSenderName,
       );
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -197,7 +221,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
-    return Align(
+    // Reply info in message
+    final replyToSenderName = message['replyToSenderName'];
+    final replyToMessageText = message['replyToMessageText'];
+    final hasReply = replyToSenderName != null && replyToMessageText != null;
+
+    final bubble = Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -225,6 +254,44 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (hasReply)
+               Container(
+                 margin: const EdgeInsets.only(bottom: 8),
+                 padding: const EdgeInsets.all(8),
+                 decoration: BoxDecoration(
+                   color: Colors.black.withOpacity(0.1),
+                   borderRadius: BorderRadius.circular(8),
+                   border: Border(
+                     left: BorderSide(
+                       color: isMe ? Colors.white.withOpacity(0.5) : theme.colorScheme.primary,
+                       width: 3,
+                     ),
+                   ),
+                 ),
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       replyToSenderName ?? '',
+                       style: TextStyle(
+                         fontSize: 12,
+                         fontWeight: FontWeight.bold,
+                         color: isMe ? Colors.white.withOpacity(0.9) : theme.colorScheme.primary,
+                       ),
+                     ),
+                     const SizedBox(height: 2),
+                     Text(
+                       replyToMessageText ?? '',
+                       maxLines: 1,
+                       overflow: TextOverflow.ellipsis,
+                       style: TextStyle(
+                         fontSize: 12,
+                         color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.6),
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
             Text(
               message['text'] ?? '',
               style: theme.textTheme.bodyLarge?.copyWith(
@@ -243,14 +310,55 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       ),
     );
+
+    // Wrap with Dismissible for Swipe to Reply
+    return Dismissible(
+      key: Key(message['id'] ?? UniqueKey().toString()),
+      direction: DismissDirection.startToEnd,
+      confirmDismiss: (direction) async {
+        final authProvider = context.read<AuthProvider>();
+        final currentUser = authProvider.userModel;
+
+        // Determine name for the preview when swiping
+        String displayName = '未知';
+        if (message['senderId'] == currentUser?.uid) {
+          displayName = '你';
+        } else {
+          displayName = _otherUser?.name ?? '對方';
+        }
+
+        // Inject a temporary sender name into the message map for the ReplyMessageWidget to use
+        // Note: we don't modify the original message map permanently in firestore here, just local state
+        final replyMsg = Map<String, dynamic>.from(message);
+        replyMsg['senderName'] = displayName; // Use senderName key to match expectation if any, or just used in logic
+
+        setState(() {
+          _replyMessage = replyMsg;
+        });
+
+        // Focus the text field
+        // We need a small delay because the keyboard might be animating
+        Future.delayed(const Duration(milliseconds: 100), () {
+           // This focuses the keyboard
+           // We might need a FocusNode if _messageController doesn't automatically trigger it
+           // But usually just setting state is enough if the TextField is built.
+           // However, to pop keyboard we might need:
+           // FocusScope.of(context).requestFocus(_focusNode);
+        });
+
+        return false; // Do not dismiss
+      },
+      child: bubble,
+    );
   }
 
   Widget _buildMessageInput(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = context.watch<AuthProvider>();
+    final currentUser = authProvider.userModel;
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
         boxShadow: [
@@ -262,44 +370,58 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
-                ),
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: '輸入訊息...',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  style: theme.textTheme.bodyLarge,
-                ),
+            if (_replyMessage != null)
+              ReplyMessageWidget(
+                senderName: _replyMessage!['senderName'] ?? (_replyMessage!['senderId'] == currentUser?.uid ? '你' : (_otherUser?.name ?? '')),
+                messageText: _replyMessage!['text'] ?? '',
+                onCancel: _cancelReply,
               ),
-            ),
-            const SizedBox(width: 12),
             Container(
-              decoration: BoxDecoration(
-                gradient: chinguTheme?.primaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: '輸入訊息...',
+                          hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: chinguTheme?.primaryGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      onPressed: _sendMessage,
+                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                    ),
                   ),
                 ],
-              ),
-              child: IconButton(
-                onPressed: _sendMessage,
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
               ),
             ),
           ],

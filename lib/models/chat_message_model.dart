@@ -11,6 +11,9 @@ class ChatMessageModel {
   final String type; // 'text', 'image', 'system'
   final DateTime timestamp;
   final List<String> readBy; // 已讀用戶 UID 列表
+  final String? replyToMessageId;
+  final String? replyToMessageText;
+  final String? replyToSenderName;
 
   ChatMessageModel({
     required this.id,
@@ -22,6 +25,9 @@ class ChatMessageModel {
     this.type = 'text',
     required this.timestamp,
     this.readBy = const [],
+    this.replyToMessageId,
+    this.replyToMessageText,
+    this.replyToSenderName,
   });
 
   /// 從 Firestore 文檔創建 ChatMessageModel
@@ -42,6 +48,9 @@ class ChatMessageModel {
       type: map['type'] ?? 'text',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),
+      replyToMessageId: map['replyToMessageId'],
+      replyToMessageText: map['replyToMessageText'],
+      replyToSenderName: map['replyToSenderName'],
     );
   }
 
@@ -56,6 +65,9 @@ class ChatMessageModel {
       'type': type,
       'timestamp': Timestamp.fromDate(timestamp),
       'readBy': readBy,
+      'replyToMessageId': replyToMessageId,
+      'replyToMessageText': replyToMessageText,
+      'replyToSenderName': replyToSenderName,
     };
   }
 
@@ -67,6 +79,9 @@ class ChatMessageModel {
   /// 複製並更新已讀列表
   ChatMessageModel copyWith({
     List<String>? readBy,
+    String? replyToMessageId,
+    String? replyToMessageText,
+    String? replyToSenderName,
   }) {
     return ChatMessageModel(
       id: id,
@@ -78,6 +93,9 @@ class ChatMessageModel {
       type: type,
       timestamp: timestamp,
       readBy: readBy ?? this.readBy,
+      replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+      replyToMessageText: replyToMessageText ?? this.replyToMessageText,
+      replyToSenderName: replyToSenderName ?? this.replyToSenderName,
     );
   }
 }
@@ -175,26 +193,3 @@ class ChatRoomModel {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
