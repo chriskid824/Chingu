@@ -53,6 +53,8 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.3.0
   image_picker: ^1.1.2
+  flutter_local_notifications: ^18.0.1
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -90,7 +92,7 @@ flutter:
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
-  # For details regarding adding assets from package dependencies, see
+  # For details regarding fonts from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
   # To add custom fonts to your application, add a fonts section here,

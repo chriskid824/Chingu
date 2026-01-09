@@ -93,6 +93,8 @@ class AppRoutes {
 
 /// 應用程式路由配置
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       // ==================== 認證路由 ====================
