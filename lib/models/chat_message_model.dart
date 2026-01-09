@@ -38,7 +38,7 @@ class ChatMessageModel {
       senderId: map['senderId'] ?? '',
       senderName: map['senderName'] ?? '',
       senderAvatarUrl: map['senderAvatarUrl'],
-      message: map['message'] ?? '',
+      message: map['message'] ?? map['text'] ?? '',
       type: map['type'] ?? 'text',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),

@@ -103,6 +103,7 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -112,15 +113,24 @@ class ChatProvider with ChangeNotifier {
         'chatRoomId': chatRoomId,
         'senderId': senderId,
         'text': text,
+        'message': text, // Align with ChatMessageModel
         'timestamp': timestamp,
         'isRead': false,
+        'readBy': [senderId],
       });
 
       // 2. 更新聊天室最後訊息
-      await _firestore.collection('chat_rooms').doc(chatRoomId).update({
+      final Map<String, dynamic> updateData = {
         'lastMessage': text,
         'lastMessageAt': timestamp,
-      });
+      };
+
+      // 如果有接收者 ID，增加其未讀計數
+      if (recipientId != null) {
+        updateData['unreadCount.$recipientId'] = FieldValue.increment(1);
+      }
+
+      await _firestore.collection('chat_rooms').doc(chatRoomId).update(updateData);
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;
