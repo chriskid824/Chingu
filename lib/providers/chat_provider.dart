@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AnalyticsService _analyticsService = AnalyticsService();
 
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
@@ -121,6 +123,15 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 記錄訊息發送行為
+      await _analyticsService.logFeatureUsage(
+        featureName: 'chat_message',
+        action: 'send',
+        additionalParams: {
+          'chat_room_id': chatRoomId,
+        },
+      );
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;

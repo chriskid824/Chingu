@@ -9,6 +9,7 @@ import 'providers/onboarding_provider.dart';
 import 'providers/dinner_event_provider.dart';
 import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
+import 'services/analytics_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -48,6 +49,9 @@ class ChinguApp extends StatelessWidget {
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
+            navigatorObservers: [
+              AnalyticsService().getAnalyticsObserver(),
+            ],
           );
         },
       ),
