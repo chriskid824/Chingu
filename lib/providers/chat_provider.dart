@@ -103,6 +103,7 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    String type = 'text',
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -112,6 +113,7 @@ class ChatProvider with ChangeNotifier {
         'chatRoomId': chatRoomId,
         'senderId': senderId,
         'text': text,
+        'type': type,
         'timestamp': timestamp,
         'isRead': false,
       });
