@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final AnalyticsService _analyticsService = AnalyticsService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -43,9 +45,11 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      await _analyticsService.setUserId(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
+      await _analyticsService.setUserId(firebaseUser.uid);
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
     }
@@ -118,6 +122,9 @@ class AuthProvider with ChangeNotifier {
 
       await _firestoreService.createUser(userModel);
 
+      // 記錄註冊事件
+      await _analyticsService.logSignUp(method: 'email');
+
       // 4. 立即重新載入用戶資料，確保 _userModel 不為空
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
@@ -148,6 +155,9 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+
+      // 記錄登入事件
+      await _analyticsService.logLogin(method: 'email');
 
       _setLoading(false);
       return true;
@@ -193,7 +203,10 @@ class AuthProvider with ChangeNotifier {
         );
 
         await _firestoreService.createUser(userModel);
+        await _analyticsService.logSignUp(method: 'google');
       }
+
+      await _analyticsService.logLogin(method: 'google');
 
       _setLoading(false);
       return true;
