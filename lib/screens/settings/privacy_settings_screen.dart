@@ -84,7 +84,7 @@ class PrivacySettingsScreen extends StatelessWidget {
             leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
             title: Text('刪除帳號', style: TextStyle(color: theme.colorScheme.error)),
             trailing: Icon(Icons.chevron_right, color: theme.colorScheme.error),
-            onTap: () {},
+            onTap: () => Navigator.pushNamed(context, '/delete-account'),
           ),
         ],
       ),
