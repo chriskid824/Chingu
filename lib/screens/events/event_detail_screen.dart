@@ -49,27 +49,44 @@ class EventDetailScreen extends StatelessWidget {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: chinguTheme?.primaryGradient,
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.restaurant,
-                        size: 80,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        '🍽️',
-                        style: TextStyle(fontSize: 40),
-                      ),
-                    ],
+              collapseMode: CollapseMode.parallax,
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
+                    fit: BoxFit.cover,
                   ),
-                ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.restaurant,
+                          size: 80,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '🍽️',
+                          style: TextStyle(fontSize: 40),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
