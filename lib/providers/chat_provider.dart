@@ -131,4 +131,47 @@ class ChatProvider with ChangeNotifier {
     _isLoading = value;
     notifyListeners();
   }
+
+  /// 設定正在輸入狀態
+  Future<void> setTypingStatus({
+    required String chatRoomId,
+    required String userId,
+    required bool isTyping,
+  }) async {
+    try {
+      // 使用點符號語法更新 Map 中的特定欄位，避免覆蓋其他用戶的狀態
+      await _firestore.collection('chat_rooms').doc(chatRoomId).update({
+        'typingIndicators.$userId': isTyping,
+      });
+    } catch (e) {
+      print('更新輸入狀態失敗: $e');
+      // 如果文檔不存在或 update 失敗（例如缺少 typingIndicators 欄位），嘗試使用 set merge
+      // 注意：這在首次創建 typingIndicators 時可能會發生
+      try {
+        await _firestore.collection('chat_rooms').doc(chatRoomId).set({
+          'typingIndicators': {
+            userId: isTyping,
+          }
+        }, SetOptions(merge: true));
+      } catch (e2) {
+         print('重試更新輸入狀態失敗: $e2');
+      }
+    }
+  }
+
+  /// 監聽對方輸入狀態
+  Stream<bool> getTypingStatusStream(String chatRoomId, String otherUserId) {
+    return _firestore
+        .collection('chat_rooms')
+        .doc(chatRoomId)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) return false;
+      final data = snapshot.data();
+      if (data == null || !data.containsKey('typingIndicators')) return false;
+
+      final indicators = data['typingIndicators'] as Map<String, dynamic>;
+      return indicators[otherUserId] == true;
+    });
+  }
 }
