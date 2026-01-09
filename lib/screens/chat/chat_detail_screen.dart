@@ -6,6 +6,7 @@ import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chingu/widgets/app_icon_button.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -124,12 +125,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 1,
         shadowColor: theme.shadowColor.withOpacity(0.1),
-        leading: IconButton(
+        leading: AppIconButton(
           icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          AppIconButton(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
             onPressed: () {},
           ),
@@ -297,7 +298,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                 ],
               ),
-              child: IconButton(
+              child: AppIconButton(
                 onPressed: _sendMessage,
                 icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
               ),
