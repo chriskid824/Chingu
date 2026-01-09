@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/utils/haptic_utils.dart';
 
 class GradientButton extends StatelessWidget {
   final String text;
@@ -42,7 +43,12 @@ class GradientButton extends StatelessWidget {
         ],
       ),
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isLoading
+            ? null
+            : () {
+                HapticUtils.light();
+                onPressed();
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,

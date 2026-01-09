@@ -7,6 +7,7 @@ import 'package:chingu/providers/matching_provider.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/screens/matching/match_success_screen.dart';
 import 'package:chingu/widgets/match_card.dart';
+import 'package:chingu/utils/haptic_utils.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key});
@@ -146,6 +147,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                               key: Key(user.uid),
                               direction: DismissDirection.horizontal,
                               onDismissed: (direction) {
+                                HapticUtils.selection();
                                 // 修正方向：startToEnd (右滑) -> Like, endToStart (左滑) -> Dislike
                                 final isLikeCorrect = direction == DismissDirection.startToEnd;
                                 
@@ -349,7 +351,10 @@ class _MatchingScreenState extends State<MatchingScreen> {
     final iconSize = isSmall ? 24.0 : 32.0;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticUtils.light();
+        onTap();
+      },
       child: Container(
         width: size,
         height: size,
