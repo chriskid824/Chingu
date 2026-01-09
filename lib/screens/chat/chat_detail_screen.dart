@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/read_receipt_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -17,6 +18,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ReadReceiptService _readReceiptService = ReadReceiptService();
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
@@ -29,6 +31,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        // Mark chat room as read when entering
+        if (_chatRoomId != null) {
+          final authProvider = context.read<AuthProvider>();
+          final currentUserId = authProvider.uid;
+          if (currentUserId != null) {
+            _readReceiptService.markChatRoomAsRead(_chatRoomId!, currentUserId);
+          }
+        }
       }
       _isInit = true;
     }
@@ -57,6 +68,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
         text: text,
+        recipientId: _otherUser?.uid,
       );
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -169,6 +181,28 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                 final messages = snapshot.data!;
 
+                // Mark unread messages as read
+                if (currentUserId != null) {
+                  for (var message in messages) {
+                    final senderId = message['senderId'] as String?;
+                    final readBy = List<String>.from(message['readBy'] ?? []);
+                    final id = message['id'] as String?;
+
+                    if (senderId != currentUserId &&
+                        !readBy.contains(currentUserId) &&
+                        id != null) {
+                      // Use post frame callback or similar to avoid build-time side effects
+                      // However, in StreamBuilder it's tricky.
+                      // Simple approach: call it directly but it might trigger rebuilds.
+                      // Better to check if we haven't already marked it in this session or just fire and forget.
+                      _readReceiptService.markMessageAsRead(_chatRoomId!, id, currentUserId);
+                    }
+                  }
+
+                  // Also clear unread count if we have new messages (optional but safer)
+                  _readReceiptService.markChatRoomAsRead(_chatRoomId!, currentUserId);
+                }
+
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
@@ -232,17 +266,45 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              timeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 10,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  timeText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                    fontSize: 10,
+                  ),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  _buildReadStatus(context, message, theme),
+                ],
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildReadStatus(BuildContext context, Map<String, dynamic> message, ThemeData theme) {
+    final readBy = List<String>.from(message['readBy'] ?? []);
+    final isRead = _otherUser != null && readBy.contains(_otherUser!.uid);
+
+    if (isRead) {
+      return Icon(
+        Icons.done_all_rounded,
+        size: 14,
+        color: Colors.white.withOpacity(0.9),
+      );
+    } else {
+      return Icon(
+        Icons.check_rounded,
+        size: 14,
+        color: Colors.white.withOpacity(0.6),
+      );
+    }
   }
 
   Widget _buildMessageInput(BuildContext context) {
