@@ -72,4 +72,50 @@ class ChatService {
       throw Exception('創建聊天室失敗: $e');
     }
   }
+
+  /// 發送訊息
+  Future<void> sendMessage({
+    required String chatRoomId,
+    required String senderId,
+    required String senderName,
+    String? senderAvatarUrl,
+    required String message,
+    String type = 'text',
+    bool isForwarded = false,
+    String? originalSenderId,
+    String? originalSenderName,
+  }) async {
+    try {
+      final timestamp = FieldValue.serverTimestamp();
+
+      // 1. 新增訊息到 messages 集合
+      await _firestore.collection('messages').add({
+        'chatRoomId': chatRoomId,
+        'senderId': senderId,
+        'senderName': senderName,
+        'senderAvatarUrl': senderAvatarUrl,
+        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'type': type,
+        'timestamp': timestamp,
+        'readBy': [], // Empty list for readBy
+        'isForwarded': isForwarded,
+        'originalSenderId': originalSenderId,
+        'originalSenderName': originalSenderName,
+      });
+
+      // 2. 更新聊天室最後訊息
+      await _chatRoomsCollection.doc(chatRoomId).update({
+        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessageTime': timestamp,
+        'lastMessageSenderId': senderId,
+        // 使用 FieldValue.increment 更新接收者的未讀數
+        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
+        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
+        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
+        // 暫時保持簡單，只更新 lastMessage。
+      });
+    } catch (e) {
+      throw Exception('發送訊息失敗: $e');
+    }
+  }
 }

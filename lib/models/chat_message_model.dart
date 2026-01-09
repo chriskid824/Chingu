@@ -11,6 +11,9 @@ class ChatMessageModel {
   final String type; // 'text', 'image', 'system'
   final DateTime timestamp;
   final List<String> readBy; // 已讀用戶 UID 列表
+  final bool isForwarded;
+  final String? originalSenderId;
+  final String? originalSenderName;
 
   ChatMessageModel({
     required this.id,
@@ -22,6 +25,9 @@ class ChatMessageModel {
     this.type = 'text',
     required this.timestamp,
     this.readBy = const [],
+    this.isForwarded = false,
+    this.originalSenderId,
+    this.originalSenderName,
   });
 
   /// 從 Firestore 文檔創建 ChatMessageModel
@@ -38,10 +44,13 @@ class ChatMessageModel {
       senderId: map['senderId'] ?? '',
       senderName: map['senderName'] ?? '',
       senderAvatarUrl: map['senderAvatarUrl'],
-      message: map['message'] ?? '',
+      message: map['message'] ?? map['text'] ?? '', // Support both for compatibility
       type: map['type'] ?? 'text',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),
+      isForwarded: map['isForwarded'] ?? false,
+      originalSenderId: map['originalSenderId'],
+      originalSenderName: map['originalSenderName'],
     );
   }
 
@@ -56,6 +65,9 @@ class ChatMessageModel {
       'type': type,
       'timestamp': Timestamp.fromDate(timestamp),
       'readBy': readBy,
+      'isForwarded': isForwarded,
+      'originalSenderId': originalSenderId,
+      'originalSenderName': originalSenderName,
     };
   }
 
@@ -64,9 +76,13 @@ class ChatMessageModel {
     return readBy.contains(userId);
   }
 
-  /// 複製並更新已讀列表
+  /// 複製並更新部分欄位
   ChatMessageModel copyWith({
+    String? message,
     List<String>? readBy,
+    bool? isForwarded,
+    String? originalSenderId,
+    String? originalSenderName,
   }) {
     return ChatMessageModel(
       id: id,
@@ -74,10 +90,13 @@ class ChatMessageModel {
       senderId: senderId,
       senderName: senderName,
       senderAvatarUrl: senderAvatarUrl,
-      message: message,
+      message: message ?? this.message,
       type: type,
       timestamp: timestamp,
       readBy: readBy ?? this.readBy,
+      isForwarded: isForwarded ?? this.isForwarded,
+      originalSenderId: originalSenderId ?? this.originalSenderId,
+      originalSenderName: originalSenderName ?? this.originalSenderName,
     );
   }
 }
@@ -175,26 +194,3 @@ class ChatRoomModel {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
