@@ -33,6 +33,10 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 隱私設定
+  final bool showOnlineStatus;
+  final bool showLastSeen;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -58,6 +62,8 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.showOnlineStatus = true,
+    this.showLastSeen = true,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -93,6 +99,8 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      showOnlineStatus: map['showOnlineStatus'] ?? true,
+      showLastSeen: map['showLastSeen'] ?? true,
     );
   }
 
@@ -122,6 +130,8 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'showOnlineStatus': showOnlineStatus,
+      'showLastSeen': showLastSeen,
     };
   }
 
@@ -149,6 +159,8 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? showOnlineStatus,
+    bool? showLastSeen,
   }) {
     return UserModel(
       uid: uid,
@@ -175,6 +187,8 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      showOnlineStatus: showOnlineStatus ?? this.showOnlineStatus,
+      showLastSeen: showLastSeen ?? this.showLastSeen,
     );
   }
 
