@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
+import 'package:chingu/widgets/zoomable_image.dart';
 
 class ProfileDetailScreen extends StatelessWidget {
   const ProfileDetailScreen({super.key});
@@ -107,12 +108,30 @@ class ProfileDetailScreen extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                             child: user.avatarUrl != null
-                                ? CircleAvatar(
-                                    backgroundImage: CachedNetworkImageProvider(
-                                      user.avatarUrl!,
-                                      cacheManager: ImageCacheManager().manager,
+                                ? GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ZoomableImage(
+                                            imageProvider: CachedNetworkImageProvider(
+                                              user.avatarUrl!,
+                                              cacheManager: ImageCacheManager().manager,
+                                            ),
+                                            heroTag: 'profile_avatar_${user.uid}',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Hero(
+                                      tag: 'profile_avatar_${user.uid}',
+                                      child: CircleAvatar(
+                                        backgroundImage: CachedNetworkImageProvider(
+                                          user.avatarUrl!,
+                                          cacheManager: ImageCacheManager().manager,
+                                        ),
+                                        radius: 50,
+                                      ),
                                     ),
-                                    radius: 50,
                                   )
                                 : Icon(
                                     Icons.person,
