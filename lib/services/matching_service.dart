@@ -6,9 +6,17 @@ import 'package:chingu/services/chat_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
-  final ChatService _chatService = ChatService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+  final ChatService _chatService;
+
+  MatchingService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+    ChatService? chatService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService(),
+        _chatService = chatService ?? ChatService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
