@@ -33,6 +33,11 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 靜音時段設定
+  final bool isSilentHoursEnabled;
+  final String silentHoursStart; // Format: "HH:mm"
+  final String silentHoursEnd;   // Format: "HH:mm"
+
   UserModel({
     required this.uid,
     required this.name,
@@ -58,6 +63,9 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.isSilentHoursEnabled = false,
+    this.silentHoursStart = '22:00',
+    this.silentHoursEnd = '07:00',
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -93,6 +101,9 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      isSilentHoursEnabled: map['isSilentHoursEnabled'] ?? false,
+      silentHoursStart: map['silentHoursStart'] ?? '22:00',
+      silentHoursEnd: map['silentHoursEnd'] ?? '07:00',
     );
   }
 
@@ -122,6 +133,9 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'isSilentHoursEnabled': isSilentHoursEnabled,
+      'silentHoursStart': silentHoursStart,
+      'silentHoursEnd': silentHoursEnd,
     };
   }
 
@@ -149,6 +163,9 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? isSilentHoursEnabled,
+    String? silentHoursStart,
+    String? silentHoursEnd,
   }) {
     return UserModel(
       uid: uid,
@@ -175,6 +192,9 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      isSilentHoursEnabled: isSilentHoursEnabled ?? this.isSilentHoursEnabled,
+      silentHoursStart: silentHoursStart ?? this.silentHoursStart,
+      silentHoursEnd: silentHoursEnd ?? this.silentHoursEnd,
     );
   }
 
