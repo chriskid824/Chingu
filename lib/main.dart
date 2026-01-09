@@ -9,6 +9,7 @@ import 'providers/onboarding_provider.dart';
 import 'providers/dinner_event_provider.dart';
 import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
+import 'services/scheduled_notification_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -22,6 +23,9 @@ void main() async {
 
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
+
+  // 初始化排程通知服務
+  await ScheduledNotificationService().initialize();
 
   runApp(const ChinguApp());
 }
