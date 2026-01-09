@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/message_translation_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,6 +13,8 @@ class ChatProvider with ChangeNotifier {
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  final MessageTranslationService _translationService = MessageTranslationService();
 
   /// 載入用戶的聊天室列表
   Future<void> loadChatRooms(String userId) async {
@@ -125,6 +128,14 @@ class ChatProvider with ChangeNotifier {
       print('發送訊息失敗: $e');
       rethrow;
     }
+  }
+
+  /// 翻譯訊息
+  Future<String> translateMessage(String text, String targetLanguage) async {
+    return _translationService.translate(
+      text: text,
+      targetLanguage: targetLanguage,
+    );
   }
 
   void _setLoading(bool value) {
