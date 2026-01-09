@@ -4,6 +4,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
+import 'package:chingu/widgets/confetti_widget.dart';
 
 class MatchSuccessScreen extends StatefulWidget {
   final UserModel currentUser;
@@ -87,6 +88,21 @@ class _MatchSuccessScreenState extends State<MatchSuccessScreen> with SingleTick
                   radius: 1.0,
                 ),
               ),
+            ),
+          ),
+
+          // Confetti Animation
+          Positioned.fill(
+            child: ConfettiWidget(
+              colors: chinguTheme != null
+                  ? [
+                      chinguTheme.primaryGradient.colors.first,
+                      chinguTheme.secondary,
+                      chinguTheme.warning,
+                      chinguTheme.success,
+                      Colors.white,
+                    ]
+                  : null,
             ),
           ),
           
