@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:chingu/models/user_model.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
@@ -103,6 +107,8 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    String type = 'text',
+    int? duration,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -111,18 +117,54 @@ class ChatProvider with ChangeNotifier {
       await _firestore.collection('messages').add({
         'chatRoomId': chatRoomId,
         'senderId': senderId,
-        'text': text,
+        'text': text, // For backward compatibility and simplicity, using 'text' field for content/url
+        'type': type,
+        if (duration != null) 'duration': duration,
         'timestamp': timestamp,
         'isRead': false,
       });
 
       // 2. 更新聊天室最後訊息
+      final lastMessageText = type == 'audio' ? '[語音訊息]' : text;
       await _firestore.collection('chat_rooms').doc(chatRoomId).update({
-        'lastMessage': text,
+        'lastMessage': lastMessageText,
         'lastMessageAt': timestamp,
       });
     } catch (e) {
       print('發送訊息失敗: $e');
+      rethrow;
+    }
+  }
+
+  /// 發送語音訊息
+  Future<void> sendVoiceMessage({
+    required String chatRoomId,
+    required String senderId,
+    required String filePath,
+    required int duration,
+  }) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('File does not exist');
+      }
+
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final ref = _storage.ref().child('chat_voice_messages/$chatRoomId/$fileName');
+
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      await sendMessage(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        text: downloadUrl,
+        type: 'audio',
+        duration: duration,
+      );
+    } catch (e) {
+      print('發送語音訊息失敗: $e');
       rethrow;
     }
   }

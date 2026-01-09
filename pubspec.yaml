@@ -54,6 +54,13 @@ dependencies:
   flutter_cache_manager: ^3.3.0
   image_picker: ^1.1.2
 
+  # Voice & Audio
+  record: ^5.0.0
+  audioplayers: ^5.0.0
+  path_provider: ^2.1.0
+  permission_handler: ^11.0.0
+  uuid: ^4.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
