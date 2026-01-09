@@ -1,13 +1,117 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/services/silent_hours_service.dart';
 
-class NotificationSettingsScreen extends StatelessWidget {
+class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
+
+  @override
+  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  final _silentHoursService = SilentHoursService();
+  bool _isLoading = true;
   
+  // Local state for silent hours
+  bool _silentHoursEnabled = false;
+  late TimeOfDay _silentStart;
+  late TimeOfDay _silentEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    await _silentHoursService.init();
+    setState(() {
+      _silentHoursEnabled = _silentHoursService.isEnabled;
+      _silentStart = _silentHoursService.startTime;
+      _silentEnd = _silentHoursService.endTime;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _updateSilentHoursEnabled(bool value) async {
+    setState(() => _silentHoursEnabled = value);
+    await _silentHoursService.setEnabled(value);
+  }
+
+  Future<void> _pickTime(bool isStart) async {
+    final initialTime = isStart ? _silentStart : _silentEnd;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        final theme = Theme.of(context);
+        return Theme(
+          data: theme.copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: theme.cardColor,
+              dialHandColor: theme.colorScheme.primary,
+              dialBackgroundColor: theme.colorScheme.surfaceVariant,
+              hourMinuteColor: WidgetStateColor.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                  ? theme.colorScheme.primary.withOpacity(0.2)
+                  : theme.cardColor
+              ),
+              hourMinuteTextColor: WidgetStateColor.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface
+              ),
+              dayPeriodTextColor: WidgetStateColor.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withOpacity(0.6)
+              ),
+              dayPeriodBorderSide: BorderSide(color: theme.colorScheme.primary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _silentStart = picked;
+        } else {
+          _silentEnd = picked;
+        }
+      });
+      await _silentHoursService.setSilentHours(_silentStart, _silentEnd);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('通知設定', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: theme.scaffoldBackgroundColor,
+          foregroundColor: theme.colorScheme.onSurface,
+          elevation: 0,
+        ),
+        body: Center(
+          child: CircularProgressIndicator(color: theme.colorScheme.primary),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -19,6 +123,41 @@ class NotificationSettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
+          _buildSectionTitle(context, '勿擾模式'),
+          SwitchListTile(
+            title: const Text('啟用勿擾模式'),
+            subtitle: Text('在指定時間內暫停接收通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            value: _silentHoursEnabled,
+            onChanged: _updateSilentHoursEnabled,
+            activeColor: theme.colorScheme.primary,
+          ),
+          if (_silentHoursEnabled) ...[
+            ListTile(
+              title: const Text('開始時間'),
+              trailing: Text(
+                _silentStart.format(context),
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: () => _pickTime(true),
+            ),
+            ListTile(
+              title: const Text('結束時間'),
+              trailing: Text(
+                _silentEnd.format(context),
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              onTap: () => _pickTime(false),
+            ),
+          ],
+          const Divider(),
           _buildSectionTitle(context, '推播通知'),
           SwitchListTile(
             title: const Text('啟用推播通知'),
@@ -111,8 +250,3 @@ class NotificationSettingsScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
