@@ -2,14 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
+import 'package:chingu/widgets/animated_tab_bar.dart';
 
-class EventsListScreen extends StatelessWidget {
+class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
-  
+
+  @override
+  State<EventsListScreen> createState() => _EventsListScreenState();
+}
+
+class _EventsListScreenState extends State<EventsListScreen> {
+  int _selectedIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onTabSelected(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+    // final chinguTheme = theme.extension<ChinguTheme>(); // Not needed if AnimatedTabBar handles it internally
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -38,45 +76,31 @@ class EventsListScreen extends StatelessWidget {
           color: theme.colorScheme.onSurface,
         ),
       ),
-      body: DefaultTabController(
-        length: 2,
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TabBar(
-                labelColor: Colors.white,
-                unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
-                indicator: BoxDecoration(
-                  gradient: chinguTheme?.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: '📅 即將到來'),
-                  Tab(text: '📋 歷史記錄'),
-                ],
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: AnimatedTabBar(
+              tabs: const ['📅 即將到來', '📋 歷史記錄'],
+              selectedIndex: _selectedIndex,
+              onTabSelected: _onTabSelected,
             ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildEventsList(context, true),
-                  _buildEventsList(context, false),
-                ],
-              ),
+          ),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              children: [
+                _buildEventsList(context, true),
+                _buildEventsList(context, false),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-  
+
   Widget _buildEventsList(BuildContext context, bool isUpcoming) {
     return ListView(
       padding: const EdgeInsets.all(16),
