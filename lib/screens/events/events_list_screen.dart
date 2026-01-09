@@ -2,9 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
+import 'package:chingu/widgets/skeleton_loader.dart';
 
-class EventsListScreen extends StatelessWidget {
+class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
+
+  @override
+  State<EventsListScreen> createState() => _EventsListScreenState();
+}
+
+class _EventsListScreenState extends State<EventsListScreen> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _simulateLoading();
+  }
+
+  Future<void> _simulateLoading() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -78,6 +101,16 @@ class EventsListScreen extends StatelessWidget {
   }
   
   Widget _buildEventsList(BuildContext context, bool isUpcoming) {
+    if (_isLoading) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 4, // Show 4 skeleton items
+        itemBuilder: (context, index) {
+          return const SkeletonEventCard();
+        },
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
