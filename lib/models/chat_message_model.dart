@@ -11,6 +11,8 @@ class ChatMessageModel {
   final String type; // 'text', 'image', 'system'
   final DateTime timestamp;
   final List<String> readBy; // 已讀用戶 UID 列表
+  final bool isEdited;
+  final DateTime? editedAt;
 
   ChatMessageModel({
     required this.id,
@@ -22,6 +24,8 @@ class ChatMessageModel {
     this.type = 'text',
     required this.timestamp,
     this.readBy = const [],
+    this.isEdited = false,
+    this.editedAt,
   });
 
   /// 從 Firestore 文檔創建 ChatMessageModel
@@ -38,10 +42,14 @@ class ChatMessageModel {
       senderId: map['senderId'] ?? '',
       senderName: map['senderName'] ?? '',
       senderAvatarUrl: map['senderAvatarUrl'],
-      message: map['message'] ?? '',
+      message: map['message'] ?? map['text'] ?? '',
       type: map['type'] ?? 'text',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),
+      isEdited: map['isEdited'] ?? false,
+      editedAt: map['editedAt'] != null
+          ? (map['editedAt'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -56,6 +64,8 @@ class ChatMessageModel {
       'type': type,
       'timestamp': Timestamp.fromDate(timestamp),
       'readBy': readBy,
+      'isEdited': isEdited,
+      'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
     };
   }
 
@@ -67,6 +77,8 @@ class ChatMessageModel {
   /// 複製並更新已讀列表
   ChatMessageModel copyWith({
     List<String>? readBy,
+    bool? isEdited,
+    DateTime? editedAt,
   }) {
     return ChatMessageModel(
       id: id,
@@ -78,6 +90,8 @@ class ChatMessageModel {
       type: type,
       timestamp: timestamp,
       readBy: readBy ?? this.readBy,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
     );
   }
 }

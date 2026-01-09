@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/message_edit_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -17,6 +18,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final MessageEditService _messageEditService = MessageEditService();
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
@@ -72,6 +74,61 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         );
       }
     }
+  }
+
+  void _showEditDialog(BuildContext context, String messageId, String currentText) {
+    final TextEditingController editController = TextEditingController(text: currentText);
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('編輯訊息', style: theme.textTheme.titleMedium),
+        content: TextField(
+          controller: editController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '輸入新的訊息內容...',
+          ),
+          maxLines: null,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('取消', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newText = editController.text.trim();
+              if (newText.isEmpty) return;
+
+              Navigator.pop(context);
+
+              try {
+                await _messageEditService.editMessage(
+                  messageId: messageId,
+                  newText: newText,
+                );
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('編輯失敗: $e')),
+                  );
+                }
+              }
+            },
+            child: Text(
+              '儲存',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold
+              )
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -196,52 +253,87 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final timeText = timestamp != null
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
+    final isEdited = message['isEdited'] == true;
+
+    Widget bubble = Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: isMe ? chinguTheme?.primaryGradient : null,
+        color: isMe ? null : theme.cardColor,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(20),
+          topRight: const Radius.circular(20),
+          bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
+          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message['text'] ?? '',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: isMe ? Colors.white : theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                timeText,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                  fontSize: 10,
+                ),
+              ),
+              if (isEdited) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '(已編輯)',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (isMe) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: GestureDetector(
+          onLongPress: () {
+            _showEditDialog(
+              context,
+              message['id'],
+              message['text'] ?? ''
+            );
+          },
+          child: bubble,
+        ),
+      );
+    }
 
     return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: isMe ? chinguTheme?.primaryGradient : null,
-          color: isMe ? null : theme.cardColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              message['text'] ?? '',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: isMe ? Colors.white : theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              timeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ),
+      alignment: Alignment.centerLeft,
+      child: bubble,
     );
   }
 
