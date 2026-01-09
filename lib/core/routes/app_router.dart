@@ -39,6 +39,7 @@ import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/delete_account_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 
 /// 路由名稱常量
@@ -89,6 +90,7 @@ class AppRoutes {
   static const String notificationSettings = '/notification-settings';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
+  static const String deleteAccount = '/delete-account';
 }
 
 /// 應用程式路由配置
@@ -202,6 +204,9 @@ class AppRouter {
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
       
+      case AppRoutes.deleteAccount:
+        return MaterialPageRoute(builder: (_) => const DeleteAccountScreen());
+
       // ==================== 404 ====================
       default:
         return MaterialPageRoute(
