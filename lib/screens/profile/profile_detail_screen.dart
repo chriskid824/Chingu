@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
+import 'package:chingu/widgets/animated_counter.dart';
 
 class ProfileDetailScreen extends StatelessWidget {
   const ProfileDetailScreen({super.key});
@@ -149,6 +150,20 @@ class ProfileDetailScreen extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 24),
+
+                        // 統計資料
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildStatItem(context, '配對', user.totalMatches),
+                            _buildVerticalDivider(),
+                            _buildStatItem(context, '聚餐', user.totalDinners),
+                            _buildVerticalDivider(),
+                            _buildStatItem(context, '評分', user.averageRating, isRating: true),
+                          ],
+                        ),
+
                         const SizedBox(height: 24),
                         // Debug Button
                         // Debug Button
@@ -338,6 +353,38 @@ class ProfileDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context, String label, num value, {bool isRating = false}) {
+    return Column(
+      children: [
+        AnimatedCounter(
+          value: value,
+          decimalPlaces: isRating ? 1 : 0,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      height: 24,
+      width: 1,
+      color: Colors.white.withOpacity(0.3),
     );
   }
 }
