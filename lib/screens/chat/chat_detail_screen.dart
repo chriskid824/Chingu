@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/widgets/message_reactions.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -197,50 +198,74 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
+    // 獲取 reactions 和當前用戶 ID
+    final reactions = message['reactions'] as Map<String, dynamic>? ?? {};
+    final currentUserId = context.read<AuthProvider>().uid;
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: isMe ? chinguTheme?.primaryGradient : null,
-          color: isMe ? null : theme.cardColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: isMe ? chinguTheme?.primaryGradient : null,
+              color: isMe ? null : theme.cardColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
+                bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message['text'] ?? '',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timeText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+          // Reaction Widget
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 8),
+            child: MessageReactions(
+              reactions: reactions,
+              currentUserId: currentUserId!,
+              isMe: isMe,
+              onReactionSelected: (emoji) {
+                context.read<ChatProvider>().toggleReaction(
+                  messageId: message['id'],
+                  emoji: emoji,
+                  userId: currentUserId,
+                );
+              },
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              message['text'] ?? '',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: isMe ? Colors.white : theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              timeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

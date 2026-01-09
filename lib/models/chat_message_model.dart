@@ -11,6 +11,7 @@ class ChatMessageModel {
   final String type; // 'text', 'image', 'system'
   final DateTime timestamp;
   final List<String> readBy; // 已讀用戶 UID 列表
+  final Map<String, List<String>> reactions; // emoji -> list of userIds
 
   ChatMessageModel({
     required this.id,
@@ -22,6 +23,7 @@ class ChatMessageModel {
     this.type = 'text',
     required this.timestamp,
     this.readBy = const [],
+    this.reactions = const {},
   });
 
   /// 從 Firestore 文檔創建 ChatMessageModel
@@ -32,6 +34,17 @@ class ChatMessageModel {
 
   /// 從 Map 創建 ChatMessageModel
   factory ChatMessageModel.fromMap(Map<String, dynamic> map, String id) {
+    // 處理 reactions 的轉換
+    Map<String, List<String>> parsedReactions = {};
+    if (map['reactions'] != null) {
+      final reactionsMap = map['reactions'] as Map<String, dynamic>;
+      reactionsMap.forEach((emoji, userIds) {
+        if (userIds is List) {
+          parsedReactions[emoji] = List<String>.from(userIds);
+        }
+      });
+    }
+
     return ChatMessageModel(
       id: id,
       chatRoomId: map['chatRoomId'] ?? '',
@@ -42,6 +55,7 @@ class ChatMessageModel {
       type: map['type'] ?? 'text',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),
+      reactions: parsedReactions,
     );
   }
 
@@ -56,6 +70,7 @@ class ChatMessageModel {
       'type': type,
       'timestamp': Timestamp.fromDate(timestamp),
       'readBy': readBy,
+      'reactions': reactions,
     };
   }
 
@@ -64,9 +79,10 @@ class ChatMessageModel {
     return readBy.contains(userId);
   }
 
-  /// 複製並更新已讀列表
+  /// 複製並更新
   ChatMessageModel copyWith({
     List<String>? readBy,
+    Map<String, List<String>>? reactions,
   }) {
     return ChatMessageModel(
       id: id,
@@ -78,6 +94,7 @@ class ChatMessageModel {
       type: type,
       timestamp: timestamp,
       readBy: readBy ?? this.readBy,
+      reactions: reactions ?? this.reactions,
     );
   }
 }
@@ -175,26 +192,3 @@ class ChatRoomModel {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
