@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
+import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/models/dinner_event_model.dart';
 
 class EventsListScreen extends StatelessWidget {
   const EventsListScreen({super.key});
   
+  Future<void> _handleRefresh(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.uid;
+    if (userId != null) {
+      await Provider.of<DinnerEventProvider>(context, listen: false)
+          .fetchMyEvents(userId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -64,11 +78,15 @@ class EventsListScreen extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: TabBarView(
-                children: [
-                  _buildEventsList(context, true),
-                  _buildEventsList(context, false),
-                ],
+              child: Consumer<DinnerEventProvider>(
+                builder: (context, provider, child) {
+                  return TabBarView(
+                    children: [
+                      _buildEventsList(context, provider.myEvents, true),
+                      _buildEventsList(context, provider.myEvents, false),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -77,45 +95,75 @@ class EventsListScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildEventsList(BuildContext context, bool isUpcoming) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/15',
-          time: '19:00',
-          budget: 'NT\$ 500-800 / 人',
-          location: '台北市信義區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/18',
-          time: '18:30',
-          budget: 'NT\$ 800-1200 / 人',
-          location: '台北市大安區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        if (!isUpcoming)
-          EventCard(
-            title: '6人晚餐聚會',
-            date: '2025/10/01',
-            time: '19:30',
-            budget: 'NT\$ 600-900 / 人',
-            location: '台北市中山區',
-            isUpcoming: isUpcoming,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-            },
-          ),
-      ],
+  Widget _buildEventsList(BuildContext context, List<DinnerEventModel> allEvents, bool isUpcoming) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+
+    final filteredEvents = allEvents.where((event) {
+      if (isUpcoming) {
+        return event.dateTime.isAfter(now);
+      } else {
+        return event.dateTime.isBefore(now);
+      }
+    }).toList();
+
+    // Sort events
+    filteredEvents.sort((a, b) {
+      if (isUpcoming) {
+        return a.dateTime.compareTo(b.dateTime); // Ascending for upcoming
+      } else {
+        return b.dateTime.compareTo(a.dateTime); // Descending for history
+      }
+    });
+
+    return RefreshIndicator(
+      onRefresh: () => _handleRefresh(context),
+      child: filteredEvents.isEmpty
+          ? ListView(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isUpcoming ? Icons.event_busy_rounded : Icons.history_rounded,
+                        size: 64,
+                        color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        isUpcoming ? '暫無即將到來的活動' : '暫無歷史活動',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: filteredEvents.length,
+              itemBuilder: (context, index) {
+                final event = filteredEvents[index];
+                return EventCard(
+                  title: '6人晚餐聚會',
+                  date: DateFormat('yyyy/MM/dd').format(event.dateTime),
+                  time: DateFormat('HH:mm').format(event.dateTime),
+                  budget: event.budgetRangeText,
+                  location: '${event.city}${event.district}',
+                  isUpcoming: isUpcoming,
+                  onTap: () {
+                    // Pass event or eventId if needed by EventDetailScreen
+                    // Currently EventDetailScreen might be static or expecting args
+                    // Based on memory: "UserDetailScreen and EventDetailScreen do not currently consume route arguments"
+                    Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+                  },
+                );
+              },
+            ),
     );
   }
 }
