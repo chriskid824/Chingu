@@ -45,6 +45,10 @@
   - **測試資料生成**：
     - 修改 `DatabaseSeeder` 以保留真實帳號
     - 為特定帳號 (test@gmail.com) 自動生成配對與聊天室測試資料
+  - **敏感資料加密**：
+    - 實作 `EncryptionHelper` (`lib/utils/encryption_helper.dart`) 用於本地資料加密。
+    - 使用 AES-CBC 算法加密，支援 256 位元密鑰。
+    - 新增 `encrypt` 套件至 `pubspec.yaml`。
 
 #### ✅ UI 優化進度 (UI Optimization)
 - [x] 啟動頁面 (Launch Screen)
