@@ -99,6 +99,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String statsDashboard = '/stats-dashboard';
 }
 
 /// 應用程式路由配置
@@ -246,6 +247,9 @@ class AppRouter {
           ),
         );
       
+      case AppRoutes.statsDashboard:
+        return MaterialPageRoute(builder: (_) => const StatsDashboardScreen());
+
       // ==================== 404 ====================
       default:
         return MaterialPageRoute(
