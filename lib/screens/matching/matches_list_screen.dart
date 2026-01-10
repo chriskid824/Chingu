@@ -2,9 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 
-class MatchesListScreen extends StatelessWidget {
+class MatchesListScreen extends StatefulWidget {
   const MatchesListScreen({super.key});
-  
+
+  @override
+  State<MatchesListScreen> createState() => _MatchesListScreenState();
+}
+
+class _MatchesListScreenState extends State<MatchesListScreen> {
+  // 模擬數據
+  final List<Map<String, dynamic>> _mutualMatches = [
+    {
+      'name': '王小華',
+      'age': 28,
+      'job': '行銷專員',
+      'matchScore': 92,
+    },
+    {
+      'name': '李小美',
+      'age': 26,
+      'job': '設計師',
+      'matchScore': 88,
+    },
+  ];
+
+  final List<Map<String, dynamic>> _likedMatches = [
+    {
+      'name': '陳大明',
+      'age': 30,
+      'job': '軟體工程師',
+      'matchScore': 95,
+    },
+    {
+      'name': '林小芳',
+      'age': 27,
+      'job': '產品經理',
+      'matchScore': 90,
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -66,8 +102,8 @@ class MatchesListScreen extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  _buildMatchesList(context, true, theme, chinguTheme),
-                  _buildMatchesList(context, false, theme, chinguTheme),
+                  _buildMatchesList(context, _mutualMatches, true, theme, chinguTheme),
+                  _buildMatchesList(context, _likedMatches, false, theme, chinguTheme),
                 ],
               ),
             ),
@@ -76,19 +112,116 @@ class MatchesListScreen extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildMatchesList(BuildContext context, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
-    return ListView(
+
+  Widget _buildMatchesList(
+      BuildContext context, List<Map<String, dynamic>> matches, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
+    if (matches.isEmpty) {
+      return _buildEmptyState(context, theme, chinguTheme);
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        _buildMatchCard(context, '王小華', 28, '行銷專員', 92, isMutual, theme, chinguTheme),
-        _buildMatchCard(context, '李小美', 26, '設計師', 88, isMutual, theme, chinguTheme),
-        _buildMatchCard(context, '陳大明', 30, '軟體工程師', 95, isMutual, theme, chinguTheme),
-        _buildMatchCard(context, '林小芳', 27, '產品經理', 90, isMutual, theme, chinguTheme),
-      ],
+      itemCount: matches.length,
+      itemBuilder: (context, index) {
+        final match = matches[index];
+        return _buildMatchCard(
+          context,
+          match['name'],
+          match['age'],
+          match['job'],
+          match['matchScore'],
+          isMutual,
+          theme,
+          chinguTheme,
+        );
+      },
     );
   }
   
+  Widget _buildEmptyState(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.person_search_rounded,
+              size: 64,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '尋找新朋友',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '去發現頁尋找更多朋友吧',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            decoration: BoxDecoration(
+              gradient: chinguTheme?.primaryGradient,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: (chinguTheme?.primary ?? theme.colorScheme.primary).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: () {
+                // Navigate to MainScreen and switch to Matching/Swipe tab (Index 1)
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  AppRoutes.mainNavigation,
+                  (route) => false,
+                  arguments: {'initialIndex': 1},
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.explore_rounded, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    '去發現',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMatchCard(BuildContext context, String name, int age, String job, int matchScore, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
     return InkWell(
       onTap: () {

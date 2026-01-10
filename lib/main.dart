@@ -9,7 +9,9 @@ import 'providers/onboarding_provider.dart';
 import 'providers/dinner_event_provider.dart';
 import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
+import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'services/rich_notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -20,8 +22,14 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 初始化 Crashlytics
+  await CrashReportingService().initialize();
+
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
+
+  // 初始化豐富通知服務
+  await RichNotificationService().initialize();
 
   runApp(const ChinguApp());
 }
@@ -45,6 +53,7 @@ class ChinguApp extends StatelessWidget {
           return MaterialApp(
             title: 'Chingu - 6人晚餐社交',
             debugShowCheckedModeBanner: false,
+            navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,

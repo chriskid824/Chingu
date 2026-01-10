@@ -1,9 +1,89 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/storage_service.dart';
 
-class EditProfileScreen extends StatelessWidget {
+class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final StorageService _storageService = StorageService();
+  final ImagePicker _picker = ImagePicker();
+
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
   
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+        _uploadProgress = 0.0;
+      });
+
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+      final uid = authProvider.uid;
+
+      if (uid == null) {
+        throw Exception('User not logged in');
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final path = 'user_avatars/${uid}_$timestamp.jpg';
+      final file = File(image.path);
+
+      final task = _storageService.uploadFile(file, path);
+
+      task.snapshotEvents.listen((snapshot) {
+        if (!mounted) return;
+        setState(() {
+          _uploadProgress = snapshot.bytesTransferred / snapshot.totalBytes;
+        });
+      });
+
+      await task;
+
+      final downloadUrl = await _storageService.getDownloadUrl(path);
+
+      await authProvider.updateUserData({'avatarUrl': downloadUrl});
+
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('頭像更新成功')),
+        );
+      }
+
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('發生錯誤: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -29,52 +109,98 @@ class EditProfileScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Avatar Section
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      gradient: chinguTheme?.primaryGradient,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                final user = authProvider.userModel;
+                return Center(
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          gradient: chinguTheme?.primaryGradient,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: const Icon(Icons.person_rounded, size: 60, color: Colors.white),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: chinguTheme?.success ?? Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (chinguTheme?.success ?? Colors.green).withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        child: ClipOval(
+                          child: _isUploading
+                              ? Container(
+                                  color: Colors.black45,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      CircularProgressIndicator(
+                                        value: _uploadProgress,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                      Text(
+                                        '${(_uploadProgress * 100).toStringAsFixed(0)}%',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : (user?.avatarUrl != null
+                                  ? Image.network(
+                                      user!.avatarUrl!,
+                                      fit: BoxFit.cover,
+                                      width: 120,
+                                      height: 120,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(child: CircularProgressIndicator());
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return const Icon(Icons.person_rounded, size: 60, color: Colors.white);
+                                      },
+                                    )
+                                  : const Icon(Icons.person_rounded, size: 60, color: Colors.white)),
+                        ),
                       ),
-                      child: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
-                    ),
+                      if (!_isUploading)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: GestureDetector(
+                            onTap: _pickAndUploadImage,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: chinguTheme?.success ?? Colors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (chinguTheme?.success ?? Colors.green).withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 8),
             Center(
               child: Text(
-                '點擊相機圖標更換照片',
+                _isUploading ? '正在上傳...' : '點擊相機圖標更換照片',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.5),
                 ),

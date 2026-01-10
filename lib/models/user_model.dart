@@ -33,6 +33,11 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 2FA
+  final bool isTwoFactorEnabled;
+  final String twoFactorMethod; // 'email', 'sms'
+  final String? phoneNumber;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -58,6 +63,9 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.isTwoFactorEnabled = false,
+    this.twoFactorMethod = 'email',
+    this.phoneNumber,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -93,6 +101,9 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
+      twoFactorMethod: map['twoFactorMethod'] ?? 'email',
+      phoneNumber: map['phoneNumber'],
     );
   }
 
@@ -122,6 +133,9 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'isTwoFactorEnabled': isTwoFactorEnabled,
+      'twoFactorMethod': twoFactorMethod,
+      'phoneNumber': phoneNumber,
     };
   }
 
@@ -149,6 +163,9 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? isTwoFactorEnabled,
+    String? twoFactorMethod,
+    String? phoneNumber,
   }) {
     return UserModel(
       uid: uid,
@@ -175,6 +192,9 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
+      twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
     );
   }
 
@@ -213,4 +233,3 @@ class UserModel {
     }
   }
 }
-
