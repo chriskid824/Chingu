@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 class ErrorHandler {
   /// 通用錯誤處理方法
@@ -7,6 +8,13 @@ class ErrorHandler {
   /// [error] 錯誤物件
   /// [stackTrace] 堆疊追蹤（可選）
   static void handleError(BuildContext context, dynamic error, {StackTrace? stackTrace}) {
+    // 記錄錯誤到 Crashlytics
+    try {
+      CrashReportingService().recordError(error, stackTrace, reason: 'ErrorHandler.handleError');
+    } catch (e) {
+      debugPrint('CrashReportingService failed: $e');
+    }
+
     // 這裡可以加入日誌記錄邏輯
     debugPrint('發生錯誤: $error');
     if (stackTrace != null) {

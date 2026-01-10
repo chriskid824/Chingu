@@ -10,6 +10,14 @@ class CrashReportingService {
   CrashReportingService._internal();
 
   Future<void> initialize() async {
+    // 依據 Debug 模式決定是否啟用 Crashlytics 收集
+    // 在 Debug 模式下通常不需要收集崩潰報告，以免污染數據
+    if (kDebugMode) {
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    }
+
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
