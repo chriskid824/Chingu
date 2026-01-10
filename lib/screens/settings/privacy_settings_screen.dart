@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
@@ -106,30 +107,7 @@ class PrivacySettingsScreen extends StatelessWidget {
                 ),
                 trailing: Icon(Icons.chevron_right, color: theme.colorScheme.error),
                 onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('刪除帳號'),
-                      content: const Text('您確定要刪除帳號嗎？所有資料將被永久刪除且無法復原。'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('取消'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // TODO: Implement delete account logic
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('功能尚未開放')),
-                            );
-                          },
-                          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                          child: const Text('刪除'),
-                        ),
-                      ],
-                    ),
-                  );
+                  Navigator.pushNamed(context, AppRoutes.deleteAccount);
                 },
               ),
             ),
