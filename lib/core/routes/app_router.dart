@@ -70,6 +70,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String favorites = '/favorites';
   
   // 配對模組
   static const String matching = '/matching';
@@ -166,12 +167,18 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const UserDetailScreen(),
+        );
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());

@@ -32,6 +32,7 @@ class UserModel {
   final int totalDinners;
   final int totalMatches;
   final double averageRating;
+  final List<String> favoriteIds;
 
   // 2FA
   final bool isTwoFactorEnabled;
@@ -63,6 +64,7 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.favoriteIds = const [],
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +103,7 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      favoriteIds: List<String>.from(map['favoriteIds'] ?? []),
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
