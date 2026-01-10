@@ -5,11 +5,19 @@ import 'package:flutter/foundation.dart';
 
 /// 雙因素認證服務
 class TwoFactorAuthService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
+  late final FirebaseFirestore _firestore;
+  late final FirestoreService _firestoreService;
 
   // 集合名稱
   static const String _collection = 'two_factor_codes';
+
+  TwoFactorAuthService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+  }) {
+    _firestore = firestore ?? FirebaseFirestore.instance;
+    _firestoreService = firestoreService ?? FirestoreService();
+  }
 
   /// 發送驗證碼
   ///
@@ -22,7 +30,25 @@ class TwoFactorAuthService {
     String? uid,
   }) async {
     try {
-      // 1. 生成 6 位數驗證碼
+      // 驗證目標格式
+      if (method == 'email') {
+        if (!target.contains('@')) {
+          throw Exception('無效的 Email 格式');
+        }
+      } else if (method == 'sms') {
+        if (target.isEmpty) {
+          throw Exception('電話號碼不能為空');
+        }
+      } else {
+        throw Exception('不支援的驗證方式: $method');
+      }
+
+      // 檢查是否可以重發 (簡單限流：1分鐘內不能重發)
+      if (!await canResend(target)) {
+        throw Exception('請稍後再試');
+      }
+
+      // 1. 生成 6 位數驗證碼 (使用安全隨機數生成器)
       final code = _generateCode();
 
       // 2. 設定過期時間 (10分鐘)
@@ -48,7 +74,27 @@ class TwoFactorAuthService {
 
     } catch (e) {
       debugPrint('發送驗證碼失敗: $e');
+      if (e.toString().contains('Exception:')) rethrow;
       throw Exception('發送驗證碼失敗: $e');
+    }
+  }
+
+  /// 檢查是否可以重新發送驗證碼
+  /// 返回 true 表示可以發送
+  Future<bool> canResend(String target) async {
+    try {
+      final doc = await _firestore.collection(_collection).doc(target).get();
+      if (!doc.exists) return true;
+
+      final data = doc.data();
+      if (data == null || !data.containsKey('createdAt')) return true;
+
+      final createdAt = (data['createdAt'] as Timestamp).toDate();
+      // 60秒冷卻時間
+      return DateTime.now().difference(createdAt).inSeconds > 60;
+    } catch (e) {
+      // 如果出錯，默認允許重發，避免卡死
+      return true;
     }
   }
 
@@ -147,9 +193,9 @@ class TwoFactorAuthService {
     }
   }
 
-  /// 生成 6 位數隨機代碼
+  /// 生成 6 位數隨機代碼 (使用安全隨機數)
   String _generateCode() {
-    final random = Random();
+    final random = Random.secure();
     final code = random.nextInt(900000) + 100000;
     return code.toString();
   }
@@ -160,9 +206,14 @@ class TwoFactorAuthService {
     // 但在演示環境中，我們只打印到控制台
     debugPrint('==========================================');
     debugPrint('MOCK SENDING 2FA CODE');
-    debugPrint('To: $target');
-    debugPrint('Method: $method');
-    debugPrint('Code: $code');
+    if (method == 'sms') {
+      debugPrint('Channel: SMS');
+      debugPrint('To Phone: $target');
+    } else {
+      debugPrint('Channel: Email');
+      debugPrint('To Email: $target');
+    }
+    debugPrint('Verification Code: $code');
     debugPrint('==========================================');
   }
 }

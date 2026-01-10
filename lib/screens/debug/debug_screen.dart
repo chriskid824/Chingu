@@ -174,5 +174,3 @@ class _DebugScreenState extends State<DebugScreen> {
     );
   }
 }
-
-
