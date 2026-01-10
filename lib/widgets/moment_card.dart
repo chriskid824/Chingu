@@ -9,12 +9,14 @@ class MomentCard extends StatefulWidget {
   final MomentModel moment;
   final Function(bool isLiked)? onLikeChanged;
   final VoidCallback? onCommentTap;
+  final Function(String comment)? onAddComment;
 
   const MomentCard({
     super.key,
     required this.moment,
     this.onLikeChanged,
     this.onCommentTap,
+    this.onAddComment,
   });
 
   @override
@@ -51,6 +53,46 @@ class _MomentCardState extends State<MomentCard> {
       _likeCount += _isLiked ? 1 : -1;
     });
     widget.onLikeChanged?.call(_isLiked);
+  }
+
+  void _handleCommentTap() {
+    HapticUtils.light();
+
+    // If external handler is provided, use it (e.g. to navigate to detail view)
+    if (widget.onCommentTap != null) {
+      widget.onCommentTap!();
+      return;
+    }
+
+    // Default behavior: Show comment input sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CommentBottomSheet(
+        onSubmit: (text) {
+          setState(() {
+            _commentCount++;
+          });
+          widget.onAddComment?.call(text);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('評論已發送'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count < 1000) return count.toString();
+    return NumberFormat.compact().format(count);
   }
 
   @override
@@ -158,16 +200,16 @@ class _MomentCardState extends State<MomentCard> {
             children: [
               _ActionButton(
                 icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                label: '$_likeCount',
+                label: _formatCount(_likeCount),
                 color: _isLiked ? (chinguTheme?.error ?? Colors.red) : theme.colorScheme.onSurfaceVariant,
                 onTap: _toggleLike,
               ),
               const SizedBox(width: 24),
               _ActionButton(
                 icon: Icons.chat_bubble_outline,
-                label: '$_commentCount',
+                label: _formatCount(_commentCount),
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _handleCommentTap,
               ),
             ],
           ),
@@ -209,6 +251,106 @@ class _ActionButton extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommentBottomSheet extends StatefulWidget {
+  final Function(String) onSubmit;
+
+  const _CommentBottomSheet({
+    required this.onSubmit,
+  });
+
+  @override
+  State<_CommentBottomSheet> createState() => _CommentBottomSheetState();
+}
+
+class _CommentBottomSheetState extends State<_CommentBottomSheet> {
+  final TextEditingController _controller = TextEditingController();
+  bool _canSubmit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      setState(() {
+        _canSubmit = _controller.text.trim().isNotEmpty;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_canSubmit) {
+      widget.onSubmit(_controller.text.trim());
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    maxLines: 4,
+                    minLines: 1,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: '寫下你的評論...',
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                margin: const EdgeInsets.only(bottom: 2),
+                child: IconButton.filled(
+                  onPressed: _canSubmit ? _submit : null,
+                  icon: const Icon(Icons.send_rounded),
+                  style: IconButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: theme.colorScheme.onSurface.withOpacity(0.1),
+                    disabledForegroundColor: theme.colorScheme.onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
