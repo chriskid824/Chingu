@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
 
@@ -9,14 +10,17 @@ class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final UserBlockService _userBlockService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    UserBlockService? userBlockService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _userBlockService = userBlockService ?? UserBlockService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -49,7 +53,11 @@ class MatchingService {
       final swipedIds = await _getSwipedUserIds(currentUser.uid);
       print('已滑過 ${swipedIds.length} 個用戶');
 
-      // 3. 過濾和評分
+      // 3. 獲取封鎖名單 (我封鎖的 + 封鎖我的)
+      final blockedIds = await _userBlockService.getBlockedUserIds(currentUser.uid);
+      print('已封鎖/被封鎖 ${blockedIds.length} 個用戶');
+
+      // 4. 過濾和評分
       List<Map<String, dynamic>> scoredMatches = [];
 
       for (var candidate in candidates) {
@@ -62,6 +70,12 @@ class MatchingService {
         // 排除已滑過的
         if (swipedIds.contains(candidate.uid)) {
           print('跳過: 已滑過 (${candidate.name})');
+          continue;
+        }
+
+        // 排除封鎖/被封鎖的用戶
+        if (blockedIds.contains(candidate.uid)) {
+          print('跳過: 封鎖名單 (${candidate.name})');
           continue;
         }
 
@@ -83,10 +97,10 @@ class MatchingService {
 
       print('過濾後剩餘 ${scoredMatches.length} 個候選人');
 
-      // 4. 排序 (分數高到低)
+      // 5. 排序 (分數高到低)
       scoredMatches.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
 
-      // 5. 返回前 N 個
+      // 6. 返回前 N 個
       final result = scoredMatches.take(limit).toList();
       print('最終返回 ${result.length} 個候選人');
       return result;
