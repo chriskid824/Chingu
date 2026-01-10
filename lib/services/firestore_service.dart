@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/moment_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -7,6 +8,7 @@ class FirestoreService {
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
+  CollectionReference get _momentsCollection => _firestore.collection('moments');
 
   /// 創建新用戶資料
   /// 
@@ -287,6 +289,73 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 創建動態
+  Future<void> createMoment(MomentModel moment) async {
+    try {
+      // 確保 id 存在，如果沒有則生成
+      String momentId =
+          moment.id.isEmpty ? _momentsCollection.doc().id : moment.id;
+
+      final momentData = {
+        'id': momentId,
+        'userId': moment.userId,
+        'userName': moment.userName,
+        'userAvatar': moment.userAvatar,
+        'content': moment.content,
+        'imageUrl': moment.imageUrl,
+        'createdAt': moment.createdAt,
+        'likeCount': moment.likeCount,
+        'commentCount': moment.commentCount,
+        'likedBy': [],
+      };
+
+      await _momentsCollection.doc(momentId).set(momentData);
+    } catch (e) {
+      throw Exception('創建動態失敗: $e');
+    }
+  }
+
+  /// 獲取動態列表
+  /// [userId] 如果提供，只獲取該用戶的動態
+  Future<List<MomentModel>> getMoments(
+      {String? userId, int limit = 20, DocumentSnapshot? lastDocument}) async {
+    try {
+      Query query =
+          _momentsCollection.orderBy('createdAt', descending: true).limit(limit);
+
+      if (userId != null) {
+        query = query.where('userId', isEqualTo: userId);
+      }
+
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      final snapshot = await query.get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        // Map data to MomentModel
+        DateTime createdAt = (data['createdAt'] as Timestamp).toDate();
+
+        return MomentModel(
+          id: data['id'],
+          userId: data['userId'],
+          userName: data['userName'],
+          userAvatar: data['userAvatar'],
+          content: data['content'],
+          imageUrl: data['imageUrl'],
+          createdAt: createdAt,
+          likeCount: data['likeCount'] ?? 0,
+          commentCount: data['commentCount'] ?? 0,
+          isLiked: false, // Default for now
+        );
+      }).toList();
+    } catch (e) {
+      throw Exception('獲取動態失敗: $e');
     }
   }
 }
