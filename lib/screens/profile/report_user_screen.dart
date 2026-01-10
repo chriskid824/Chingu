@@ -6,6 +6,8 @@ import 'package:chingu/widgets/app_icon_button.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/providers/auth_provider.dart';
 
+/// 用戶舉報頁面
+/// 允許用戶選擇原因並填寫詳細描述以舉報不當行為
 class ReportUserScreen extends StatefulWidget {
   final String reportedUserId;
   final String? reportedUserName;
@@ -109,7 +111,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
           icon: Icons.arrow_back,
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('舉報用戶'),
+        title: Text('檢舉用戶'),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
@@ -122,7 +124,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
             children: [
               if (widget.reportedUserName != null) ...[
                 Text(
-                  '舉報對象: ${widget.reportedUserName}',
+                  '檢舉對象: ${widget.reportedUserName}',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -130,7 +132,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
                 SizedBox(height: 24),
               ],
               Text(
-                '請選擇舉報原因',
+                '請選擇檢舉原因',
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -172,7 +174,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
               ),
               SizedBox(height: 32),
               GradientButton(
-                text: _isSubmitting ? '提交中...' : '提交舉報',
+                text: _isSubmitting ? '提交中...' : '提交檢舉',
                 onPressed: _isSubmitting ? null : _submitReport,
                 width: double.infinity,
               ),
