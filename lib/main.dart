@@ -9,6 +9,7 @@ import 'providers/onboarding_provider.dart';
 import 'providers/dinner_event_provider.dart';
 import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/notification_stats_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
@@ -47,6 +48,13 @@ class ChinguApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DinnerEventProvider()),
         ChangeNotifierProvider(create: (_) => MatchingProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationStatsProvider>(
+          create: (context) => NotificationStatsProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+          ),
+          update: (context, auth, previous) =>
+              previous!..updateAuth(auth),
+        ),
       ],
       child: Consumer<ThemeController>(
         builder: (context, themeController, _) {
