@@ -97,7 +97,7 @@ class SettingsScreen extends StatelessWidget {
             Navigator.of(context).pushNamed(AppRoutes.helpCenter);
           }),
           _buildListTile(context, Icons.feedback_outlined, '意見回饋', () {
-            // 可以開啟意見回饋表單或發送email
+            Navigator.of(context).pushNamed(AppRoutes.feedback);
           }),
           _buildListTile(context, Icons.star_outline, '評價應用程式', () {
             // 可以開啟應用商店評分頁面
