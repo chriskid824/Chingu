@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -137,6 +138,9 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 記錄發送訊息事件
+      await AnalyticsService().logSendMessage(type: type);
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;
