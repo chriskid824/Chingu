@@ -236,6 +236,35 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
                       _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
                       
+                      // 收藏列表入口
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: chinguTheme?.warning?.withOpacity(0.1) ?? Colors.amber.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.star_rounded,
+                            color: chinguTheme?.warning ?? Colors.amber,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          '我的收藏',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                          color: theme.colorScheme.onSurface.withOpacity(0.3),
+                        ),
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
+                      ),
+
                       const SizedBox(height: 40),
                       
                       // 登出按鈕
