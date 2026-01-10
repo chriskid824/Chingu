@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/badge_count_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -8,10 +9,13 @@ class ChatProvider with ChangeNotifier {
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
   String? _errorMessage;
+  // TODO: 實作真實的未讀訊息計數。目前預設為 0，等待後端支援。
+  final int _totalUnreadCount = 0;
 
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int get totalUnreadCount => _totalUnreadCount;
 
   /// 載入用戶的聊天室列表
   Future<void> loadChatRooms(String userId) async {
@@ -31,6 +35,7 @@ class ChatProvider with ChangeNotifier {
       print('找到 ${chatRoomsQuery.docs.length} 個聊天室');
 
       _chatRooms = [];
+      int totalUnreadCount = 0;
 
       for (var doc in chatRoomsQuery.docs) {
         final data = doc.data();
@@ -54,13 +59,22 @@ class ChatProvider with ChangeNotifier {
           otherUserDoc.id,
         );
 
+        // 獲取未讀數量
+        final unreadCountMap = Map<String, int>.from(data['unreadCount'] ?? {});
+        final unreadCount = unreadCountMap[userId] ?? 0;
+        totalUnreadCount += unreadCount;
+
         _chatRooms.add({
           'chatRoomId': doc.id,
           'otherUser': otherUser,
           'lastMessage': data['lastMessage'] ?? '',
           'lastMessageAt': data['lastMessageAt'],
+          'unreadCount': unreadCount,
         });
       }
+
+      // 更新 App Badge
+      await BadgeCountService().updateCount(totalUnreadCount);
 
       print('成功載入 ${_chatRooms.length} 個聊天室');
 
@@ -103,6 +117,7 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    String type = 'text',
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -112,6 +127,7 @@ class ChatProvider with ChangeNotifier {
         'chatRoomId': chatRoomId,
         'senderId': senderId,
         'text': text,
+        'type': type,
         'timestamp': timestamp,
         'isRead': false,
       });

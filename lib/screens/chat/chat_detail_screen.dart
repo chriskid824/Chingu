@@ -6,6 +6,8 @@ import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chingu/widgets/gif_picker.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -58,6 +60,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         senderId: currentUser.uid,
         text: text,
       );
+      if (!mounted) return;
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           0,
@@ -68,10 +71,56 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('發送失敗: $e')),
+          SnackBar(content: Text('Failed to send: $e')),
         );
       }
     }
+  }
+
+  void _sendGifMessage(String url) async {
+    if (_chatRoomId == null) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final currentUser = authProvider.userModel;
+
+    if (currentUser == null) return;
+
+    try {
+      await context.read<ChatProvider>().sendMessage(
+        chatRoomId: _chatRoomId!,
+        senderId: currentUser.uid,
+        text: url,
+        type: 'image',
+      );
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send: $e')),
+        );
+      }
+    }
+  }
+
+  void _openGifPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GifPicker(
+        onGifSelected: (url) {
+          Navigator.pop(context);
+          _sendGifMessage(url);
+        },
+      ),
+    );
   }
 
   @override
@@ -197,6 +246,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
+    final text = message['text'] ?? '';
+    final type = message['type'] as String?;
+    final isImage = (type == 'image' || type == 'gif') || (type == null && (text as String).endsWith('.gif'));
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -204,10 +257,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: isImage
+            ? const EdgeInsets.all(4)
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: isMe ? chinguTheme?.primaryGradient : null,
-          color: isMe ? null : theme.cardColor,
+          gradient: (isMe && !isImage) ? chinguTheme?.primaryGradient : null,
+          color: (isMe && !isImage) ? null : theme.cardColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
@@ -225,18 +280,41 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message['text'] ?? '',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: isMe ? Colors.white : theme.colorScheme.onSurface,
+            if (isImage)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedNetworkImage(
+                  imageUrl: text,
+                  placeholder: (context, url) => Container(
+                    height: 150,
+                    width: 150,
+                    color: theme.colorScheme.surfaceVariant,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    height: 150,
+                    width: 150,
+                    color: theme.colorScheme.surfaceVariant,
+                    child: const Icon(Icons.error),
+                  ),
+                ),
+              )
+            else
+              Text(
+                text,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                ),
               ),
-            ),
             const SizedBox(height: 4),
-            Text(
-              timeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 10,
+            Padding(
+              padding: isImage ? const EdgeInsets.only(left: 8, right: 8, bottom: 4) : EdgeInsets.zero,
+              child: Text(
+                timeText,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: (isMe && !isImage) ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                  fontSize: 10,
+                ),
               ),
             ),
           ],
@@ -285,6 +363,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                onPressed: _openGifPicker,
+                icon: Icon(Icons.gif_box_outlined, color: theme.colorScheme.primary, size: 20),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
                 gradient: chinguTheme?.primaryGradient,

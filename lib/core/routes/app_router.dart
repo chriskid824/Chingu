@@ -15,8 +15,10 @@ import '../../screens/profile/profile_setup_screen.dart';
 import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
+import '../../screens/profile/profile_preview_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
+import '../../screens/onboarding/notification_permission_screen.dart';
 // 配對模組
 import '../../screens/matching/matching_screen.dart';
 import '../../screens/matching/user_detail_screen.dart';
@@ -32,14 +34,17 @@ import '../../screens/events/event_rating_screen.dart';
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
 import '../../screens/chat/icebreaker_screen.dart';
+import '../../screens/chat/sticker_manager_screen.dart';
 // 設定模組
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
 import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
+import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
+import '../../screens/profile/report_user_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -62,7 +67,9 @@ class AppRoutes {
   static const String interestsSelection = '/interests-selection';
   static const String preferences = '/preferences';
   static const String location = '/location';
+  static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
+  static const String profilePreview = '/profile-preview';
   
   // 配對模組
   static const String matching = '/matching';
@@ -81,18 +88,23 @@ class AppRoutes {
   static const String chatList = '/chat-list';
   static const String chatDetail = '/chat-detail';
   static const String icebreaker = '/icebreaker';
+  static const String stickerManager = '/sticker-manager';
   
   // 設定模組
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
   static const String privacySettings = '/privacy-settings';
   static const String notificationSettings = '/notification-settings';
+  static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
+  static const String reportUser = '/report-user';
 }
 
 /// 應用程式路由配置
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       // ==================== 認證路由 ====================
@@ -116,7 +128,11 @@ class AppRouter {
       
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
-        return MaterialPageRoute(builder: (_) => const MainScreen());
+        final args = settings.arguments;
+        final initialIndex = args is Map<String, dynamic> ? args['initialIndex'] as int? : null;
+        return MaterialPageRoute(
+          builder: (_) => MainScreen(initialIndex: initialIndex),
+        );
       
       // ==================== 首頁子頁面 ====================
       case AppRoutes.home:
@@ -141,9 +157,15 @@ class AppRouter {
       case AppRoutes.location:
         return MaterialPageRoute(builder: (_) => const LocationScreen());
       
+      case AppRoutes.notificationPermission:
+        return MaterialPageRoute(builder: (_) => const NotificationPermissionScreen());
+
       case AppRoutes.profileDetail:
         return MaterialPageRoute(builder: (_) => const ProfileDetailScreen());
       
+      case AppRoutes.profilePreview:
+        return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
@@ -183,6 +205,9 @@ class AppRouter {
       case AppRoutes.icebreaker:
         return MaterialPageRoute(builder: (_) => const IcebreakerScreen());
       
+      case AppRoutes.stickerManager:
+        return MaterialPageRoute(builder: (_) => const StickerManagerScreen());
+
       // ==================== 設定模組 ====================
       case AppRoutes.settings:
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
@@ -196,11 +221,30 @@ class AppRouter {
       case AppRoutes.notificationSettings:
         return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
       
+      case AppRoutes.notificationPreview:
+        return MaterialPageRoute(builder: (_) => const NotificationPreviewScreen());
+
       case AppRoutes.helpCenter:
         return MaterialPageRoute(builder: (_) => const HelpCenterScreen());
-      
+
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.reportUser:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null) {
+          return MaterialPageRoute(
+            builder: (_) => Scaffold(
+              body: Center(child: Text('Error: Missing arguments for report user')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => ReportUserScreen(
+            reportedUserId: args['reportedUserId'],
+            reportedUserName: args['reportedUserName'],
+          ),
+        );
       
       // ==================== 404 ====================
       default:

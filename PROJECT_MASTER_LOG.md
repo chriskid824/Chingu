@@ -72,6 +72,26 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
+  - **聊天增強**:
+    - GIF Picker (`gif_picker.dart`)
+    - Sticker Pack Manager (`sticker_manager_screen.dart`, `sticker_pack_model.dart`)
+    - Message Forwarding (`message_forward_service.dart`)
+  - **UI 元件**:
+    - Confetti Widget (`confetti_widget.dart`)
+    - Loading Dialog (`loading_dialog.dart`)
+    - In-App Notification Banner (`in_app_notification.dart`)
+    - Animated Counter (`animated_counter.dart`)
+    - Animated Tab Bar (`animated_tab_bar.dart`)
+    - Gradient Text (`gradient_text.dart`)
+    - Event Card Animation
+    - Parallax Header
+  - **服務與邏輯**:
+    - Crash Reporting (`crash_reporting_service.dart`)
+    - Matching Algorithm Optimization
+    - Unit Tests for Dinner Event Provider & Matching Service
+    - Profile Preview Mode
+
 - ✅ **聊天詳情畫面 (ChatDetailScreen)**: 完整實作即時聊天功能
   - 修復了 `AppRouter` 中缺少 `settings` 參數導致 arguments 無法傳遞的問題
   - 實作了 Firestore 即時訊息流監聽
@@ -147,14 +167,11 @@
 
 ## 💡 下一步建議 (Next Step Recommendations)
 
-1.  **優先完成聊天功能**：
-    目前聊天列表已完成，但點擊進入後仍是假資料。建議優先實作 `ChatDetailScreen` 的邏輯，讓使用者能真正進行對話。
+1.  **解決剩餘的合併衝突**：
+    部分功能分支（如語音訊息錄製、通知設定 UI 等）因涉及核心檔案衝突而暫未合併，需要手動解決衝突後再整合。
 
-2.  **連接首頁活動**：
-    讓首頁顯示真實的活動資料，提升 App 的完整度。
-
-3.  **UI 批量優化**：
-    在核心功能 (聊天、活動) 完成後，建議一次性對剩餘的 32 個頁面進行 UI 風格統一，以確保使用者體驗的一致性。
+2.  **UI 批量優化**：
+    持續進行階段 4 的 UI 優化工作。
 
 ---
 

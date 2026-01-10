@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/widgets/gradient_button.dart';
 
 class EventDetailScreen extends StatelessWidget {
   const EventDetailScreen({super.key});
@@ -40,6 +41,22 @@ class EventDetailScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
+                    Icons.share_rounded,
+                    size: 18,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
                     Icons.more_vert_rounded,
                     size: 18,
                     color: theme.colorScheme.onSurface,
@@ -49,27 +66,44 @@ class EventDetailScreen extends StatelessWidget {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: chinguTheme?.primaryGradient,
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.restaurant,
-                        size: 80,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        '🍽️',
-                        style: TextStyle(fontSize: 40),
-                      ),
-                    ],
+              collapseMode: CollapseMode.parallax,
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
+                    fit: BoxFit.cover,
                   ),
-                ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.restaurant,
+                          size: 80,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '🍽️',
+                          style: TextStyle(fontSize: 40),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -234,6 +268,25 @@ class EventDetailScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: GradientButton(
+            text: '立即報名',
+            onPressed: () {},
+          ),
+        ),
       ),
     );
   }

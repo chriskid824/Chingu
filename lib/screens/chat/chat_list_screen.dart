@@ -102,6 +102,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
               color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
           ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.matching),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+            child: const Text('開始聊天'),
+          ),
         ],
       ),
     );
@@ -116,6 +129,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final otherUser = chatRoom['otherUser'];
     final lastMessage = chatRoom['lastMessage'] ?? '';
     final lastMessageAt = chatRoom['lastMessageAt'];
+    final int unreadCount = chatRoom['unreadCount'] ?? 0;
     
     String timeText = '';
     if (lastMessageAt != null) {
@@ -202,13 +216,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    lastMessage,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lastMessage,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: unreadCount > 0
+                                ? theme.colorScheme.onSurface
+                                : theme.colorScheme.onSurface.withOpacity(0.6),
+                            fontWeight: unreadCount > 0
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (unreadCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),

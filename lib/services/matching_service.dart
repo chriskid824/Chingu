@@ -6,9 +6,17 @@ import 'package:chingu/services/chat_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
-  final ChatService _chatService = ChatService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+  final ChatService _chatService;
+
+  MatchingService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+    ChatService? chatService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService(),
+        _chatService = chatService ?? ChatService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -216,32 +224,38 @@ class MatchingService {
   int _calculateMatchScore(UserModel current, UserModel candidate) {
     double score = 0;
 
-    // 1. 興趣匹配 (40%)
+    // 1. 興趣匹配 (50%) - 提高權重，強調共同話題
     // 計算共同興趣數量
     final commonInterests = current.interests.where((i) => candidate.interests.contains(i)).length;
-    // 假設如果有 3 個共同興趣就拿滿分
-    final interestScore = (commonInterests / 3).clamp(0.0, 1.0) * 40;
+    // 假設如果有 4 個共同興趣就拿滿分 (從 3 提高到 4)
+    final interestScore = (commonInterests / 4).clamp(0.0, 1.0) * 50;
     score += interestScore;
 
-    // 2. 預算匹配 (20%)
-    if (current.budgetRange == candidate.budgetRange) {
-      score += 20;
-    } else if ((current.budgetRange - candidate.budgetRange).abs() == 1) {
-      score += 10; // 相鄰預算區間給一半分數
-    }
-
-    // 3. 地點匹配 (20%)
+    // 2. 地點匹配 (30%) - 提高權重，強調地理位置便利性
     if (current.city == candidate.city) {
       if (current.district == candidate.district) {
-        score += 20;
+        score += 30; // 同區滿分
       } else {
-        score += 10; // 同城市不同區
+        score += 15; // 同城市不同區給一半
       }
     }
 
-    // 4. 年齡偏好匹配 (20%)
-    // 已經在硬性條件過濾過了，這裡給予基礎分，越接近中間值越高分（可選）
-    score += 20; 
+    // 3. 年齡匹配 (10%) - 動態評分，越接近用戶年齡越高分
+    final ageDiff = (current.age - candidate.age).abs();
+    if (ageDiff <= 2) {
+      score += 10; // 差距 2 歲以內
+    } else if (ageDiff <= 5) {
+      score += 5; // 差距 5 歲以內
+    } else {
+      score += 2; // 符合硬性篩選範圍但差距較大
+    }
+
+    // 4. 預算匹配 (10%) - 降低權重
+    if (current.budgetRange == candidate.budgetRange) {
+      score += 10;
+    } else if ((current.budgetRange - candidate.budgetRange).abs() == 1) {
+      score += 5; // 相鄰預算區間
+    }
 
     return score.round();
   }

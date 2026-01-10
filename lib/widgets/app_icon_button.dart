@@ -1,0 +1,44 @@
+import 'package:flutter/material.dart';
+import 'package:chingu/utils/haptic_utils.dart';
+
+class AppIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color? color;
+  final Color? backgroundColor;
+  final double size;
+  final double iconSize;
+
+  const AppIconButton({
+    Key? key,
+    required this.icon,
+    required this.onPressed,
+    this.color,
+    this.backgroundColor,
+    this.size = 40,
+    this.iconSize = 24,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.transparent,
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(icon, size: iconSize),
+        color: color,
+        onPressed: () {
+          HapticUtils.selection();
+          onPressed();
+        },
+        padding: EdgeInsets.zero,
+        constraints: BoxConstraints(),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+}
