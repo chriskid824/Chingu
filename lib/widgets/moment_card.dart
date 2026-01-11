@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
@@ -8,12 +9,16 @@ import 'package:intl/intl.dart';
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
   final Function(bool isLiked)? onLikeChanged;
+  final Function(bool isBookmarked)? onBookmarkChanged;
+  final Function(String reason)? onReportSubmitted;
   final VoidCallback? onCommentTap;
 
   const MomentCard({
     super.key,
     required this.moment,
     this.onLikeChanged,
+    this.onBookmarkChanged,
+    this.onReportSubmitted,
     this.onCommentTap,
   });
 
@@ -25,6 +30,7 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  bool _isBookmarked = false;
 
   @override
   void initState() {
@@ -51,6 +57,120 @@ class _MomentCardState extends State<MomentCard> {
       _likeCount += _isLiked ? 1 : -1;
     });
     widget.onLikeChanged?.call(_isLiked);
+  }
+
+  void _handleShare() {
+    // Generate a dummy link for the moment
+    final link = 'https://chingu.app/moment/${widget.moment.id}';
+    Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('連結已複製到剪貼簿')),
+    );
+  }
+
+  void _handleBookmark() {
+    setState(() {
+      _isBookmarked = !_isBookmarked;
+    });
+    widget.onBookmarkChanged?.call(_isBookmarked);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isBookmarked ? '已加入收藏' : '已從收藏移除'),
+      ),
+    );
+  }
+
+  void _showReportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('舉報動態'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildReportOption('垃圾訊息 / 詐騙'),
+            _buildReportOption('騷擾行為'),
+            _buildReportOption('不當內容'),
+            _buildReportOption('其他'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportOption(String reason) {
+    return ListTile(
+      title: Text(reason),
+      onTap: () {
+        Navigator.pop(context);
+        widget.onReportSubmitted?.call(reason);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('舉報已提交，我們會盡快處理')),
+        );
+      },
+    );
+  }
+
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('分享'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleShare();
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: _isBookmarked ? Theme.of(context).primaryColor : null,
+                ),
+                title: Text(_isBookmarked ? '移除收藏' : '收藏'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleBookmark();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('舉報'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showReportDialog();
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -112,9 +232,7 @@ class _MomentCardState extends State<MomentCard> {
               ),
               IconButton(
                 icon: const Icon(Icons.more_horiz),
-                onPressed: () {
-                  // TODO: Implement more options
-                },
+                onPressed: _showMoreOptions,
               ),
             ],
           ),
