@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/moment_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -287,6 +288,50 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  // === 用戶動態 (Moments) ===
+
+  /// 創建用戶動態
+  ///
+  /// [moment] 動態模型 (ID 會由 Firestore 自動生成)
+  Future<String> createMoment(MomentModel moment) async {
+    try {
+      final docRef = await _firestore.collection('moments').add(moment.toMap());
+      return docRef.id;
+    } catch (e) {
+      throw Exception('創建動態失敗: $e');
+    }
+  }
+
+  /// 獲取用戶動態列表
+  ///
+  /// [userId] 指定用戶 ID
+  Future<List<MomentModel>> getMoments(String userId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('moments')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => MomentModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw Exception('獲取動態失敗: $e');
+    }
+  }
+
+  /// 刪除動態
+  ///
+  /// [momentId] 動態 ID
+  Future<void> deleteMoment(String momentId) async {
+    try {
+      await _firestore.collection('moments').doc(momentId).delete();
+    } catch (e) {
+      throw Exception('刪除動態失敗: $e');
     }
   }
 }
