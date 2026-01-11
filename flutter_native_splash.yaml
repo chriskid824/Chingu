@@ -1,0 +1,13 @@
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/splash.png
+  branding: assets/images/splash.png
+  android_12:
+    image: assets/images/splash.png
+    color: "#FFFFFF"
+
+  # Adjusting for different modes if needed
+  # dark:
+  #   color: "#1E2030"
+  #   image: assets/images/splash.png # In dark mode, we might want a white logo, but our splash.png is colored.
+  #   # Since we don't have a dark mode specific asset generated, we stick to light mode config.
