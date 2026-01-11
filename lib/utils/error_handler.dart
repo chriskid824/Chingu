@@ -6,7 +6,8 @@ class ErrorHandler {
   /// [context] BuildContext 用於顯示 SnackBar
   /// [error] 錯誤物件
   /// [stackTrace] 堆疊追蹤（可選）
-  static void handleError(BuildContext context, dynamic error, {StackTrace? stackTrace}) {
+  /// [onRetry] 重試回調函數（可選）
+  static void handleError(BuildContext context, dynamic error, {StackTrace? stackTrace, VoidCallback? onRetry}) {
     // 這裡可以加入日誌記錄邏輯
     debugPrint('發生錯誤: $error');
     if (stackTrace != null) {
@@ -14,11 +15,13 @@ class ErrorHandler {
     }
 
     String message = _getErrorMessage(error);
-    showErrorSnackBar(context, message);
+    showErrorSnackBar(context, message, onRetry: onRetry);
   }
 
   /// 顯示錯誤 SnackBar
-  static void showErrorSnackBar(BuildContext context, String message) {
+  ///
+  /// [onRetry] 若提供，SnackBar 的按鈕將變為「重試」
+  static void showErrorSnackBar(BuildContext context, String message, {VoidCallback? onRetry}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -41,9 +44,12 @@ class ErrorHandler {
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
-          label: '關閉',
+          label: onRetry != null ? '重試' : '關閉',
           textColor: Colors.white,
           onPressed: () {
+            if (onRetry != null) {
+              onRetry();
+            }
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
         ),
