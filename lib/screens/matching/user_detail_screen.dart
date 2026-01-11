@@ -1,9 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 
-class UserDetailScreen extends StatelessWidget {
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/firestore_service.dart';
+
+class UserDetailScreen extends StatefulWidget {
   const UserDetailScreen({super.key});
-  
+
+  @override
+  State<UserDetailScreen> createState() => _UserDetailScreenState();
+}
+
+class _UserDetailScreenState extends State<UserDetailScreen> {
+  UserModel? _user;
+  bool _isLoading = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String) {
+      setState(() => _isLoading = true);
+      // Use FirestoreService directly as MatchingProvider usually loads list
+      try {
+        final user = await FirestoreService().getUser(args);
+        if (mounted) {
+          setState(() {
+            _user = user;
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } else if (args is UserModel) {
+      setState(() => _user = args);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -11,7 +49,9 @@ class UserDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
+      body: _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 320,
@@ -112,7 +152,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  _user != null ? '${_user!.name}, ${_user!.age}' : '陳大明, 30',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,

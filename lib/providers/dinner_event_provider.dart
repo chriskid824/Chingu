@@ -212,6 +212,20 @@ class DinnerEventProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 獲取單個活動詳情
+  Future<DinnerEventModel?> getEventById(String eventId) async {
+    try {
+      _setLoading(true);
+      final event = await _dinnerEventService.getEvent(eventId);
+      _setLoading(false);
+      return event;
+    } catch (e) {
+      debugPrint('獲取活動失敗: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
 }
 
 
