@@ -13,10 +13,87 @@ class DinnerEventProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // 篩選條件
+  String? _filterCity;
+  DateTimeRange? _filterDateRange;
+  String? _filterStatus;
+  String? _searchQuery;
+
   List<DinnerEventModel> get myEvents => _myEvents;
   List<DinnerEventModel> get recommendedEvents => _recommendedEvents;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  // 篩選器 Getters
+  String? get filterCity => _filterCity;
+  DateTimeRange? get filterDateRange => _filterDateRange;
+  String? get filterStatus => _filterStatus;
+  String? get searchQuery => _searchQuery;
+
+  /// 獲取過濾後的我的活動列表
+  List<DinnerEventModel> get filteredMyEvents {
+    return _myEvents.where((event) {
+      // 1. 城市篩選
+      if (_filterCity != null && _filterCity!.isNotEmpty) {
+        if (event.city != _filterCity) return false;
+      }
+
+      // 2. 日期範圍篩選
+      if (_filterDateRange != null) {
+        if (event.dateTime.isBefore(_filterDateRange!.start) ||
+            event.dateTime.isAfter(_filterDateRange!.end.add(const Duration(days: 1)))) {
+          return false;
+        }
+      }
+
+      // 3. 狀態篩選
+      if (_filterStatus != null && _filterStatus!.isNotEmpty) {
+        // 如果選擇的是 'pending'，也包含 'matching' (假設 UI 顯示為 '配對中')
+        if (event.status != _filterStatus) return false;
+      }
+
+      // 4. 搜尋關鍵字 (名稱、描述)
+      if (_searchQuery != null && _searchQuery!.isNotEmpty) {
+        final query = _searchQuery!.toLowerCase();
+        final notes = (event.notes ?? '').toLowerCase();
+        final restaurantName = (event.restaurantName ?? '').toLowerCase();
+        final city = event.city.toLowerCase();
+        final district = event.district.toLowerCase();
+
+        if (!notes.contains(query) &&
+            !restaurantName.contains(query) &&
+            !city.contains(query) &&
+            !district.contains(query)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  /// 設置篩選條件
+  void setFilters({
+    String? city,
+    DateTimeRange? dateRange,
+    String? status,
+    String? searchQuery,
+  }) {
+    _filterCity = city;
+    _filterDateRange = dateRange;
+    _filterStatus = status;
+    _searchQuery = searchQuery;
+    notifyListeners();
+  }
+
+  /// 清除篩選條件
+  void clearFilters() {
+    _filterCity = null;
+    _filterDateRange = null;
+    _filterStatus = null;
+    _searchQuery = null;
+    notifyListeners();
+  }
 
   /// 創建活動
   Future<bool> createEvent({
