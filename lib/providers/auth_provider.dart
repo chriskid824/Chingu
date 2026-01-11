@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final AnalyticsService _analyticsService = AnalyticsService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -46,6 +48,8 @@ class AuthProvider with ChangeNotifier {
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
+      // Set user ID in Analytics
+      await _analyticsService.setUserId(firebaseUser.uid);
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
     }
@@ -118,6 +122,9 @@ class AuthProvider with ChangeNotifier {
 
       await _firestoreService.createUser(userModel);
 
+      // Log Sign Up Event
+      await _analyticsService.logSignUp(method: 'password');
+
       // 4. 立即重新載入用戶資料，確保 _userModel 不為空
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
@@ -148,6 +155,9 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+
+      // Log Login Event
+      await _analyticsService.logLogin(method: 'password');
 
       _setLoading(false);
       return true;
@@ -193,6 +203,9 @@ class AuthProvider with ChangeNotifier {
         );
 
         await _firestoreService.createUser(userModel);
+        await _analyticsService.logSignUp(method: 'google');
+      } else {
+        await _analyticsService.logLogin(method: 'google');
       }
 
       _setLoading(false);

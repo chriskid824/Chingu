@@ -3,12 +3,14 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final AnalyticsService _analyticsService = AnalyticsService();
 
   MatchingService({
     FirebaseFirestore? firestore,
@@ -112,11 +114,19 @@ class MatchingService {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
+      // Log Swipe Event
+      await _analyticsService.logSwipe(isLike ? 'like' : 'dislike', false);
+
       // 如果是喜歡，檢查是否配對成功 (對方也喜歡我)
       if (isLike) {
         final isMatch = await _checkMutualMatch(userId, targetUserId);
         if (isMatch) {
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
+
+          // Log Match Success Event
+          await _analyticsService.logEvent(name: 'match_success', parameters: {
+            'partner_id': targetUserId,
+          });
           
           // 獲取對方資料以返回
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
