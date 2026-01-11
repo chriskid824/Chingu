@@ -30,6 +30,7 @@ import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
+import '../../screens/events/my_events_screen.dart';
 // 聊天模組
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
@@ -45,6 +46,7 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../models/dinner_event_model.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -83,6 +85,7 @@ class AppRoutes {
   static const String eventDetail = '/event-detail';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
+  static const String myEvents = '/my-events';
   
   // 聊天模組
   static const String chatList = '/chat-list';
@@ -184,13 +187,22 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+         final args = settings.arguments as Map<String, dynamic>?;
+         return MaterialPageRoute(
+           builder: (_) => EventDetailScreen(
+             event: args?['event'] as DinnerEventModel?,
+             eventId: args?['eventId'] as String?,
+           ),
+         );
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
       
       case AppRoutes.eventRating:
         return MaterialPageRoute(builder: (_) => const EventRatingScreen());
+
+      case AppRoutes.myEvents:
+        return MaterialPageRoute(builder: (_) => const MyEventsScreen());
       
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
@@ -291,14 +303,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
