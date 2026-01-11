@@ -73,6 +73,18 @@ class ChatService {
     }
   }
 
+  /// 標記聊天室為已讀
+  Future<void> markChatAsRead(String chatRoomId, String userId) async {
+    try {
+      await _chatRoomsCollection.doc(chatRoomId).update({
+        'unreadCount.$userId': 0,
+      });
+    } catch (e) {
+      print('標記已讀失敗: $e');
+      // 不拋出異常，以免影響 UI 流程
+    }
+  }
+
   /// 發送訊息
   Future<void> sendMessage({
     required String chatRoomId,
