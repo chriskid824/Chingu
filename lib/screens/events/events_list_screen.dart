@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
 import 'package:chingu/widgets/animated_tab_bar.dart';
+import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/screens/events/event_history_screen.dart';
+import 'package:intl/intl.dart';
 
 class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
@@ -19,6 +23,17 @@ class _EventsListScreenState extends State<EventsListScreen> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadEvents();
+    });
+  }
+
+  Future<void> _loadEvents() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final eventProvider = Provider.of<DinnerEventProvider>(context, listen: false);
+    if (authProvider.user != null) {
+      await eventProvider.fetchMyEvents(authProvider.user!.uid);
+    }
   }
 
   @override
@@ -47,7 +62,6 @@ class _EventsListScreenState extends State<EventsListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // final chinguTheme = theme.extension<ChinguTheme>(); // Not needed if AnimatedTabBar handles it internally
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -75,71 +89,97 @@ class _EventsListScreenState extends State<EventsListScreen> {
           onPressed: () => Navigator.of(context).pop(),
           color: theme.colorScheme.onSurface,
         ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: AnimatedTabBar(
-              tabs: const ['📅 即將到來', '📋 歷史記錄'],
-              selectedIndex: _selectedIndex,
-              onTabSelected: _onTabSelected,
-            ),
-          ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              children: [
-                _buildEventsList(context, true),
-                _buildEventsList(context, false),
-              ],
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadEvents,
           ),
         ],
+      ),
+      body: Consumer<DinnerEventProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final events = provider.myEvents;
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: AnimatedTabBar(
+                  tabs: const ['📅 即將到來', '📋 歷史記錄'],
+                  selectedIndex: _selectedIndex,
+                  onTabSelected: _onTabSelected,
+                ),
+              ),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  children: [
+                    _buildUpcomingEventsList(context, events),
+                    EventHistoryScreen(events: events),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildEventsList(BuildContext context, bool isUpcoming) {
-    return ListView(
+  Widget _buildUpcomingEventsList(BuildContext context, List<dynamic> events) {
+    // Filter logic for upcoming events
+    final now = DateTime.now();
+    final upcomingEvents = events.where((e) {
+      return (e.status == 'pending' || e.status == 'confirmed') && e.dateTime.isAfter(now);
+    }).toList();
+
+    if (upcomingEvents.isEmpty) {
+       return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.event_busy_rounded,
+              size: 64,
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '暫無即將到來的活動',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/15',
-          time: '19:00',
-          budget: 'NT\$ 500-800 / 人',
-          location: '台北市信義區',
-          isUpcoming: isUpcoming,
+      itemCount: upcomingEvents.length,
+      itemBuilder: (context, index) {
+        final event = upcomingEvents[index];
+        return EventCard(
+          title: '${event.maxParticipants}人晚餐聚會',
+          date: DateFormat('yyyy/MM/dd').format(event.dateTime),
+          time: DateFormat('HH:mm').format(event.dateTime),
+          budget: '${event.budgetRangeText} / 人',
+          location: '${event.city}${event.district}',
+          isUpcoming: true,
           onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+            Navigator.of(context).pushNamed(
+              AppRoutes.eventDetail,
+              arguments: {'eventId': event.id},
+            );
           },
-        ),
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/18',
-          time: '18:30',
-          budget: 'NT\$ 800-1200 / 人',
-          location: '台北市大安區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        if (!isUpcoming)
-          EventCard(
-            title: '6人晚餐聚會',
-            date: '2025/10/01',
-            time: '19:30',
-            budget: 'NT\$ 600-900 / 人',
-            location: '台北市中山區',
-            isUpcoming: isUpcoming,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-            },
-          ),
-      ],
+        );
+      },
     );
   }
 }
