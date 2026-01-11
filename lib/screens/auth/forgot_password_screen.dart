@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -25,22 +27,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
 
-    // TODO: 實現密碼重設邏輯
-    await Future.delayed(const Duration(seconds: 2));
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.sendPasswordResetEmail(
+      _emailController.text.trim(),
+    );
 
     if (!mounted) return;
 
     setState(() => _isLoading = false);
 
-    // 顯示成功訊息
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('重設密碼連結已發送到您的信箱'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-    );
+    if (success) {
+      // 顯示成功訊息
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('重設郵件已發送,請檢查您的郵箱'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
 
-    Navigator.of(context).pop();
+      Navigator.of(context).pop();
+    } else {
+      // 顯示錯誤訊息
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? '發送失敗，請稍後再試'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
