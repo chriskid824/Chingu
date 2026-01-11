@@ -43,6 +43,8 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/privacy_policy_screen.dart';
+import '../../screens/settings/terms_of_service_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
@@ -98,6 +100,8 @@ class AppRoutes {
   static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
+  static const String privacyPolicy = '/privacy-policy';
+  static const String termsOfService = '/terms-of-service';
   static const String reportUser = '/report-user';
 }
 
@@ -229,6 +233,12 @@ class AppRouter {
 
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.privacyPolicy:
+        return MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen());
+
+      case AppRoutes.termsOfService:
+        return MaterialPageRoute(builder: (_) => const TermsOfServiceScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
