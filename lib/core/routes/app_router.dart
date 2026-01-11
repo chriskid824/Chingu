@@ -9,7 +9,7 @@ import '../../screens/auth/email_verification_screen.dart';
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/home/notifications_screen.dart';
-import '../../screens/home/search_screen.dart';
+import '../../screens/explore/search_screen.dart';
 // 個人資料模組
 import '../../screens/profile/profile_setup_screen.dart';
 import '../../screens/profile/interests_selection_screen.dart';
