@@ -204,7 +204,7 @@ class FirestoreService {
       // 注意：此搜尋方法較簡單，實際應用中建議使用 Algolia 等專業搜尋服務
       final querySnapshot = await _usersCollection
           .where('name', isGreaterThanOrEqualTo: searchTerm)
-          .where('name', isLessThan: '${searchTerm}z')
+          .where('name', isLessThan: '$searchTerm\uf8ff')
           .where('isActive', isEqualTo: true)
           .limit(limit)
           .get();
@@ -215,6 +215,50 @@ class FirestoreService {
           .toList();
     } catch (e) {
       throw Exception('搜尋用戶失敗: $e');
+    }
+  }
+
+  /// 搜尋用戶（by 名稱和興趣）
+  ///
+  /// [searchTerm] 搜尋詞
+  /// [limit] 返回數量限制
+  Future<List<UserModel>> searchUsersAdvanced(String searchTerm,
+      {int limit = 20}) async {
+    try {
+      if (searchTerm.isEmpty) return [];
+
+      // 1. 搜尋名稱
+      final nameQuery = _usersCollection
+          .where('name', isGreaterThanOrEqualTo: searchTerm)
+          .where('name', isLessThan: '$searchTerm\uf8ff')
+          .where('isActive', isEqualTo: true)
+          .limit(limit);
+
+      // 2. 搜尋興趣 (完全匹配)
+      final interestQuery = _usersCollection
+          .where('interests', arrayContains: searchTerm)
+          .where('isActive', isEqualTo: true)
+          .limit(limit);
+
+      // 並行執行查詢
+      final results = await Future.wait([
+        nameQuery.get(),
+        interestQuery.get(),
+      ]);
+
+      // 合併結果並去重
+      final Map<String, UserModel> usersMap = {};
+
+      for (var snapshot in results) {
+        for (var doc in snapshot.docs) {
+          final user = UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          usersMap[user.uid] = user;
+        }
+      }
+
+      return usersMap.values.toList();
+    } catch (e) {
+      throw Exception('進階搜尋用戶失敗: $e');
     }
   }
 
