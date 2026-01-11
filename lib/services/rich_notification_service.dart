@@ -77,6 +77,33 @@ class RichNotificationService {
     }
   }
 
+  /// 解析通知數據並返回 RouteSettings
+  RouteSettings? getRouteSettings(Map<String, dynamic> data) {
+    final String? actionType = data['actionType'];
+    final String? actionData = data['actionData'];
+    // 忽略 actionId，因為這是在應用啟動時的初始化邏輯
+
+    if (actionType == null) return null;
+
+    switch (actionType) {
+      case 'open_chat':
+        // 由於 ChatDetailScreen 需要完整參數，這裡統一導航到聊天列表
+        // 讓使用者從列表進入，確保數據完整性
+        return const RouteSettings(name: AppRoutes.chatList);
+
+      case 'view_event':
+        // 雖然 EventDetailScreen 目前使用 mock data，但如果將來支持參數
+        // 可以像這樣傳遞: RouteSettings(name: AppRoutes.eventDetail, arguments: actionData);
+        return const RouteSettings(name: AppRoutes.eventDetail);
+
+      case 'match_history':
+        return const RouteSettings(name: AppRoutes.matchesList);
+
+      default:
+        return const RouteSettings(name: AppRoutes.notifications);
+    }
+  }
+
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
@@ -97,29 +124,15 @@ class RichNotificationService {
   void _performAction(String action, String? data, NavigatorState navigator) {
     switch (action) {
       case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
+        navigator.pushNamed(AppRoutes.chatList);
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
+        navigator.pushNamed(AppRoutes.eventDetail);
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
-        // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
         break;
     }
