@@ -1,0 +1,17 @@
+{
+  "name": "chingu-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for Chingu backend operations",
+  "main": "sendBroadcast.ts",
+  "scripts": {
+    "send-broadcast": "ts-node sendBroadcast.ts"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0"
+  }
+}
