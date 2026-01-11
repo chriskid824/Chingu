@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_channel_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -167,11 +168,30 @@ class RichNotificationService {
       ));
     }
 
+    // Determine channel based on notification type
+    String channelId = NotificationChannelService.channelSystem;
+    String channelName = NotificationChannelService.nameSystem;
+    String channelDesc = NotificationChannelService.descSystem;
+
+    if (notification.type == 'match') {
+      channelId = NotificationChannelService.channelMatches;
+      channelName = NotificationChannelService.nameMatches;
+      channelDesc = NotificationChannelService.descMatches;
+    } else if (notification.type == 'message') {
+      channelId = NotificationChannelService.channelMessages;
+      channelName = NotificationChannelService.nameMessages;
+      channelDesc = NotificationChannelService.descMessages;
+    } else if (notification.type == 'event') {
+      channelId = NotificationChannelService.channelEvents;
+      channelName = NotificationChannelService.nameEvents;
+      channelDesc = NotificationChannelService.descEvents;
+    }
+
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'chingu_rich_notifications', // channel Id
-      'Rich Notifications', // channel Name
-      channelDescription: 'Notifications with images and actions',
+      channelId,
+      channelName,
+      channelDescription: channelDesc,
       importance: Importance.max,
       priority: Priority.high,
       styleInformation: styleInformation,

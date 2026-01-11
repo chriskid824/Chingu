@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -21,6 +23,7 @@ class AuthProvider with ChangeNotifier {
   UserModel? _userModel;
   String? _errorMessage;
   bool _isLoading = false;
+  StreamSubscription<String>? _tokenRefreshSubscription;
 
   // Getters
   AuthStatus get status => _status;
@@ -38,8 +41,15 @@ class AuthProvider with ChangeNotifier {
 
   /// 處理認證狀態變化
   Future<void> _onAuthStateChanged(firebase_auth.User? firebaseUser) async {
+    // 取消舊的監聽
+    await _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+
     if (firebaseUser == null) {
       // 用戶登出
+      // 嘗試刪除 Token (Best effort)
+      await NotificationService().deleteToken();
+
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
@@ -48,8 +58,33 @@ class AuthProvider with ChangeNotifier {
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+
+      // 初始化通知服務並更新 Token
+      _initializeNotifications(firebaseUser.uid);
     }
     notifyListeners();
+  }
+
+  /// 初始化通知並更新 Token
+  Future<void> _initializeNotifications(String uid) async {
+    try {
+      final notificationService = NotificationService();
+      // 確保服務已初始化
+      await notificationService.initialize();
+
+      // 獲取並更新 Token
+      final token = await notificationService.getToken();
+      if (token != null) {
+        await _firestoreService.updateFcmToken(uid, token);
+      }
+
+      // 監聽 Token 刷新
+      _tokenRefreshSubscription = notificationService.onTokenRefresh.listen((newToken) {
+        _firestoreService.updateFcmToken(uid, newToken);
+      });
+    } catch (e) {
+      debugPrint('初始化通知失敗: $e');
+    }
   }
 
   /// 載入用戶資料
