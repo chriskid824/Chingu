@@ -30,6 +30,7 @@ import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
+import '../../screens/events/event_history_screen.dart';
 // 聊天模組
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
@@ -83,6 +84,7 @@ class AppRoutes {
   static const String eventDetail = '/event-detail';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
+  static const String eventHistory = '/event-history';
   
   // 聊天模組
   static const String chatList = '/chat-list';
@@ -184,13 +186,20 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const EventDetailScreen(),
+        );
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
       
       case AppRoutes.eventRating:
         return MaterialPageRoute(builder: (_) => const EventRatingScreen());
+
+      case AppRoutes.eventHistory:
+        // Note: Usually EventHistoryScreen is used as a tab, but if we need a standalone route:
+        return MaterialPageRoute(builder: (_) => const Scaffold(body: Center(child: Text('History available in Events List'))));
       
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
@@ -291,14 +300,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

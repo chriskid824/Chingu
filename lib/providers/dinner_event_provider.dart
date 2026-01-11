@@ -26,6 +26,8 @@ class DinnerEventProvider with ChangeNotifier {
     required String city,
     required String district,
     String? notes,
+    int maxParticipants = DinnerEventService.DEFAULT_MAX_PARTICIPANTS,
+    DateTime? registrationDeadline,
   }) async {
     try {
       _setLoading(true);
@@ -38,6 +40,8 @@ class DinnerEventProvider with ChangeNotifier {
         city: city,
         district: district,
         notes: notes,
+        maxParticipants: maxParticipants,
+        registrationDeadline: registrationDeadline,
       );
 
       // 創建成功後刷新我的活動列表
@@ -127,6 +131,11 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
+  /// 獲取單個活動的 Stream
+  Stream<DinnerEventModel?> getEventStream(String eventId) {
+    return _dinnerEventService.getEventStream(eventId);
+  }
+
   /// 獲取本週四和下週四的日期
   List<DateTime> getThursdayDates() {
     return _dinnerEventService.getThursdayDates();
@@ -213,5 +222,3 @@ class DinnerEventProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
