@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/widgets/gradient_button.dart';
 
 class EmptyStateWidget extends StatelessWidget {
   final IconData? icon;
@@ -11,25 +13,37 @@ class EmptyStateWidget extends StatelessWidget {
   final VoidCallback? onActionPressed;
   final Widget? customAction;
   final double spacing;
+  final bool useGradientBackground;
 
   const EmptyStateWidget({
     super.key,
     this.icon,
     this.iconWidget,
     this.iconColor,
-    this.iconSize = 80.0,
+    this.iconSize = 64.0,
     required this.title,
     this.description,
     this.actionLabel,
     this.onActionPressed,
     this.customAction,
-    this.spacing = 16.0,
+    this.spacing = 24.0,
+    this.useGradientBackground = false,
   }) : assert(icon != null || iconWidget != null, 'Either icon or iconWidget must be provided');
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveIconColor = iconColor ?? theme.colorScheme.onSurface.withOpacity(0.2);
+    final chinguTheme = theme.extension<ChinguTheme>();
+    final effectiveIconColor = iconColor ?? theme.colorScheme.primary;
+
+    Widget buildIcon() {
+      if (iconWidget != null) return iconWidget!;
+      return Icon(
+        icon,
+        size: iconSize,
+        color: effectiveIconColor,
+      );
+    }
 
     return Center(
       child: Padding(
@@ -38,14 +52,17 @@ class EmptyStateWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (iconWidget != null)
-              iconWidget!
+            if (useGradientBackground)
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: buildIcon(),
+              )
             else
-              Icon(
-                icon,
-                size: iconSize,
-                color: effectiveIconColor,
-              ),
+              buildIcon(),
             SizedBox(height: spacing),
             Text(
               title,
@@ -61,7 +78,7 @@ class EmptyStateWidget extends StatelessWidget {
                 description!,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                   height: 1.5,
                 ),
               ),
@@ -69,15 +86,13 @@ class EmptyStateWidget extends StatelessWidget {
             if (customAction != null || (actionLabel != null && onActionPressed != null)) ...[
               SizedBox(height: spacing * 1.5),
               customAction ??
-                  ElevatedButton(
-                    onPressed: onActionPressed,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: Text(actionLabel!),
+                  GradientButton(
+                    text: actionLabel!,
+                    onPressed: onActionPressed!,
+                    width: null, // Auto width
+                    height: 48,
+                    borderRadius: 24, // Pill shape
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                   ),
             ],
           ],

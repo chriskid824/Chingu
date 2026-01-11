@@ -3,6 +3,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
 import 'package:chingu/widgets/animated_tab_bar.dart';
+import 'package:chingu/widgets/empty_state.dart';
 
 class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
@@ -102,44 +103,65 @@ class _EventsListScreenState extends State<EventsListScreen> {
   }
 
   Widget _buildEventsList(BuildContext context, bool isUpcoming) {
+    final List<Widget> events = [
+      EventCard(
+        title: '6人晚餐聚會',
+        date: '2025/10/15',
+        time: '19:00',
+        budget: 'NT\$ 500-800 / 人',
+        location: '台北市信義區',
+        isUpcoming: isUpcoming,
+        onTap: () {
+          Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+        },
+      ),
+      EventCard(
+        title: '6人晚餐聚會',
+        date: '2025/10/18',
+        time: '18:30',
+        budget: 'NT\$ 800-1200 / 人',
+        location: '台北市大安區',
+        isUpcoming: isUpcoming,
+        onTap: () {
+          Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+        },
+      ),
+      if (!isUpcoming)
+        EventCard(
+          title: '6人晚餐聚會',
+          date: '2025/10/01',
+          time: '19:30',
+          budget: 'NT\$ 600-900 / 人',
+          location: '台北市中山區',
+          isUpcoming: isUpcoming,
+          onTap: () {
+            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+          },
+        ),
+    ];
+
+    if (events.isEmpty) {
+      return EmptyStateWidget(
+        icon: isUpcoming ? Icons.calendar_today_rounded : Icons.history_rounded,
+        title: isUpcoming ? '沒有即將到來的活動' : '沒有歷史活動',
+        description: isUpcoming ? '去探索更多有趣的晚餐聚會吧！' : '您還沒有參加過任何活動',
+        actionLabel: isUpcoming ? '瀏覽活動' : null,
+        onActionPressed: isUpcoming
+            ? () {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  AppRoutes.mainNavigation,
+                  (route) => false,
+                  arguments: {'initialIndex': 2}, // Explore tab
+                );
+              }
+            : null,
+        useGradientBackground: true,
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/15',
-          time: '19:00',
-          budget: 'NT\$ 500-800 / 人',
-          location: '台北市信義區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/18',
-          time: '18:30',
-          budget: 'NT\$ 800-1200 / 人',
-          location: '台北市大安區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        if (!isUpcoming)
-          EventCard(
-            title: '6人晚餐聚會',
-            date: '2025/10/01',
-            time: '19:30',
-            budget: 'NT\$ 600-900 / 人',
-            location: '台北市中山區',
-            isUpcoming: isUpcoming,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-            },
-          ),
-      ],
+      children: events,
     );
   }
 }
