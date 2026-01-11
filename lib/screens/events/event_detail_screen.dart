@@ -10,6 +10,10 @@ class EventDetailScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
+    // 獲取傳入的參數 (eventId 或 DinnerEventModel)
+    final args = ModalRoute.of(context)?.settings.arguments;
+    // 這裡可以根據 args 加載數據，目前保持 UI 不變，但記錄參數獲取點
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: CustomScrollView(

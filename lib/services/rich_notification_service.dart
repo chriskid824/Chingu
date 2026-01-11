@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -46,6 +48,14 @@ class RichNotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
+
+    // 初始化時區
+    tz.initializeTimeZones();
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Taipei'));
+    } catch (e) {
+      debugPrint('Could not set local location to Asia/Taipei: $e');
+    }
 
     // 請求 Android 13+ 通知權限
     final androidImplementation = _flutterLocalNotificationsPlugin
@@ -109,10 +119,8 @@ class RichNotificationService {
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          // 傳遞 eventId 作為參數
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: data);
         }
         break;
       case 'match_history':
@@ -195,5 +203,57 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 排程活動提醒
+  Future<void> scheduleEventNotification({
+    required String eventId,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    required String type, // '1h' or '1d'
+  }) async {
+    final int id = (eventId + '_' + type).hashCode;
+
+    // 確保時間在未來
+    if (scheduledDate.isBefore(DateTime.now())) {
+      return;
+    }
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'channel_events',
+          'Events',
+          channelDescription: 'Event reminders',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: json.encode({
+        'actionType': 'view_event',
+        'actionData': eventId,
+        'notificationId': id.toString(),
+      }),
+    );
+  }
+
+  /// 取消活動提醒
+  Future<void> cancelEventNotification(String eventId) async {
+    // 取消 1 小時前的提醒
+    final int id1h = (eventId + '_1h').hashCode;
+    await _flutterLocalNotificationsPlugin.cancel(id1h);
+
+    // 取消 1 天前的提醒
+    final int id1d = (eventId + '_1d').hashCode;
+    await _flutterLocalNotificationsPlugin.cancel(id1d);
   }
 }
