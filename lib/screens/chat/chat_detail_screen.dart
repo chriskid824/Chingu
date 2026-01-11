@@ -31,6 +31,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        // 標記為已讀
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final currentUser = context.read<AuthProvider>().userModel;
+          if (currentUser != null && _chatRoomId != null) {
+            context.read<ChatProvider>().markAsRead(_chatRoomId!, currentUser.uid);
+          }
+        });
       }
       _isInit = true;
     }
