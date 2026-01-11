@@ -155,6 +155,55 @@ class AuthService {
     }
   }
 
+  /// 重新認證用戶
+  ///
+  /// [password] 密碼 (僅用於 Email 登入)
+  Future<void> reauthenticate({String? password}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('用戶未登入');
+
+      AuthCredential? credential;
+
+      // 檢查用戶的登入提供商
+      for (final providerProfile in user.providerData) {
+        final providerId = providerProfile.providerId;
+
+        if (providerId == 'password') {
+          if (password == null) throw Exception('請輸入密碼');
+          credential = EmailAuthProvider.credential(
+            email: user.email!,
+            password: password,
+          );
+          break;
+        } else if (providerId == 'google.com') {
+          // 重新觸發 Google 登入
+          final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+          if (googleUser == null) throw Exception('Google 驗證已取消');
+
+          final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+          credential = GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+          break;
+        }
+        // 未來可擴充其他提供商 (Apple, Facebook)
+      }
+
+      if (credential != null) {
+        await user.reauthenticateWithCredential(credential);
+      } else {
+        throw Exception('無法識別的登入方式，請重新登入後再試');
+      }
+
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw Exception('重新認證失敗: $e');
+    }
+  }
+
   /// 刪除用戶帳號
   Future<void> deleteAccount() async {
     try {

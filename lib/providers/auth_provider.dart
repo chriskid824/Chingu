@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/storage_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final StorageService _storageService = StorageService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -281,6 +283,29 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 獲取當前用戶的主要登入提供商 ID
+  String get providerId {
+    if (_firebaseUser == null || _firebaseUser!.providerData.isEmpty) {
+      return 'password';
+    }
+    // 返回第一個提供商 ID (e.g., 'password', 'google.com', 'apple.com')
+    return _firebaseUser!.providerData.first.providerId;
+  }
+
+  /// 請求數據導出
+  Future<bool> requestDataExport() async {
+    try {
+      if (_firebaseUser == null || _firebaseUser!.email == null) return false;
+
+      await _firestoreService.requestDataExport(_firebaseUser!.uid, _firebaseUser!.email!);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 設置載入狀態
   void _setLoading(bool value) {
     _isLoading = value;
@@ -291,6 +316,41 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// 刪除用戶帳號
+  ///
+  /// [password] 密碼，用於重新認證 (若為 Email 登入)
+  Future<bool> deleteAccount({String? password}) async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+      final uid = _firebaseUser!.uid;
+
+      // 1. 重新認證
+      await _authService.reauthenticate(password: password);
+
+      // 2. 刪除相關資料 (Firestore)
+      await _firestoreService.deleteUserAndRelatedData(uid);
+
+      // 3. 刪除相關文件 (Storage)
+      await _storageService.deleteUserDirectory(uid);
+
+      // 4. 刪除帳號 (Auth)
+      await _authService.deleteAccount();
+
+      // 狀態更新將由 _onAuthStateChanged 處理
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
   }
 }
 

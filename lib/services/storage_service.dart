@@ -23,4 +23,21 @@ class StorageService {
       throw Exception('Failed to get download URL: $e');
     }
   }
+
+  /// Deletes all files associated with a user.
+  /// Simulates folder deletion by listing and deleting all files containing the `user_images/{uid}` prefix.
+  Future<void> deleteUserDirectory(String uid) async {
+    try {
+      // Note: Firebase Storage doesn't support folder deletion.
+      // We must list all files with the prefix and delete them individually.
+      final ListResult result = await _storage.ref().child('user_images/$uid').listAll();
+
+      await Future.wait(
+        result.items.map((Reference ref) => ref.delete()),
+      );
+    } catch (e) {
+      // Log error but don't stop the process as this is cleanup
+      print('Failed to delete user directory: $e');
+    }
+  }
 }
