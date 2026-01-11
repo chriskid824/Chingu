@@ -3,6 +3,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
 import 'package:chingu/widgets/animated_tab_bar.dart';
+import 'package:chingu/widgets/skeleton_loader.dart';
 
 class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
@@ -14,11 +15,20 @@ class EventsListScreen extends StatefulWidget {
 class _EventsListScreenState extends State<EventsListScreen> {
   int _selectedIndex = 0;
   late PageController _pageController;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
+    // Simulate loading
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   @override
@@ -102,6 +112,14 @@ class _EventsListScreenState extends State<EventsListScreen> {
   }
 
   Widget _buildEventsList(BuildContext context, bool isUpcoming) {
+    if (_isLoading) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 4,
+        itemBuilder: (context, index) => const SkeletonEventCard(),
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [

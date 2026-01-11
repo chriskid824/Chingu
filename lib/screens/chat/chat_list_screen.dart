@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/widgets/skeleton_loader.dart';
 import 'package:intl/intl.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -52,10 +53,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ],
       ),
       body: chatProvider.isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-              ),
+          ? ListView.builder(
+              itemCount: 8,
+              itemBuilder: (context, index) => const SkeletonChatTile(),
             )
           : chatProvider.chatRooms.isEmpty
               ? _buildEmptyState(context, theme)
