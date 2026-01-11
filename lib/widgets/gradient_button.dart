@@ -8,6 +8,8 @@ class GradientButton extends StatelessWidget {
   final double? width;
   final double height;
   final bool isLoading;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
 
   const GradientButton({
     super.key,
@@ -17,6 +19,8 @@ class GradientButton extends StatelessWidget {
     this.width,
     this.height = 56,
     this.isLoading = false,
+    this.padding = EdgeInsets.zero,
+    this.borderRadius = 12.0,
   });
 
   @override
@@ -32,7 +36,7 @@ class GradientButton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         gradient: effectiveGradient,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
             color: effectiveGradient.colors.first.withOpacity(0.3),
@@ -47,9 +51,9 @@ class GradientButton extends StatelessWidget {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
-          padding: EdgeInsets.zero,
+          padding: padding,
         ),
         child: isLoading
             ? const SizedBox(

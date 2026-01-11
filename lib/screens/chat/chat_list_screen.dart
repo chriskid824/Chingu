@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/widgets/empty_state.dart';
 import 'package:intl/intl.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -78,45 +79,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline_rounded,
-            size: 80,
-            color: theme.colorScheme.primary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '還沒有聊天室',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '開始配對以建立聊天！',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.matching),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            child: const Text('開始聊天'),
-          ),
-        ],
-      ),
+    return EmptyStateWidget(
+      icon: Icons.chat_bubble_outline_rounded,
+      title: '還沒有聊天室',
+      description: '開始配對以建立聊天！',
+      actionLabel: '開始聊天',
+      onActionPressed: () => Navigator.of(context).pushNamed(AppRoutes.matching),
+      useGradientBackground: true,
     );
   }
 
