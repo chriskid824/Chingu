@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class MomentModel extends Equatable {
@@ -24,6 +25,43 @@ class MomentModel extends Equatable {
     this.commentCount = 0,
     this.isLiked = false,
   });
+
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id,
+      {String? currentUserId}) {
+    final likes = List<String>.from(map['likes'] ?? []);
+    final isLiked =
+        currentUserId != null ? likes.contains(currentUserId) : false;
+
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? 'Unknown',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      likeCount: map['likeCount'] ?? 0,
+      commentCount: map['commentCount'] ?? 0,
+      isLiked: isLiked,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+      // likes is handled by transactions, but for initial creation we can send empty list if needed,
+      // or just omit it and let the backend/logic handle it.
+      // Including it as empty list for clarity.
+      'likes': [],
+    };
+  }
 
   MomentModel copyWith({
     String? id,

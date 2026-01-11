@@ -3,7 +3,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
+import 'package:chingu/widgets/moment_comment_sheet.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -22,9 +26,11 @@ class MomentCard extends StatefulWidget {
 }
 
 class _MomentCardState extends State<MomentCard> {
+  final FirestoreService _firestoreService = FirestoreService();
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  bool _isProcessingLike = false;
 
   @override
   void initState() {
@@ -38,19 +44,74 @@ class _MomentCardState extends State<MomentCard> {
   void didUpdateWidget(MomentCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.moment != oldWidget.moment) {
-      _isLiked = widget.moment.isLiked;
-      _likeCount = widget.moment.likeCount;
+      // Only update local state if widget updates, but respect local changes if they are fresher?
+      // Usually, if the list reloads, we want to sync with server state.
+      // But if we have pending changes, we might want to be careful.
+      // For now, simple sync.
+      if (!_isProcessingLike) {
+        _isLiked = widget.moment.isLiked;
+        _likeCount = widget.moment.likeCount;
+      }
       _commentCount = widget.moment.commentCount;
     }
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
+    if (_isProcessingLike) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.uid;
+
+    if (userId == null) return;
+
     HapticUtils.light();
+
+    // Optimistic Update
     setState(() {
+      _isProcessingLike = true;
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
-    widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      await _firestoreService.toggleMomentLike(widget.moment.id, userId);
+      widget.onLikeChanged?.call(_isLiked);
+    } catch (e) {
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          _likeCount += _isLiked ? 1 : -1;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失敗: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingLike = false;
+        });
+      }
+    }
+  }
+
+  void _handleCommentTap() {
+    // If external handler provided, use it. Otherwise, show default sheet.
+    if (widget.onCommentTap != null) {
+      widget.onCommentTap!();
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => MomentCommentSheet(momentId: widget.moment.id),
+      ).then((_) {
+        // Optionally refresh comment count if needed,
+        // though strictly we'd need to re-fetch the moment or listen to it.
+        // Or we can rely on parent refreshing the list.
+      });
+    }
   }
 
   @override
@@ -167,7 +228,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _handleCommentTap,
               ),
             ],
           ),
