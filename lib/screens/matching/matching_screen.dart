@@ -8,6 +8,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/screens/matching/match_success_screen.dart';
 import 'package:chingu/widgets/match_card.dart';
 import 'package:chingu/widgets/swipeable_card.dart';
+import 'package:chingu/widgets/skeleton_loader.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key});
@@ -97,7 +98,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         ],
       ),
       body: matchingProvider.isLoading
-          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
+          ? const Center(child: SkeletonMatchCard())
           : matchingProvider.errorMessage != null
               ? _buildErrorState(context, theme, matchingProvider.errorMessage!)
               : candidates.isEmpty

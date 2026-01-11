@@ -7,6 +7,7 @@ import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
 import 'package:chingu/widgets/animated_counter.dart';
+import 'package:chingu/widgets/skeleton_loader.dart';
 
 class ProfileDetailScreen extends StatelessWidget {
   const ProfileDetailScreen({super.key});
@@ -25,7 +26,7 @@ class ProfileDetailScreen extends StatelessWidget {
           
           if (user == null) {
             if (authProvider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const SkeletonProfile();
             }
             
             return Center(
