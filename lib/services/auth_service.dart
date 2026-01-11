@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final AnalyticsService _analytics = AnalyticsService();
 
   /// 獲取當前登入用戶
   User? get currentUser => _auth.currentUser;
@@ -32,6 +34,10 @@ class AuthService {
       if (userCredential.user == null) {
         throw Exception('註冊失敗，請稍後再試');
       }
+
+      // Track Sign Up
+      await _analytics.logSignUp(method: 'email');
+      await _analytics.setUserId(userCredential.user!.uid);
 
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
@@ -61,6 +67,10 @@ class AuthService {
       if (userCredential.user == null) {
         throw Exception('登入失敗，請稍後再試');
       }
+
+      // Track Login
+      await _analytics.logLogin(method: 'email');
+      await _analytics.setUserId(userCredential.user!.uid);
 
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
@@ -99,6 +109,10 @@ class AuthService {
       if (userCredential.user == null) {
         throw Exception('Google 登入失敗');
       }
+
+      // Track Login
+      await _analytics.logLogin(method: 'google');
+      await _analytics.setUserId(userCredential.user!.uid);
 
       return userCredential.user!;
     } catch (e) {

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -166,6 +167,21 @@ class _DebugScreenState extends State<DebugScreen> {
               style: TextStyle(
                 color: _status.startsWith('❌') ? Colors.red : Colors.green,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const Text('近期 Analytics 事件', style: TextStyle(fontWeight: FontWeight.bold)),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: AnalyticsService().localLog.length,
+                itemBuilder: (context, index) {
+                  return Text(
+                    AnalyticsService().localLog[index],
+                    style: const TextStyle(fontSize: 12, fontFamily: 'Courier'),
+                  );
+                },
               ),
             ),
           ],

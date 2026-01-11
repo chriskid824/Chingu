@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AnalyticsService _analytics = AnalyticsService();
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
@@ -155,6 +157,11 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // Track Event Registration
+      // Note: We don't have event name here easily without extra fetch or passing it.
+      // But we have ID.
+      await _analytics.logEventRegistration(eventId: eventId, eventName: 'Dinner Event');
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,6 +212,9 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // Track Event Cancellation
+      await _analytics.logEventCancellation(eventId: eventId, eventName: 'Dinner Event');
     } catch (e) {
       throw Exception('退出活動失敗: $e');
     }

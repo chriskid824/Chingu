@@ -3,12 +3,14 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final AnalyticsService _analytics = AnalyticsService();
 
   MatchingService({
     FirebaseFirestore? firestore,
@@ -112,15 +114,24 @@ class MatchingService {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
+      bool isMatch = false;
+
       // 如果是喜歡，檢查是否配對成功 (對方也喜歡我)
       if (isLike) {
-        final isMatch = await _checkMutualMatch(userId, targetUserId);
+        isMatch = await _checkMutualMatch(userId, targetUserId);
         if (isMatch) {
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
           
           // 獲取對方資料以返回
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
+
+          // Track Swipe (Like with Match)
+          await _analytics.logSwipe(
+            swipeType: 'like',
+            isMatch: true,
+            partnerId: targetUserId,
+          );
           
           return {
             'isMatch': true,
@@ -130,6 +141,13 @@ class MatchingService {
         }
       }
       
+      // Track Swipe (Like without match, or Dislike)
+      await _analytics.logSwipe(
+        swipeType: isLike ? 'like' : 'dislike',
+        isMatch: false,
+        partnerId: targetUserId,
+      );
+
       return {
         'isMatch': false,
         'chatRoomId': null,
