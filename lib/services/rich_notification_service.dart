@@ -77,6 +77,11 @@ class RichNotificationService {
     }
   }
 
+  /// 處理導航邏輯 (公開以便 NotificationService 使用)
+  void handleNavigation(String? actionType, String? actionData, String? actionId) {
+    _handleNavigation(actionType, actionData, actionId);
+  }
+
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
