@@ -1,14 +1,152 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:chingu/widgets/event_registration_dialog.dart';
+import 'package:chingu/models/enums/event_registration_status.dart';
+import 'package:chingu/utils/error_handler.dart';
 
-class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key});
+class EventDetailScreen extends StatefulWidget {
+  final DinnerEventModel? event;
+  final String? eventId;
+
+  const EventDetailScreen({
+    super.key,
+    this.event,
+    this.eventId,
+  });
   
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  final DinnerEventService _eventService = DinnerEventService();
+  DinnerEventModel? _event;
+  bool _isLoading = true;
+  bool _isActionLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvent();
+  }
+
+  Future<void> _loadEvent() async {
+    if (widget.event != null) {
+      setState(() {
+        _event = widget.event;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (widget.eventId != null) {
+      try {
+        final event = await _eventService.getEvent(widget.eventId!);
+        if (mounted) {
+          setState(() {
+            _event = event;
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ErrorHandler.showError(context, e);
+        }
+      }
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleRegistrationAction(String userId) async {
+    if (_event == null) return;
+
+    final isRegistered = _event!.participantIds.contains(userId);
+    final isWaitlisted = _event!.waitingList.contains(userId);
+
+    EventRegistrationStatus actionStatus;
+    if (isRegistered || isWaitlisted) {
+      actionStatus = EventRegistrationStatus.cancelled;
+    } else if (_event!.isFull) {
+      actionStatus = EventRegistrationStatus.waitlist;
+    } else {
+      actionStatus = EventRegistrationStatus.registered;
+    }
+
+    await EventRegistrationDialog.show(
+      context: context,
+      status: actionStatus,
+      onConfirm: () async {
+        setState(() => _isActionLoading = true);
+        try {
+          if (actionStatus == EventRegistrationStatus.cancelled) {
+             await _eventService.unregisterFromEvent(_event!.id, userId);
+             if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已取消報名')),
+                );
+             }
+          } else {
+             // Registered or Waitlist logic
+             final result = await _eventService.registerForEvent(_event!.id, userId);
+             if (mounted) {
+               if (result == EventRegistrationStatus.waitlist) {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('已加入候補名單')),
+                 );
+               } else {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('報名成功！')),
+                 );
+               }
+             }
+          }
+          // Reload event to refresh UI
+          await _loadEvent();
+          // Also fetch fresh from server to be sure if using the ID method
+          if (widget.event != null) {
+             final freshEvent = await _eventService.getEvent(_event!.id);
+             if (mounted && freshEvent != null) {
+                setState(() => _event = freshEvent);
+             }
+          }
+
+        } catch (e) {
+          if (mounted) ErrorHandler.showError(context, e);
+        } finally {
+          if (mounted) setState(() => _isActionLoading = false);
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = Provider.of<AuthProvider>(context);
+    final userId = authProvider.user?.uid;
+
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_event == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text('找不到活動')),
+      );
+    }
+
+    final isRegistered = userId != null && _event!.participantIds.contains(userId);
+    final isWaitlisted = userId != null && _event!.waitingList.contains(userId);
+    final isFull = _event!.isFull;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -49,21 +187,6 @@ class EventDetailScreen extends StatelessWidget {
                 onPressed: () {},
               ),
               const SizedBox(width: 8),
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.more_vert_rounded,
-                    size: 18,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                onPressed: () {},
-              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,
@@ -117,12 +240,13 @@ class EventDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '6人晚餐聚會',
+                          '${_event!.maxParticipants}人晚餐聚會',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
+                      if (isRegistered)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
@@ -139,7 +263,7 @@ class EventDetailScreen extends StatelessWidget {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              '已確認',
+                              '已報名',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
@@ -148,7 +272,34 @@ class EventDetailScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                      ),
+                      )
+                      else if (isWaitlisted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.hourglass_empty,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                '候補中',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -157,7 +308,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    '${_event!.dateTime.year}年${_event!.dateTime.month}月${_event!.dateTime.day}日\n${_event!.dateTime.hour.toString().padLeft(2, '0')}:${_event!.dateTime.minute.toString().padLeft(2, '0')}',
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +316,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    _event!.budgetRangeText,
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +324,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    '${_event!.city} ${_event!.district}\n${_event!.restaurantAddress ?? "尚未公佈餐廳"}',
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,17 +332,20 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    '${_event!.maxParticipants} 人（固定）\n目前已報名：${_event!.currentParticipants} 人${_event!.waitingList.isNotEmpty ? "\n候補人數：${_event!.waitingList.length} 人" : ""}',
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
                   const SizedBox(height: 32),
                   
+                  if (isRegistered)
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                             // TODO: Implement chat logic
+                          },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: BorderSide(color: theme.colorScheme.primary),
@@ -282,13 +436,68 @@ class EventDetailScreen extends StatelessWidget {
           ],
         ),
         child: SafeArea(
-          child: GradientButton(
-            text: '立即報名',
-            onPressed: () {},
-          ),
+          child: _isActionLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _buildActionButton(isRegistered, isWaitlisted, isFull, userId, theme),
         ),
       ),
     );
+  }
+
+  Widget _buildActionButton(bool isRegistered, bool isWaitlisted, bool isFull, String? userId, ThemeData theme) {
+    if (userId == null) {
+      return GradientButton(
+        text: '請先登入',
+        onPressed: () {}, // Redirect to login
+      );
+    }
+
+    if (isRegistered) {
+       return OutlinedButton(
+         onPressed: () => _handleRegistrationAction(userId),
+         style: OutlinedButton.styleFrom(
+           padding: const EdgeInsets.symmetric(vertical: 16),
+           side: BorderSide(color: theme.colorScheme.error),
+           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+         ),
+         child: Text(
+           '取消報名',
+           style: TextStyle(
+             fontSize: 16,
+             fontWeight: FontWeight.w600,
+             color: theme.colorScheme.error
+           ),
+         ),
+       );
+    } else if (isWaitlisted) {
+       return OutlinedButton(
+         onPressed: () => _handleRegistrationAction(userId),
+         style: OutlinedButton.styleFrom(
+           padding: const EdgeInsets.symmetric(vertical: 16),
+           side: BorderSide(color: theme.colorScheme.error),
+           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+         ),
+         child: Text(
+           '取消候補',
+           style: TextStyle(
+             fontSize: 16,
+             fontWeight: FontWeight.w600,
+             color: theme.colorScheme.error
+           ),
+         ),
+       );
+    } else if (isFull) {
+       return GradientButton(
+        text: '名額已滿 - 加入候補',
+        onPressed: () => _handleRegistrationAction(userId),
+        // Suggest a different color or style for waitlist? Default is fine for now
+      );
+    } else {
+      return GradientButton(
+        text: '立即報名',
+        onPressed: () => _handleRegistrationAction(userId),
+      );
+    }
   }
   
   Widget _buildInfoCard(BuildContext context, IconData icon, String label, String value, Color color) {
