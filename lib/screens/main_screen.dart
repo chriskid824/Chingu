@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +31,40 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (message.notification != null) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final user = authProvider.userModel;
+
+        if (user == null) return;
+
+        // 構建通知模型
+        final notification = NotificationModel(
+          id: message.messageId ?? DateTime.now().toString(),
+          userId: user.uid,
+          type: message.data['type'] ?? 'system',
+          title: message.notification!.title ?? '',
+          message: message.notification!.body ?? '',
+          imageUrl: message.data['imageUrl'] ?? (message.notification!.android?.imageUrl),
+          actionType: message.data['actionType'],
+          actionData: message.data['actionData'],
+          createdAt: DateTime.now(),
+        );
+
+        final notificationService = RichNotificationService();
+
+        // 檢查偏好設定
+        if (notificationService.shouldShowNotification(user, notification)) {
+          // 處理預覽隱私
+          final processedNotification = notificationService.processNotificationPreview(user, notification);
+          notificationService.showNotification(processedNotification);
+        }
+      }
+    });
   }
 
   final List<Widget> _screens = [

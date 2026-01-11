@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -195,5 +196,65 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 檢查是否應該顯示通知
+  bool shouldShowNotification(UserModel user, NotificationModel notification) {
+    final settings = user.notificationSettings;
+
+    // 1. 檢查主開關
+    if (settings['pushEnabled'] == false) return false;
+
+    // 2. 根據類型檢查子開關
+    switch (notification.type) {
+      case 'match':
+        // 假設 actionType 可區分新配對或成功配對，若無 actionType 則預設為新配對
+        if (notification.actionType == 'match_success') {
+          return settings['matchSuccess'] ?? true;
+        }
+        return settings['matchNew'] ?? true;
+
+      case 'message':
+        return settings['messageNew'] ?? true;
+
+      case 'event':
+        if (notification.actionType == 'event_update') {
+          return settings['eventUpdate'] ?? true;
+        }
+        // 默認為提醒
+        return settings['eventReminder'] ?? true;
+
+      case 'marketing': // 假設有此類型
+        if (notification.actionType == 'newsletter') {
+          return settings['marketingNewsletter'] ?? false;
+        }
+        return settings['marketingPromo'] ?? false;
+
+      default:
+        return true;
+    }
+  }
+
+  /// 處理通知預覽內容
+  NotificationModel processNotificationPreview(UserModel user, NotificationModel notification) {
+    // 檢查是否隱藏訊息內容
+    if (notification.type == 'message') {
+      final showPreview = user.notificationSettings['messagePreview'] ?? true;
+      if (!showPreview) {
+        return NotificationModel(
+          id: notification.id,
+          userId: notification.userId,
+          type: notification.type,
+          title: notification.title,
+          message: '新訊息', // 隱藏內容
+          imageUrl: notification.imageUrl,
+          actionType: notification.actionType,
+          actionData: notification.actionData,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt,
+        );
+      }
+    }
+    return notification;
   }
 }
