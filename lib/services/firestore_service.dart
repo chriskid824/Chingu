@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
@@ -287,6 +288,76 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 收藏動態
+  ///
+  /// [momentId] 動態 ID
+  /// [userId] 用戶 ID
+  Future<void> bookmarkMoment(String momentId, String userId) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'bookmarkedMoments': FieldValue.arrayUnion([momentId]),
+      });
+    } catch (e) {
+      throw Exception('收藏動態失敗: $e');
+    }
+  }
+
+  /// 取消收藏動態
+  ///
+  /// [momentId] 動態 ID
+  /// [userId] 用戶 ID
+  Future<void> unbookmarkMoment(String momentId, String userId) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'bookmarkedMoments': FieldValue.arrayRemove([momentId]),
+      });
+    } catch (e) {
+      throw Exception('取消收藏動態失敗: $e');
+    }
+  }
+
+  /// 提交動態舉報
+  Future<void> submitMomentReport({
+    required String reporterId,
+    required String reportedMomentId,
+    required String reason,
+    required String description,
+  }) async {
+    try {
+      await _firestore.collection('reports').add({
+        'reporterId': reporterId,
+        'reportedMomentId': reportedMomentId,
+        'reason': reason,
+        'description': description,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'type': 'moment_report',
+      });
+    } catch (e) {
+      throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 獲取動態列表 (Mock)
+  ///
+  /// [limit] 數量限制
+  Future<List<MomentModel>> getMoments({int limit = 20}) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('moments')
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => MomentModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      // 暫時返回空列表，避免崩潰
+      return [];
     }
   }
 }
