@@ -8,6 +8,7 @@ class NotificationModel {
   final String title;
   final String message;
   final String? imageUrl;
+  final String? deeplink; // 支援 deep link 跳轉
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
   final bool isRead;
@@ -20,6 +21,7 @@ class NotificationModel {
     required this.title,
     required this.message,
     this.imageUrl,
+    this.deeplink,
     this.actionType,
     this.actionData,
     this.isRead = false,
@@ -41,6 +43,7 @@ class NotificationModel {
       title: map['title'] ?? '',
       message: map['message'] ?? '',
       imageUrl: map['imageUrl'],
+      deeplink: map['deeplink'],
       actionType: map['actionType'],
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
@@ -56,6 +59,7 @@ class NotificationModel {
       'title': title,
       'message': message,
       'imageUrl': imageUrl,
+      'deeplink': deeplink,
       'actionType': actionType,
       'actionData': actionData,
       'isRead': isRead,
@@ -72,6 +76,7 @@ class NotificationModel {
       title: title,
       message: message,
       imageUrl: imageUrl,
+      deeplink: deeplink,
       actionType: actionType,
       actionData: actionData,
       isRead: true,
@@ -96,26 +101,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
