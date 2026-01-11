@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -28,8 +29,12 @@ void main() async {
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
 
-  // 初始化豐富通知服務
+  // 初始化豐富通知服務 (用於前台顯示)
   await RichNotificationService().initialize();
+
+  // 初始化核心通知服務 (FCM)
+  // 注意：實際的 Token 註冊會等到用戶登入後在 AuthProvider 中進行
+  await NotificationService().initialize();
 
   runApp(const ChinguApp());
 }
