@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/crash_reporting_service.dart';
 
 class ErrorHandler {
   /// 通用錯誤處理方法
@@ -12,6 +13,9 @@ class ErrorHandler {
     if (stackTrace != null) {
       debugPrint('堆疊追蹤: $stackTrace');
     }
+
+    // 記錄錯誤到 Crashlytics
+    CrashReportingService().recordError(error, stackTrace);
 
     String message = _getErrorMessage(error);
     showErrorSnackBar(context, message);
