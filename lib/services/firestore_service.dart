@@ -247,24 +247,65 @@ class FirestoreService {
     }
   }
 
-  /// 更新用戶平均評分
+  /// 提交評分並更新用戶統計
   /// 
-  /// [uid] 用戶 ID
-  /// [newRating] 新評分
-  Future<void> updateUserRating(String uid, double newRating) async {
+  /// [raterId] 評分者 ID
+  /// [targetId] 被評分者 ID
+  /// [eventId] 活動 ID
+  /// [rating] 評分 (1-5)
+  /// [comment] 評論
+  /// [tags] 標籤
+  Future<void> submitRating({
+    required String raterId,
+    required String targetId,
+    required String eventId,
+    required double rating,
+    String? comment,
+    List<String>? tags,
+  }) async {
     try {
-      final user = await getUser(uid);
-      if (user == null) return;
+      final ratingRef = _firestore.collection('ratings').doc();
+      final userRef = _usersCollection.doc(targetId);
 
-      final totalRatings =
-          user.totalDinners; // 假設每次晚餐都會被評分
-      final currentAverage = user.averageRating;
-      final newAverage =
-          ((currentAverage * (totalRatings - 1)) + newRating) / totalRatings;
+      await _firestore.runTransaction((transaction) async {
+        final userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+          throw Exception('User not found');
+        }
 
-      await updateUser(uid, {'averageRating': newAverage});
+        final userData = userDoc.data() as Map<String, dynamic>;
+
+        // 處理可能的 null 或舊數據格式
+        final double currentAverage = (userData['averageRating'] is num)
+            ? (userData['averageRating'] as num).toDouble()
+            : 0.0;
+        final int currentCount = (userData['ratingCount'] is num)
+            ? (userData['ratingCount'] as num).toInt()
+            : 0;
+
+        final newCount = currentCount + 1;
+        final newAverage = ((currentAverage * currentCount) + rating) / newCount;
+
+        // 1. 創建評分記錄
+        transaction.set(ratingRef, {
+          'raterId': raterId,
+          'targetId': targetId,
+          'eventId': eventId,
+          'rating': rating,
+          'comment': comment,
+          'tags': tags,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // 2. 更新用戶平均評分
+        transaction.update(userRef, {
+          'averageRating': newAverage,
+          'ratingCount': newCount,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
     } catch (e) {
-      throw Exception('更新用戶評分失敗: $e');
+      throw Exception('提交評分失敗: $e');
     }
   }
 
