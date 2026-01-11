@@ -3,6 +3,8 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
 import 'package:chingu/widgets/animated_tab_bar.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
@@ -136,7 +138,24 @@ class _EventsListScreenState extends State<EventsListScreen> {
             location: '台北市中山區',
             isUpcoming: isUpcoming,
             onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+              // Pass a mock completed event model
+              final mockCompletedEvent = DinnerEventModel(
+                id: 'mock_event_completed',
+                creatorId: 'mock_creator',
+                dateTime: DateTime(2025, 10, 1, 19, 30),
+                budgetRange: 1,
+                city: '台北市',
+                district: '中山區',
+                participantIds: [], // Empty to trigger mock participants in Detail Screen
+                participantStatus: {},
+                status: 'completed',
+                createdAt: DateTime.now(),
+              );
+
+              Navigator.of(context).pushNamed(
+                AppRoutes.eventDetail,
+                arguments: mockCompletedEvent,
+              );
             },
           ),
       ],
