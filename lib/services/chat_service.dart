@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:flutter/foundation.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
@@ -65,6 +67,10 @@ class ChatService {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount': {
+          user1Id: 0,
+          user2Id: 0,
+        },
       });
       
       return docRef.id;
@@ -73,11 +79,12 @@ class ChatService {
     }
   }
 
-  /// 發送訊息
+  /// 發送訊息並觸發推播通知
   Future<void> sendMessage({
     required String chatRoomId,
     required String senderId,
     required String senderName,
+    required String recipientId,
     String? senderAvatarUrl,
     required String message,
     String type = 'text',
@@ -94,7 +101,8 @@ class ChatService {
         'senderId': senderId,
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
-        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'message': message, // Standardizing on 'message'
+        'text': message, // Keep 'text' for backward compatibility
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -103,17 +111,43 @@ class ChatService {
         'originalSenderName': originalSenderName,
       });
 
-      // 2. 更新聊天室最後訊息
+      // 2. 更新聊天室最後訊息和未讀計數
       await _chatRoomsCollection.doc(chatRoomId).update({
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
+        'unreadCount.$recipientId': FieldValue.increment(1),
       });
+
+      // 3. 觸發推播通知 Cloud Function
+      try {
+        String previewText = message;
+        if (type == 'image') {
+          previewText = '📷 圖片訊息';
+        } else if (type == 'gif') {
+          previewText = 'GIF 圖片';
+        } else if (type == 'audio') {
+          previewText = '🎤 語音訊息';
+        } else if (message.length > 20) {
+          previewText = '${message.substring(0, 20)}...';
+        }
+
+        final functions = FirebaseFunctions.instance;
+        final callable = functions.httpsCallable('sendChatNotification');
+
+        await callable.call({
+          'recipientId': recipientId,
+          'senderId': senderId,
+          'senderName': senderName,
+          'messagePreview': previewText,
+          'chatRoomId': chatRoomId,
+          'type': 'message',
+        });
+      } catch (e) {
+        // 推播失敗不應阻斷訊息發送流程，僅記錄錯誤
+        debugPrint('發送推播失敗: $e');
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
