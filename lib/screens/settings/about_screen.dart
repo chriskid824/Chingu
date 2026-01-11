@@ -101,12 +101,14 @@ class AboutScreen extends StatelessWidget {
               '服務條款',
               '查看完整條款',
               theme.colorScheme.primary,
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.termsOfService),
             ),
             _buildInfoCard(
               Icons.privacy_tip,
               '隱私政策',
               '查看隱私政策',
               theme.colorScheme.primary,
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.privacyPolicy),
             ),
             const SizedBox(height: 40),
             Text(
@@ -147,8 +149,9 @@ class AboutScreen extends StatelessWidget {
     IconData icon,
     String title,
     String subtitle,
-    Color iconColor,
-  ) {
+    Color iconColor, {
+    VoidCallback? onTap,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -156,7 +159,7 @@ class AboutScreen extends StatelessWidget {
         title: Text(title),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: const Icon(Icons.chevron_right, size: 20),
-        onTap: () {},
+        onTap: onTap ?? () {},
       ),
     );
   }
