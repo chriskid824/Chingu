@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -31,11 +32,43 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 優化啟動流程：檢查是否有初始通知訊息
+  // 這樣可以避免載入預設頁面後再跳轉，提升使用者體驗
+  String initialRoute = AppRoutes.mainNavigation;
+  Object? initialArguments;
+
+  try {
+    final RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null && initialMessage.data.isNotEmpty) {
+      final settings =
+          RichNotificationService().getRouteSettings(initialMessage.data);
+      if (settings != null && settings.name != null) {
+        initialRoute = settings.name!;
+        initialArguments = settings.arguments;
+        debugPrint('App started from notification: $initialRoute');
+      }
+    }
+  } catch (e) {
+    debugPrint('Error handling initial notification: $e');
+  }
+
+  runApp(ChinguApp(
+    initialRoute: initialRoute,
+    initialArguments: initialArguments,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String initialRoute;
+  final Object? initialArguments;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute = AppRoutes.mainNavigation,
+    this.initialArguments,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +88,27 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            initialRoute: initialRoute,
             onGenerateRoute: AppRouter.generateRoute,
+            // 處理初始路由堆疊，確保從通知啟動時，返回鍵可以回到主頁
+            onGenerateInitialRoutes: (String routeName) {
+              if (routeName == AppRoutes.mainNavigation) {
+                return [
+                  AppRouter.generateRoute(
+                    const RouteSettings(name: AppRoutes.mainNavigation),
+                  ),
+                ];
+              }
+
+              return [
+                AppRouter.generateRoute(
+                  const RouteSettings(name: AppRoutes.mainNavigation),
+                ),
+                AppRouter.generateRoute(
+                  RouteSettings(name: routeName, arguments: initialArguments),
+                ),
+              ];
+            },
           );
         },
       ),
