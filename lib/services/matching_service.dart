@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -178,6 +179,17 @@ class MatchingService {
     // 更新雙方的 totalMatches
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
+
+    // 調用 Cloud Function 發送通知
+    try {
+      await FirebaseFunctions.instance.httpsCallable('sendMatchNotification').call({
+        'userId': user1Id,
+        'targetUserId': user2Id,
+      });
+    } catch (e) {
+      print('調用 sendMatchNotification 失敗: $e');
+      // 不中斷配對流程，僅記錄錯誤
+    }
     
     // 創建聊天室
     return await _chatService.createChatRoom(user1Id, user2Id);
