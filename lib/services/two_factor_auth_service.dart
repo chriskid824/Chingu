@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 
 /// 雙因素認證服務
@@ -59,49 +60,21 @@ class TwoFactorAuthService {
   /// 返回是否驗證成功
   Future<bool> verifyCode(String target, String code) async {
     try {
-      // 模擬 Cloud Function 的行為
-      // TODO: Migrate to Cloud Functions for secure verification.
-      // Current implementation relies on client-side logic which is insecure if Firestore rules are open.
-      final docRef = _firestore.collection(_collection).doc(target);
-      final doc = await docRef.get();
+      // Secure verification via Cloud Function
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('verifyTwoFactorCode')
+          .call({
+        'target': target,
+        'code': code,
+      });
 
-      if (!doc.exists) {
-        throw Exception('驗證碼不存在或已過期');
-      }
-
-      final data = doc.data() as Map<String, dynamic>;
-      final expiresAt = (data['expiresAt'] as Timestamp).toDate();
-      final savedCode = data['code'] as String;
-      final attempts = data['attempts'] as int? ?? 0;
-
-      // 檢查是否過期
-      if (DateTime.now().isAfter(expiresAt)) {
-        throw Exception('驗證碼已過期');
-      }
-
-      // 檢查嘗試次數 (防止暴力破解)
-      if (attempts >= 5) {
-        throw Exception('嘗試次數過多，請重新發送');
-      }
-
-      // 檢查代碼是否匹配
-      if (savedCode == code) {
-        // 驗證成功，刪除代碼
-        await docRef.delete();
-        return true;
-      } else {
-        // 驗證失敗，增加嘗試次數
-        await docRef.update({
-          'attempts': FieldValue.increment(1),
-        });
-        return false;
-      }
+      final data = result.data as Map<dynamic, dynamic>;
+      return data['success'] == true;
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('Cloud Function 驗證失敗: ${e.code} - ${e.message}');
+      throw Exception(e.message); // 使用 Cloud Function 返回的具體錯誤訊息
     } catch (e) {
       debugPrint('驗證代碼失敗: $e');
-      // 如果是我們拋出的異常，直接重拋
-      if (e.toString().contains('Exception:')) {
-        rethrow;
-      }
       throw Exception('驗證失敗: $e');
     }
   }
