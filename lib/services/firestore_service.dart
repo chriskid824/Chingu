@@ -289,6 +289,88 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 刪除用戶及其相關的所有資料
+  ///
+  /// [uid] 用戶 ID
+  Future<void> deleteUserAndRelatedData(String uid) async {
+    try {
+      // 收集所有需要刪除的文檔引用
+      List<DocumentReference> docsToDelete = [];
+
+      // 1. 查詢滑動記錄 (Swipes)
+      // 作為發起者
+      final mySwipes = await _firestore.collection('swipes')
+          .where('userId', isEqualTo: uid)
+          .get();
+      docsToDelete.addAll(mySwipes.docs.map((d) => d.reference));
+
+      // 作為目標
+      final swipesTargetingMe = await _firestore.collection('swipes')
+          .where('targetUserId', isEqualTo: uid)
+          .get();
+      docsToDelete.addAll(swipesTargetingMe.docs.map((d) => d.reference));
+
+      // 2. 查詢發送的訊息 (Messages)
+      final myMessages = await _firestore.collection('messages')
+          .where('senderId', isEqualTo: uid)
+          .get();
+      docsToDelete.addAll(myMessages.docs.map((d) => d.reference));
+
+      // 3. 處理聊天室 (Chat Rooms)
+      final chatRooms = await _firestore.collection('chat_rooms')
+          .where('participantIds', arrayContains: uid)
+          .get();
+      docsToDelete.addAll(chatRooms.docs.map((d) => d.reference));
+
+      // 4. 刪除舉報記錄 (Reports)
+      final myReports = await _firestore.collection('reports')
+          .where('reporterId', isEqualTo: uid)
+          .get();
+      docsToDelete.addAll(myReports.docs.map((d) => d.reference));
+
+      // 5. 刪除用戶文檔及子集合
+      // 刪除 login_history 子集合
+      final loginHistory = await _usersCollection.doc(uid).collection('login_history').get();
+      docsToDelete.addAll(loginHistory.docs.map((d) => d.reference));
+
+      // 刪除 user_learned_preferences (如果有)
+      final learnedPrefs = await _firestore.collection('user_learned_preferences').doc(uid).get();
+      if (learnedPrefs.exists) {
+        docsToDelete.add(learnedPrefs.reference);
+      }
+
+      // 刪除用戶主文檔
+      docsToDelete.add(_usersCollection.doc(uid));
+
+      // 分批刪除 (每次最多 500 個操作)
+      await _batchDelete(docsToDelete);
+
+    } catch (e) {
+      // 發生錯誤時嘗試至少刪除用戶主文檔
+      try {
+         await _usersCollection.doc(uid).delete();
+      } catch (_) {}
+      throw Exception('刪除用戶關聯資料失敗: $e');
+    }
+  }
+
+  /// 執行分批刪除
+  Future<void> _batchDelete(List<DocumentReference> docs) async {
+    const int batchSize = 500;
+
+    for (int i = 0; i < docs.length; i += batchSize) {
+      final batch = _firestore.batch();
+      final end = (i + batchSize < docs.length) ? i + batchSize : docs.length;
+      final chunk = docs.sublist(i, end);
+
+      for (final doc in chunk) {
+        batch.delete(doc);
+      }
+
+      await batch.commit();
+    }
+  }
 }
 
 

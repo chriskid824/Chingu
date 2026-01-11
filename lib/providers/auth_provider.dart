@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/storage_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final StorageService _storageService = StorageService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -271,6 +273,42 @@ class AuthProvider with ChangeNotifier {
         _userModel!.gender.isNotEmpty &&
         _userModel!.job.isNotEmpty &&
         _userModel!.city.isNotEmpty;
+  }
+
+  /// 刪除帳號
+  ///
+  /// [password] 用戶密碼 (用於重新驗證)
+  Future<bool> deleteAccount(String password) async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      final uid = _firebaseUser!.uid;
+      final avatarUrl = _userModel?.avatarUrl;
+
+      // 1. 重新驗證用戶身份
+      await _authService.reauthenticate(password);
+
+      // 2. 刪除 Storage 中的文件
+      // 我們使用 deleteUserDirectory 來嘗試清除該用戶的所有文件
+      await _storageService.deleteUserDirectory(uid);
+
+      // 3. 刪除 Firestore 資料
+      await _firestoreService.deleteUserAndRelatedData(uid);
+
+      // 4. 刪除 Auth 帳號
+      await _authService.deleteAccount();
+
+      // 狀態將由 _onAuthStateChanged 更新
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
   }
 
   /// 刷新用戶資料
