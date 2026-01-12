@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/utils/haptic_utils.dart';
+import 'package:chingu/widgets/moment_comment_sheet.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -25,6 +29,7 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -44,13 +49,65 @@ class _MomentCardState extends State<MomentCard> {
     }
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
     HapticUtils.light();
+
+    // Optimistic update
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
-    widget.onLikeChanged?.call(_isLiked);
+
+    final authProvider = context.read<AuthProvider>();
+    final currentUser = authProvider.currentUser;
+
+    if (currentUser == null) {
+      // Revert if no user (should not happen in normal flow)
+      setState(() {
+        _isLiked = !_isLiked;
+        _likeCount += _isLiked ? 1 : -1;
+      });
+      return;
+    }
+
+    try {
+      await _firestoreService.toggleMomentLike(widget.moment.id, currentUser.uid);
+      widget.onLikeChanged?.call(_isLiked);
+    } catch (e) {
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          _likeCount += _isLiked ? 1 : -1;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失敗，請稍後再試')),
+        );
+      }
+    }
+  }
+
+  void _showComments() {
+    widget.onCommentTap?.call();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          builder: (_, controller) => MomentCommentSheet(
+            momentId: widget.moment.id,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -167,7 +224,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _showComments,
               ),
             ],
           ),
