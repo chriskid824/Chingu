@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MomentModel extends Equatable {
   final String id;
@@ -49,6 +50,45 @@ class MomentModel extends Equatable {
       commentCount: commentCount ?? this.commentCount,
       isLiked: isLiked ?? this.isLiked,
     );
+  }
+
+  factory MomentModel.fromMap(
+    Map<String, dynamic> map,
+    String id, {
+    String? currentUserId,
+  }) {
+    final likes = List<String>.from(map['likes'] ?? []);
+    final isLiked = currentUserId != null && likes.contains(currentUserId);
+
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? '',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: map['createdAt'] is Timestamp
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      likeCount: map['likeCount'] ?? 0,
+      commentCount: map['commentCount'] ?? 0,
+      isLiked: isLiked,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+      // 'likes' is handled separately via arrayUnion/arrayRemove
+      // 'isLiked' is computed
+    };
   }
 
   @override
