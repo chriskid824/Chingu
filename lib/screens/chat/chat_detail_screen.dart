@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -22,17 +23,101 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (args != null) {
-        _chatRoomId = args['chatRoomId'];
-        _otherUser = args['otherUser'];
-      }
+      _initialize();
       _isInit = true;
+    }
+  }
+
+  Future<void> _initialize() async {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (args != null) {
+      _chatRoomId = args['chatRoomId'];
+      _otherUser = args['otherUser'];
+    }
+
+    // 如果只有 chatRoomId，嘗試獲取 otherUser
+    if (_chatRoomId != null && _otherUser == null) {
+      await _fetchOtherUser();
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchOtherUser() async {
+    try {
+      final currentUserId = context.read<AuthProvider>().uid;
+      if (currentUserId == null) {
+        if (mounted) {
+           setState(() {
+             _errorMessage = '用戶未登入';
+             _isLoading = false;
+           });
+        }
+        return;
+      }
+
+      final chatDoc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(_chatRoomId)
+          .get();
+
+      if (chatDoc.exists) {
+        final data = chatDoc.data()!;
+        final participants = List<String>.from(data['participantIds'] ?? []);
+        final otherUserId = participants.firstWhere(
+          (id) => id != currentUserId,
+          orElse: () => '',
+        );
+
+        if (otherUserId.isNotEmpty) {
+          final user = await FirestoreService().getUser(otherUserId);
+
+          if (mounted) {
+            setState(() {
+              if (user != null) {
+                _otherUser = user;
+              } else {
+                _errorMessage = '找不到對方用戶資料';
+              }
+            });
+          }
+        } else {
+          if (mounted) {
+             setState(() {
+               _errorMessage = '聊天室成員資料異常';
+             });
+          }
+        }
+      } else {
+        if (mounted) {
+           setState(() {
+             _errorMessage = '找不到聊天室';
+           });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching other user: $e');
+      if (mounted) {
+         setState(() {
+           _errorMessage = '載入失敗: $e';
+         });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -128,10 +213,39 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
-    if (_chatRoomId == null || _otherUser == null) {
+    if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: const BackButton(),
+        ),
         body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
+    if (_errorMessage != null || _chatRoomId == null || _otherUser == null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: const BackButton(),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage ?? '無法載入聊天室',
+                style: theme.textTheme.titleMedium,
+              ),
+            ],
+          ),
+        ),
       );
     }
 
