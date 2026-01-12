@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/moment_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -7,6 +8,7 @@ class FirestoreService {
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
+  CollectionReference get _momentsCollection => _firestore.collection('moments');
 
   /// 創建新用戶資料
   /// 
@@ -289,6 +291,84 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  // === Moments ===
+
+  /// 獲取動態流
+  Stream<List<MomentModel>> getMomentsStream(String currentUserId) {
+    return _momentsCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return MomentModel.fromMap(
+            doc.data() as Map<String, dynamic>, doc.id,
+            currentUserId: currentUserId);
+      }).toList();
+    });
+  }
+
+  /// 切換動態點讚
+  Future<void> toggleMomentLike(String momentId, String userId) async {
+    final docRef = _momentsCollection.doc(momentId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      final likes = List<String>.from(data['likes'] ?? []);
+
+      if (likes.contains(userId)) {
+        transaction.update(docRef, {
+          'likes': FieldValue.arrayRemove([userId]),
+          'likeCount': FieldValue.increment(-1),
+        });
+      } else {
+        transaction.update(docRef, {
+          'likes': FieldValue.arrayUnion([userId]),
+          'likeCount': FieldValue.increment(1),
+        });
+      }
+    });
+  }
+
+  /// 獲取動態評論流
+  Stream<List<Map<String, dynamic>>> getMomentCommentsStream(String momentId) {
+    return _momentsCollection
+        .doc(momentId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          ...data,
+          'id': doc.id,
+          'createdAt': (data['createdAt'] as Timestamp).toDate(),
+        };
+      }).toList();
+    });
+  }
+
+  /// 添加動態評論
+  Future<void> addMomentComment(String momentId, UserModel user, String content) async {
+    final momentRef = _momentsCollection.doc(momentId);
+    final commentRef = momentRef.collection('comments').doc();
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.set(commentRef, {
+        'userId': user.uid,
+        'userName': user.name,
+        'userAvatar': user.avatarUrl,
+        'content': content,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(momentRef, {
+        'commentCount': FieldValue.increment(1),
+      });
+    });
+  }
 }
-
-
