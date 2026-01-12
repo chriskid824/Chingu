@@ -1,26 +1,29 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:chingu/services/two_factor_auth_service.dart';
 
-// Note: Since we cannot run tests in this environment due to missing binaries,
-// this file serves as a verification script template.
+// The service itself has dependencies on Firebase which are hard to mock in a simple unit test
+// without a full mockito setup. However, we can verify the static logic (Regex) that we introduced.
 
 void main() {
-  group('TwoFactorAuthService', () {
-    // In a real environment with mockito, we would mock FirestoreInstance
-    // and FirestoreService.
+  group('TwoFactorAuthService Logic Tests', () {
+    test('Email regex validation', () {
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      expect(emailRegex.hasMatch('test@example.com'), isTrue);
+      expect(emailRegex.hasMatch('user.name@domain.co.uk'), isTrue);
+      expect(emailRegex.hasMatch('invalid-email'), isFalse);
+      expect(emailRegex.hasMatch('@domain.com'), isFalse);
+    });
 
-    test('Should verify 2FA logic structure', () {
-      // This is a placeholder to show where tests would go.
-      // Since we can't run them, we rely on the implementation correctness.
+    test('Phone regex validation', () {
+      // Allows optional + prefix and 8-15 digits.
+      // Does not allow spaces or dashes, assuming sanitization happens before service call.
+      final phoneRegex = RegExp(r'^\+?[0-9]{8,15}$');
+      expect(phoneRegex.hasMatch('+1234567890'), isTrue);
+      expect(phoneRegex.hasMatch('0912345678'), isTrue);
+      expect(phoneRegex.hasMatch('886912345678'), isTrue);
 
-      final service = TwoFactorAuthService();
-
-      // We check if the class is instantiable and methods exist
-      expect(service, isNotNull);
-      expect(service.sendVerificationCode, isNotNull);
-      expect(service.verifyCode, isNotNull);
-      expect(service.enableTwoFactor, isNotNull);
-      expect(service.disableTwoFactor, isNotNull);
+      expect(phoneRegex.hasMatch('123'), isFalse); // Too short
+      expect(phoneRegex.hasMatch('0912-345-678'), isFalse); // Dashes not allowed by this regex
+      expect(phoneRegex.hasMatch('abcdefg'), isFalse); // Non-numeric
     });
   });
 }

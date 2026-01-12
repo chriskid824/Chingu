@@ -22,6 +22,33 @@ class TwoFactorAuthService {
     String? uid,
   }) async {
     try {
+      // 驗證目標格式
+      if (method == 'email') {
+        if (!_isValidEmail(target)) {
+          throw Exception('無效的 Email 格式');
+        }
+      } else if (method == 'sms') {
+        if (!_isValidPhone(target)) {
+          throw Exception('無效的電話號碼格式');
+        }
+      } else {
+        throw Exception('不支援的驗證方式');
+      }
+
+      final docRef = _firestore.collection(_collection).doc(target);
+
+      // 檢查冷卻時間
+      final doc = await docRef.get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey('createdAt')) {
+          final lastSent = (data['createdAt'] as Timestamp).toDate();
+          if (DateTime.now().difference(lastSent).inSeconds < 60) {
+             throw Exception('請稍後再試 (60秒冷卻)');
+          }
+        }
+      }
+
       // 1. 生成 6 位數驗證碼
       final code = _generateCode();
 
@@ -31,7 +58,7 @@ class TwoFactorAuthService {
       // 3. 儲存到 Firestore
       // 如果有 uid，我們也可以用 uid 作為 key，但驗證時通常是用 target (如 email) 查找
       // 這裡我們用 target 作為文檔 ID，確保一個 target 同一時間只有一個有效 code
-      await _firestore.collection(_collection).doc(target).set({
+      await docRef.set({
         // TODO: In production, do NOT store the plain text code in a client-readable document.
         // This should be handled by a Cloud Function that stores a hash or handles verification.
         // For this demo/MVP, we assume strict Firestore Security Rules prevent client read access.
@@ -48,6 +75,9 @@ class TwoFactorAuthService {
 
     } catch (e) {
       debugPrint('發送驗證碼失敗: $e');
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
       throw Exception('發送驗證碼失敗: $e');
     }
   }
@@ -113,8 +143,13 @@ class TwoFactorAuthService {
   /// [phoneNumber] 電話號碼 (如果 method 是 sms)
   Future<void> enableTwoFactor(String uid, String method, {String? phoneNumber}) async {
     try {
-      if (method == 'sms' && (phoneNumber == null || phoneNumber.isEmpty)) {
-        throw Exception('啟用 SMS 驗證需要電話號碼');
+      if (method == 'sms') {
+        if (phoneNumber == null || phoneNumber.isEmpty) {
+          throw Exception('啟用 SMS 驗證需要電話號碼');
+        }
+        if (!_isValidPhone(phoneNumber)) {
+           throw Exception('無效的電話號碼格式');
+        }
       }
 
       final updates = {
@@ -147,11 +182,21 @@ class TwoFactorAuthService {
     }
   }
 
-  /// 生成 6 位數隨機代碼
+  /// 生成 6 位數隨機代碼 (Secure)
   String _generateCode() {
-    final random = Random();
+    final random = Random.secure();
     final code = random.nextInt(900000) + 100000;
     return code.toString();
+  }
+
+  /// 驗證 Email 格式
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  /// 驗證電話號碼格式
+  bool _isValidPhone(String phone) {
+    return RegExp(r'^\+?[0-9]{8,15}$').hasMatch(phone);
   }
 
   /// 模擬發送代碼
