@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -56,6 +58,7 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    tz.initializeTimeZones();
     _isInitialized = true;
   }
 
@@ -109,10 +112,7 @@ class RichNotificationService {
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: data);
         }
         break;
       case 'match_history':
@@ -123,6 +123,55 @@ class RichNotificationService {
         navigator.pushNamed(AppRoutes.notifications);
         break;
     }
+  }
+
+  /// 排程通知
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    // 使用 UTC 以避免需要額外依賴來獲取本地時區位置
+    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
+      scheduledDate.toUtc(),
+      tz.UTC,
+    );
+
+    if (tzScheduledDate.isBefore(tz.TZDateTime.now(tz.UTC))) {
+      debugPrint('Scheduled date is in the past, skipping notification.');
+      return;
+    }
+
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'chingu_event_reminders',
+      'Event Reminders',
+      channelDescription: 'Reminders for upcoming events',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tzScheduledDate,
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
+
+  /// 取消通知
+  Future<void> cancelNotification(int id) async {
+    await _flutterLocalNotificationsPlugin.cancel(id);
   }
 
   /// 顯示豐富通知
