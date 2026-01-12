@@ -53,6 +53,16 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
+  /// 獲取單個活動詳情
+  Future<DinnerEventModel?> fetchEventById(String eventId) async {
+    try {
+      return await _dinnerEventService.getEvent(eventId);
+    } catch (e) {
+      debugPrint('獲取活動詳情失敗: $e');
+      return null;
+    }
+  }
+
   /// 獲取我的活動列表
   Future<void> fetchMyEvents(String userId) async {
     try {
@@ -91,7 +101,21 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.joinEvent(eventId, userId);
+      // 1. 獲取活動詳情以檢查時間
+      final event = await _dinnerEventService.getEvent(eventId);
+      if (event == null) {
+        throw Exception('活動不存在');
+      }
+
+      // 2. 檢查時間衝突 (只有在正式報名時才檢查，候補暫不嚴格限制)
+      if (event.currentParticipants < event.maxParticipants) {
+        final hasConflict = await _dinnerEventService.hasTimeConflict(userId, event.dateTime);
+        if (hasConflict) {
+           throw Exception('此時段與您已報名的其他活動衝突');
+        }
+      }
+
+      await _dinnerEventService.registerForEvent(eventId, userId);
       
       // 刷新列表
       await fetchMyEvents(userId);
@@ -99,7 +123,7 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       _setLoading(false);
       notifyListeners();
       return false;
@@ -112,7 +136,7 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.leaveEvent(eventId, userId);
+      await _dinnerEventService.unregisterFromEvent(eventId, userId);
       
       // 刷新列表
       await fetchMyEvents(userId);
@@ -120,7 +144,7 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
       _setLoading(false);
       notifyListeners();
       return false;
@@ -213,5 +237,3 @@ class DinnerEventProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
