@@ -102,6 +102,24 @@ class FirestoreService {
     }
   }
 
+  /// 更新 FCM Token
+  ///
+  /// [uid] 用戶 ID
+  /// [token] FCM Token
+  Future<void> updateFcmToken(String uid, String token) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'fcmToken': token,
+        'fcmTokens': FieldValue.arrayUnion([token]),
+        // 同時更新最後活躍時間，因為 token 刷新通常意味著應用啟動
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // 不拋出異常，以免中斷應用啟動流程
+      debugPrint('更新 FCM Token 失敗: $e');
+    }
+  }
+
   /// 查詢符合條件的用戶（用於配對）
   /// 
   /// [city] 城市
