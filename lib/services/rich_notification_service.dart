@@ -19,6 +19,12 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  bool _ignoreLaunchNotification = false;
+
+  /// 標記啟動通知已處理，避免重複導航
+  void suppressLaunchNotification() {
+    _ignoreLaunchNotification = true;
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -61,6 +67,11 @@ class RichNotificationService {
 
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
+    if (_ignoreLaunchNotification) {
+      _ignoreLaunchNotification = false;
+      return;
+    }
+
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
