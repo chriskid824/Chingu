@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -34,8 +35,24 @@ void main() async {
   runApp(const ChinguApp());
 }
 
-class ChinguApp extends StatelessWidget {
+class ChinguApp extends StatefulWidget {
   const ChinguApp({super.key});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始化 NotificationService 並處理初始訊息
+    // 使用 addPostFrameCallback 確保 Navigator 準備就緒
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().initialize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
