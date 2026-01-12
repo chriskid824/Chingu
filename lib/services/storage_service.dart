@@ -23,4 +23,24 @@ class StorageService {
       throw Exception('Failed to get download URL: $e');
     }
   }
+
+  /// Deletes all files associated with a user (e.g., in 'user_images/{uid}/').
+  Future<void> deleteUserDirectory(String uid) async {
+    try {
+      final listResult = await _storage.ref().child('user_images/$uid').listAll();
+
+      // Delete all files in the directory
+      await Future.wait(listResult.items.map((ref) => ref.delete()));
+
+      // Note: Firebase Storage folders are virtual. Deleting all files "removes" the folder.
+      // If there are subfolders, listAll() returns them in `prefixes`.
+      // We are assuming a flat structure for user images.
+    } catch (e) {
+      // If the path doesn't exist, it's fine.
+      if (e is FirebaseException && e.code == 'object-not-found') {
+        return;
+      }
+      throw Exception('Failed to delete user files: $e');
+    }
+  }
 }

@@ -289,6 +289,82 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 請求資料導出
+  Future<void> requestDataExport(String uid) async {
+    try {
+      await _firestore.collection('data_export_requests').add({
+        'uid': uid,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('請求資料導出失敗: $e');
+    }
+  }
+
+  /// 刪除用戶及其相關資料
+  Future<void> deleteUserAndRelatedData(String uid) async {
+    try {
+      final batch = _firestore.batch();
+
+      // 1. 刪除用戶文檔
+      batch.delete(_usersCollection.doc(uid));
+
+      // 2. 標記相關的 Chat Rooms 為失效或移除用戶
+      // 注意：直接刪除可能會影響其他用戶的聊天記錄，更好的做法是將用戶從 participantIds 移除
+      // 但如果這是嚴格的"刪除資料"請求，我們應該刪除所有相關數據。
+      // 這裡採用移除 participantIds 的策略，如果只剩一個用戶，則聊天室可能需要被清理（由後端函數處理）
+      // 或者直接刪除參與者是該用戶的聊天室記錄（如果我們只關心該用戶的關聯）
+
+      // 為了簡化和確保數據清除，我們查找該用戶參與的聊天室
+      final chatRoomsSnapshot = await _firestore
+          .collection('chat_rooms')
+          .where('participantIds', arrayContains: uid)
+          .get();
+
+      for (var doc in chatRoomsSnapshot.docs) {
+        // 從參與者中移除
+        batch.update(doc.reference, {
+          'participantIds': FieldValue.arrayRemove([uid]),
+          // 清除該用戶的未讀計數
+          'unreadCount.$uid': FieldValue.delete(),
+          // 清除打字狀態
+          'typingIndicators.$uid': FieldValue.delete(),
+        });
+      }
+
+      // 3. 刪除用戶的 Swipes
+      final swipesSnapshot = await _firestore
+          .collection('swipes')
+          .where('swiperId', isEqualTo: uid)
+          .get();
+
+      for (var doc in swipesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 4. 刪除用戶的 Reports (作為 reporter)
+      final reportsSnapshot = await _firestore
+          .collection('reports')
+          .where('reporterId', isEqualTo: uid)
+          .get();
+
+      for (var doc in reportsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 注意：Messages 集合如果是頂層集合且量大，客戶端刪除可能不切實際且昂貴。
+      // 通常這部分由雲端函數 (Cloud Functions) 響應 auth.user().onDelete 事件來處理。
+      // 在此僅作基本清理。
+
+      // 5. 提交 Batch
+      await batch.commit();
+
+    } catch (e) {
+      throw Exception('刪除用戶相關資料失敗: $e');
+    }
+  }
 }
 
 

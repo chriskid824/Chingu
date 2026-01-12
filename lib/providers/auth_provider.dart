@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/storage_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final StorageService _storageService = StorageService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -278,6 +280,60 @@ class AuthProvider with ChangeNotifier {
     if (_firebaseUser != null) {
       await _loadUserData(_firebaseUser!.uid);
       notifyListeners();
+    }
+  }
+
+  /// 請求資料導出
+  Future<void> requestDataExport() async {
+    try {
+      if (_firebaseUser == null) return;
+      _setLoading(true);
+      await _firestoreService.requestDataExport(_firebaseUser!.uid);
+      _setLoading(false);
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// 刪除帳號（完整流程）
+  Future<void> deleteAccount(String password) async {
+    try {
+      if (_firebaseUser == null) return;
+      _setLoading(true);
+
+      final uid = _firebaseUser!.uid;
+
+      // 1. 重新認證
+      await _authService.reauthenticate(password);
+
+      // 2. 刪除 Firestore 相關數據
+      await _firestoreService.deleteUserAndRelatedData(uid);
+
+      // 3. 刪除 Storage 文件
+      // 注意：失敗不應阻止帳號刪除，可以記錄錯誤但繼續
+      try {
+        await _storageService.deleteUserDirectory(uid);
+      } catch (e) {
+        debugPrint('刪除 Storage 文件失敗: $e');
+      }
+
+      // 4. 刪除 Firebase Auth 帳號
+      await _authService.deleteAccount();
+
+      // 清理狀態
+      _status = AuthStatus.unauthenticated;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      rethrow;
     }
   }
 
