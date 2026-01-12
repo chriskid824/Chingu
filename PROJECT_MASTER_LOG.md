@@ -61,6 +61,9 @@
   - [x] 實作即時訊息監聽 (Real-time listener)
   - [x] 實作發送訊息功能
   - [x] 修復 AppRouter settings 參數傳遞問題
+- [x] **創建通知發送 Cloud Function** ✅
+  - [x] 建立 `functions/src/sendNotification.ts`
+  - [x] 實作 FCM 通知發送邏輯 (驗證、獲取 Token、清理無效 Token)
 - [ ] **連接首頁活動資料**
   - [ ] 從 Firestore 載入「即將到來的晚餐」
   - [ ] 在首頁顯示真實活動列表
@@ -72,6 +75,10 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **Cloud Functions**:
+  - 新增 `functions/src/sendNotification.ts`，用於伺服器端發送 FCM 通知。
+  - 建立 Cloud Functions 基礎目錄結構 (`functions/src`, `package.json`, `tsconfig.json`)。
+
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
