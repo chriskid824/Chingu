@@ -160,6 +160,9 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      when(mockFirestoreService.getBatchUsers(any))
+          .thenAnswer((_) async => [currentUser, candidateUser]);
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,

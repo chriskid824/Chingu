@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -157,8 +158,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
@@ -180,7 +180,42 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送配對通知
+    try {
+      final users = await _firestoreService.getBatchUsers([user1Id, user2Id]);
+      if (users.length >= 2) {
+        final user1 = users.firstWhere((u) => u.uid == user1Id);
+        final user2 = users.firstWhere((u) => u.uid == user2Id);
+
+        await Future.wait([
+          _sendMatchNotification(user1Id, user2),
+          _sendMatchNotification(user2Id, user1),
+        ]);
+      }
+    } catch (e) {
+      print('發送配對通知過程錯誤: $e');
+      // 不中斷流程，僅記錄錯誤
+    }
+
+    return chatRoomId;
+  }
+
+  /// 發送配對通知 (調用 Cloud Function)
+  Future<void> _sendMatchNotification(String recipientId, UserModel partner) async {
+    try {
+      await FirebaseFunctions.instance.httpsCallable('sendNotification').call({
+        'userId': recipientId,
+        'type': 'match',
+        'title': '配對成功！',
+        'message': '你和 ${partner.name} 配對成功了，快去聊天吧！',
+        'imageUrl': partner.avatarUrl,
+        'actionType': 'open_chat',
+      });
+    } catch (e) {
+      print('調用 Cloud Function 發送通知失敗: $e');
+    }
   }
 
   /// 獲取已滑過的用戶 ID 列表
