@@ -28,6 +28,9 @@ class UserModel {
   final GeoPoint? locationGeo;
   final String subscription; // 'free' or 'premium'
   
+  // 收藏列表
+  final List<String> favoriteIds;
+
   // 統計資料
   final int totalDinners;
   final int totalMatches;
@@ -60,6 +63,7 @@ class UserModel {
     required this.lastLogin,
     this.locationGeo,
     this.subscription = 'free',
+    this.favoriteIds = const [],
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
@@ -98,6 +102,7 @@ class UserModel {
       lastLogin: (map['lastLogin'] as Timestamp).toDate(),
       locationGeo: map['locationGeo'] as GeoPoint?,
       subscription: map['subscription'] ?? 'free',
+      favoriteIds: List<String>.from(map['favoriteIds'] ?? []),
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
@@ -130,6 +135,7 @@ class UserModel {
       'lastLogin': Timestamp.fromDate(lastLogin),
       'locationGeo': locationGeo,
       'subscription': subscription,
+      'favoriteIds': favoriteIds,
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
@@ -160,6 +166,7 @@ class UserModel {
     DateTime? lastLogin,
     GeoPoint? locationGeo,
     String? subscription,
+    List<String>? favoriteIds,
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
@@ -189,6 +196,7 @@ class UserModel {
       lastLogin: lastLogin ?? this.lastLogin,
       locationGeo: locationGeo ?? this.locationGeo,
       subscription: subscription ?? this.subscription,
+      favoriteIds: favoriteIds ?? this.favoriteIds,
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
