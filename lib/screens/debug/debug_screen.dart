@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,6 +106,91 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  void _showNotificationDialog() {
+    String type = 'system';
+    final titleController = TextEditingController(text: '測試通知標題');
+    final messageController = TextEditingController(text: '這是一條測試通知內容');
+    final imageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: const Text('發送測試通知'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: type,
+                  decoration: const InputDecoration(labelText: '類型'),
+                  items: const [
+                    DropdownMenuItem(value: 'match', child: Text('配對 (match)')),
+                    DropdownMenuItem(value: 'event', child: Text('活動 (event)')),
+                    DropdownMenuItem(value: 'message', child: Text('訊息 (message)')),
+                    DropdownMenuItem(value: 'rating', child: Text('評價 (rating)')),
+                    DropdownMenuItem(value: 'system', child: Text('系統 (system)')),
+                  ],
+                  onChanged: (v) => setState(() => type = v!),
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: '標題'),
+                  controller: titleController,
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: '內容'),
+                  controller: messageController,
+                ),
+                TextField(
+                  decoration: const InputDecoration(labelText: '圖片 URL (選填)'),
+                  controller: imageController,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
+                final notification = NotificationModel(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  userId: FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
+                  type: type,
+                  title: titleController.text,
+                  message: messageController.text,
+                  imageUrl: imageController.text.isEmpty ? null : imageController.text,
+                  createdAt: DateTime.now(),
+                  // 根據類型自動設置 actionType，方便測試點擊跳轉
+                  actionType: type == 'match'
+                      ? 'match_history'
+                      : type == 'event'
+                          ? 'view_event'
+                          : type == 'message'
+                              ? 'open_chat'
+                              : null,
+                );
+
+                await RichNotificationService().showNotification(notification);
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('通知已發送')),
+                  );
+                }
+              },
+              child: const Text('發送'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,6 +247,19 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const SizedBox(height: 32),
+            const Text('通知測試工具', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _showNotificationDialog,
+              icon: const Icon(Icons.notifications_active_rounded),
+              label: const Text('發送測試通知'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
