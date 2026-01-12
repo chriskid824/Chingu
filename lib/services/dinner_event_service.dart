@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -58,6 +61,10 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      // 排程提醒
+      await _scheduleReminder(docRef.id, dateTime, creatorId);
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -155,6 +162,12 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 交易成功後排程提醒
+      final event = await getEvent(eventId);
+      if (event != null) {
+        await _scheduleReminder(eventId, event.dateTime, userId);
+      }
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,6 +218,9 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 交易成功後取消提醒
+      await RichNotificationService().cancelNotification(eventId.hashCode);
     } catch (e) {
       throw Exception('退出活動失敗: $e');
     }
@@ -366,6 +382,92 @@ class DinnerEventService {
       
     } catch (e) {
       throw Exception('報名失敗: $e');
+    }
+  }
+
+  /// 同步活動提醒（建議在 App 啟動時調用）
+  Future<void> syncReminders(String userId) async {
+    try {
+      // 優化：先獲取用戶設置，避免 N+1 查詢
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final notificationSettings = Map<String, dynamic>.from(userData['notificationSettings'] ?? {});
+      final eventReminder1d = notificationSettings['eventReminder1d'] ?? true;
+
+      // 如果用戶關閉了提醒，則不進行排程 (或應該取消所有？這裡假設是同步新增/更新)
+      // 如果關閉了，理論上應該取消所有。但這裡我們先只處理"開啟"的情況，或在_scheduleReminder中處理取消邏輯。
+      // 為了簡單且安全，如果關閉，我們不排程。
+
+      // 獲取用戶參與的所有活動
+      final events = await getUserEvents(userId);
+      final now = DateTime.now();
+
+      for (var event in events) {
+        // 只處理未來的活動
+        if (event.dateTime.isAfter(now)) {
+          // 如果活動已取消或用戶不在參與者列表中
+          if (event.status == 'cancelled' || !event.participantIds.contains(userId)) {
+            await RichNotificationService().cancelNotification(event.id.hashCode);
+          } else {
+            // 重新排程/確認提醒
+            await _scheduleReminder(event.id, event.dateTime, userId, eventReminder1d: eventReminder1d);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('同步提醒失敗: $e');
+    }
+  }
+
+  /// 排程活動提醒（內部方法）
+  Future<void> _scheduleReminder(
+    String eventId,
+    DateTime eventDate,
+    String userId, {
+    bool? eventReminder1d,
+  }) async {
+    try {
+      // 1. 如果未傳入設置，則獲取用戶設置 (用於單次調用)
+      bool shouldRemind = true;
+
+      if (eventReminder1d != null) {
+        shouldRemind = eventReminder1d;
+      } else {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final notificationSettings = Map<String, dynamic>.from(userData['notificationSettings'] ?? {});
+          shouldRemind = notificationSettings['eventReminder1d'] ?? true;
+        }
+      }
+
+      // 2. 檢查是否開啟提醒
+      if (!shouldRemind) {
+        // 如果設置為不提醒，嘗試取消可能存在的提醒
+        await RichNotificationService().cancelNotification(eventId.hashCode);
+        return;
+      }
+
+      // 3. 計算提醒時間 (活動前 24 小時)
+      final reminderDate = eventDate.subtract(const Duration(hours: 24));
+
+      // 4. 如果提醒時間在未來，則排程
+      if (reminderDate.isAfter(DateTime.now())) {
+        await RichNotificationService().scheduleNotification(
+          id: eventId.hashCode,
+          title: '活動提醒',
+          body: '您報名的晚餐活動將在明天舉行！別忘了準時參加喔。',
+          scheduledDate: reminderDate,
+          payload: json.encode({
+            'actionType': 'view_event',
+            'actionData': eventId,
+          }),
+        );
+      }
+    } catch (e) {
+      debugPrint('排程提醒失敗: $e');
     }
   }
 }
