@@ -38,6 +38,9 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final Map<String, bool> notificationSettings;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +69,17 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notificationSettings = const {
+      'push_enabled': true,
+      'match_new': true,
+      'match_success': true,
+      'message_new': true,
+      'message_preview': true,
+      'event_reminder': true,
+      'event_change': true,
+      'marketing_promo': false,
+      'marketing_newsletter': false,
+    },
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -76,6 +90,28 @@ class UserModel {
 
   /// 從 Map 創建 UserModel
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
+    // 處理通知設定
+    final Map<String, dynamic>? rawSettings = map['notificationSettings'] as Map<String, dynamic>?;
+    final Map<String, bool> parsedSettings = {
+      'push_enabled': true,
+      'match_new': true,
+      'match_success': true,
+      'message_new': true,
+      'message_preview': true,
+      'event_reminder': true,
+      'event_change': true,
+      'marketing_promo': false,
+      'marketing_newsletter': false,
+    };
+
+    if (rawSettings != null) {
+      rawSettings.forEach((key, value) {
+        if (value is bool) {
+          parsedSettings[key] = value;
+        }
+      });
+    }
+
     return UserModel(
       uid: uid,
       name: map['name'] ?? '',
@@ -104,6 +140,7 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationSettings: parsedSettings,
     );
   }
 
@@ -136,6 +173,7 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationSettings': notificationSettings,
     };
   }
 
@@ -166,6 +204,7 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    Map<String, bool>? notificationSettings,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +234,7 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 
