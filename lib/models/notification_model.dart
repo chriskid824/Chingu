@@ -12,6 +12,7 @@ class NotificationModel {
   final String? actionData; // JSON string or ID
   final bool isRead;
   final DateTime createdAt;
+  final String? deeplink;
 
   NotificationModel({
     required this.id,
@@ -24,6 +25,7 @@ class NotificationModel {
     this.actionData,
     this.isRead = false,
     required this.createdAt,
+    this.deeplink,
   });
 
   /// 從 Firestore 文檔創建 NotificationModel
@@ -45,6 +47,7 @@ class NotificationModel {
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      deeplink: map['deeplink'],
     );
   }
 
@@ -60,6 +63,7 @@ class NotificationModel {
       'actionData': actionData,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
+      'deeplink': deeplink,
     };
   }
 
@@ -76,6 +80,36 @@ class NotificationModel {
       actionData: actionData,
       isRead: true,
       createdAt: createdAt,
+      deeplink: deeplink,
+    );
+  }
+
+  /// 複製對象
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? message,
+    String? imageUrl,
+    String? actionType,
+    String? actionData,
+    bool? isRead,
+    DateTime? createdAt,
+    String? deeplink,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
+      actionType: actionType ?? this.actionType,
+      actionData: actionData ?? this.actionData,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+      deeplink: deeplink ?? this.deeplink,
     );
   }
 
@@ -96,26 +130,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
