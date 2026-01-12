@@ -292,6 +292,44 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 切換用戶收藏狀態
+  ///
+  /// [targetUserId] 目標用戶 ID
+  Future<void> toggleFavorite(String targetUserId) async {
+    if (_userModel == null || _firebaseUser == null) return;
+
+    final isCurrentlyFavorite = _userModel!.favoriteIds.contains(targetUserId);
+    final previousFavoriteIds = List<String>.from(_userModel!.favoriteIds);
+
+    try {
+      // 1. Optimistic Update (本地立即更新 UI)
+      List<String> newFavoriteIds;
+      if (isCurrentlyFavorite) {
+        newFavoriteIds = List<String>.from(previousFavoriteIds)..remove(targetUserId);
+      } else {
+        newFavoriteIds = List<String>.from(previousFavoriteIds)..add(targetUserId);
+      }
+
+      _userModel = _userModel!.copyWith(favoriteIds: newFavoriteIds);
+      notifyListeners();
+
+      // 2. Call API
+      if (isCurrentlyFavorite) {
+        await _firestoreService.removeFromFavorites(_firebaseUser!.uid, targetUserId);
+      } else {
+        await _firestoreService.addToFavorites(_firebaseUser!.uid, targetUserId);
+      }
+    } catch (e) {
+      // 3. Revert on Failure (失敗時回滾)
+      _userModel = _userModel!.copyWith(favoriteIds: previousFavoriteIds);
+      _errorMessage = '更新收藏失敗: $e';
+      notifyListeners();
+
+      // 讓 UI 知道發生了錯誤
+      rethrow;
+    }
+  }
 }
 
 
