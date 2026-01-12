@@ -268,6 +268,23 @@ class FirestoreService {
     }
   }
 
+  /// 更新用戶 FCM Token
+  ///
+  /// [uid] 用戶 ID
+  /// [token] FCM Token
+  Future<void> updateFcmToken(String uid, String token) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'fcmToken': token,
+        'fcmTokens': FieldValue.arrayUnion([token]), // 支持多設備
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('更新 FCM Token 失敗: $e');
+      // 不拋出異常，以免影響主流程
+    }
+  }
+
   /// 提交用戶舉報
   Future<void> submitUserReport({
     required String reporterId,
