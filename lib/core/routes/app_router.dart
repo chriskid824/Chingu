@@ -231,6 +231,7 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const AboutScreen());
 
       case AppRoutes.reportUser:
+        // Handle report user arguments
         final args = settings.arguments as Map<String, dynamic>?;
         if (args == null) {
           return MaterialPageRoute(
@@ -291,14 +292,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
