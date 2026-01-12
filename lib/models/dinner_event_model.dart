@@ -1,5 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum EventRegistrationStatus {
+  registered,
+  waitlist,
+  cancelled,
+  none,
+}
+
 /// 晚餐活動模型（固定6人）
 class DinnerEventModel {
   final String id;
@@ -10,9 +17,12 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者
+  final int maxParticipants; // 每桌最大人數
+  final int currentParticipants; // 當前人數
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final List<String> waitingList; // 候補名單 UID 列表
   
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
@@ -41,8 +51,11 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
+    this.currentParticipants = 0,
     required this.participantIds,
     required this.participantStatus,
+    this.waitingList = const [],
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -64,6 +77,7 @@ class DinnerEventModel {
 
   /// 從 Map 創建 DinnerEventModel
   factory DinnerEventModel.fromMap(Map<String, dynamic> map, String id) {
+    final participants = List<String>.from(map['participantIds'] ?? []);
     return DinnerEventModel(
       id: id,
       creatorId: map['creatorId'] ?? '',
@@ -72,8 +86,11 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
-      participantIds: List<String>.from(map['participantIds'] ?? []),
+      maxParticipants: map['maxParticipants'] ?? 6,
+      currentParticipants: map['currentParticipants'] ?? participants.length,
+      participantIds: participants,
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitingList: List<String>.from(map['waitingList'] ?? []),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -105,8 +122,11 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
+      'currentParticipants': currentParticipants,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'waitingList': waitingList,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -128,8 +148,11 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
+    int? currentParticipants,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitingList,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -149,8 +172,11 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
+      currentParticipants: currentParticipants ?? this.currentParticipants,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      waitingList: waitingList ?? this.waitingList,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -197,8 +223,8 @@ class DinnerEventModel {
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  /// 檢查是否已滿
+  bool get isFull => currentParticipants >= maxParticipants;
 
   /// 獲取已確認人數
   int get confirmedCount {
@@ -219,7 +245,3 @@ class DinnerEventModel {
     return sum / ratings!.length;
   }
 }
-
-
-
-
