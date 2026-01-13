@@ -3,7 +3,10 @@ import 'package:chingu/models/user_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -290,5 +293,3 @@ class FirestoreService {
     }
   }
 }
-
-
