@@ -16,6 +16,7 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/favorites_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -45,6 +46,7 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../models/user_model.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -70,6 +72,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String favorites = '/favorites';
   
   // 配對模組
   static const String matching = '/matching';
@@ -166,12 +169,23 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final user = settings.arguments as UserModel?;
+        if (user == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Error: Missing user data')),
+            ),
+          );
+        }
+        return MaterialPageRoute(builder: (_) => UserDetailScreen(user: user));
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
