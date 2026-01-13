@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
 
@@ -9,14 +10,17 @@ class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final NotificationService _notificationService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    NotificationService? notificationService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _notificationService = notificationService ?? NotificationService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -179,6 +183,13 @@ class MatchingService {
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
+    // 發送配對成功通知
+    try {
+      await _notificationService.sendMatchNotification(user1Id, user2Id);
+    } catch (e) {
+      print('發送配對通知失敗 (不影響流程): $e');
+    }
+
     // 創建聊天室
     return await _chatService.createChatRoom(user1Id, user2Id);
   }
