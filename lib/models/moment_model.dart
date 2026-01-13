@@ -1,67 +1,75 @@
-import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class MomentModel extends Equatable {
+class MomentModel {
   final String id;
   final String userId;
   final String userName;
-  final String? userAvatar;
+  final String? userAvatarUrl;
   final String content;
-  final String? imageUrl;
+  final List<String> imageUrls;
   final DateTime createdAt;
-  final int likeCount;
-  final int commentCount;
-  final bool isLiked;
+  final int likesCount;
 
-  const MomentModel({
+  MomentModel({
     required this.id,
     required this.userId,
     required this.userName,
-    this.userAvatar,
+    this.userAvatarUrl,
     required this.content,
-    this.imageUrl,
+    required this.imageUrls,
     required this.createdAt,
-    this.likeCount = 0,
-    this.commentCount = 0,
-    this.isLiked = false,
+    this.likesCount = 0,
   });
+
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id) {
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? '',
+      userAvatarUrl: map['userAvatarUrl'],
+      content: map['content'] ?? '',
+      imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      likesCount: map['likesCount'] ?? 0,
+    );
+  }
+
+  factory MomentModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return MomentModel.fromMap(data, doc.id);
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatarUrl': userAvatarUrl,
+      'content': content,
+      'imageUrls': imageUrls,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likesCount': likesCount,
+    };
+  }
 
   MomentModel copyWith({
     String? id,
     String? userId,
     String? userName,
-    String? userAvatar,
+    String? userAvatarUrl,
     String? content,
-    String? imageUrl,
+    List<String>? imageUrls,
     DateTime? createdAt,
-    int? likeCount,
-    int? commentCount,
-    bool? isLiked,
+    int? likesCount,
   }) {
     return MomentModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
-      userAvatar: userAvatar ?? this.userAvatar,
+      userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
       content: content ?? this.content,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
       createdAt: createdAt ?? this.createdAt,
-      likeCount: likeCount ?? this.likeCount,
-      commentCount: commentCount ?? this.commentCount,
-      isLiked: isLiked ?? this.isLiked,
+      likesCount: likesCount ?? this.likesCount,
     );
   }
-
-  @override
-  List<Object?> get props => [
-        id,
-        userId,
-        userName,
-        userAvatar,
-        content,
-        imageUrl,
-        createdAt,
-        likeCount,
-        commentCount,
-        isLiked,
-      ];
 }
