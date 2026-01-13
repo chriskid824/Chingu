@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:chingu/models/user_model.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -19,6 +20,48 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+
+  /// 檢查是否應該顯示通知
+  bool shouldShowNotification(UserModel user, NotificationModel notification) {
+    // 檢查總開關
+    if (user.notificationSettings['push_enabled'] == false) {
+      return false;
+    }
+
+    // 根據類型檢查具體設定
+    switch (notification.type) {
+      case 'match': // 新配對
+        return user.notificationSettings['match_new'] ?? true;
+
+      case 'match_success': // 配對成功 (如果有這個類型)
+        return user.notificationSettings['match_success'] ?? true;
+
+      case 'message': // 新訊息
+        return user.notificationSettings['message_new'] ?? true;
+
+      case 'event': // 活動相關
+        // 這裡需要區分是提醒還是變更
+        // 檢查標題或內容是否包含"變更"關鍵字
+        if (notification.title.contains('變更') || notification.message.contains('變更') ||
+            notification.title.contains('取消') || notification.message.contains('取消')) {
+          return user.notificationSettings['event_change'] ?? true;
+        }
+        return user.notificationSettings['event_reminder'] ?? true;
+
+      case 'marketing': // 行銷
+        // 檢查標題或內容是否包含"電子報"關鍵字
+        if (notification.title.contains('電子報') || notification.message.contains('電子報')) {
+           return user.notificationSettings['marketing_newsletter'] ?? false;
+        }
+        return user.notificationSettings['marketing_promo'] ?? false;
+
+      case 'system': // 系統通知
+        return true; // 系統通知通常不讓用戶關閉，或有單獨設定
+
+      default:
+        return true;
+    }
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -126,7 +169,15 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification, {UserModel? user}) async {
+    // 如果提供了用戶資料，檢查是否應該顯示通知
+    if (user != null) {
+      if (!shouldShowNotification(user, notification)) {
+        debugPrint('Notification suppressed by user settings: ${notification.title}');
+        return;
+      }
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
