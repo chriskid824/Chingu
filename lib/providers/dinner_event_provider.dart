@@ -40,9 +40,7 @@ class DinnerEventProvider with ChangeNotifier {
         notes: notes,
       );
 
-      // 創建成功後刷新我的活動列表
       await fetchMyEvents(creatorId);
-
       _setLoading(false);
       return true;
     } catch (e) {
@@ -85,46 +83,47 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
-  /// 加入活動
+  /// 加入活動 (Updated)
   Future<bool> joinEvent(String eventId, String userId) async {
     try {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.joinEvent(eventId, userId);
+      await _dinnerEventService.registerForEvent(eventId, userId);
       
-      // 刷新列表
       await fetchMyEvents(userId);
-      
       _setLoading(false);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setLoading(false);
       notifyListeners();
       return false;
     }
   }
 
-  /// 退出活動
+  /// 退出活動 (Updated)
   Future<bool> leaveEvent(String eventId, String userId) async {
     try {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.leaveEvent(eventId, userId);
+      await _dinnerEventService.unregisterFromEvent(eventId, userId);
       
-      // 刷新列表
       await fetchMyEvents(userId);
-      
       _setLoading(false);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setLoading(false);
       notifyListeners();
       return false;
     }
+  }
+
+  /// 獲取單個活動詳情
+  Future<DinnerEventModel?> getEventById(String eventId) async {
+    return await _dinnerEventService.getEvent(eventId);
   }
 
   /// 獲取本週四和下週四的日期
@@ -133,27 +132,15 @@ class DinnerEventProvider with ChangeNotifier {
   }
 
   /// 獲取可預約的日期
-  /// 過濾規則：
-  /// 1. 如果已經是週一（含）以後，不能預約本週四
-  /// 2. 如果已經參加了該日期的活動，不能重複預約
   List<DateTime> getBookableDates() {
     final dates = _dinnerEventService.getThursdayDates();
     final now = DateTime.now();
     
     return dates.where((date) {
-      // 1. 檢查截止時間
-      // 計算該日期所在週的週一
-      // date.weekday: 4 (Thursday)
-      // Monday is date - 3 days
       final monday = DateTime(date.year, date.month, date.day).subtract(const Duration(days: 3));
-      
-      // 如果現在已經過了週一 00:00，則該日期不可預約
       if (now.isAfter(monday)) {
         return false;
       }
-
-      // 2. 檢查是否已參加
-      // 檢查 myEvents 中是否有同日期的活動
       final isJoined = _myEvents.any((event) {
         final eventDate = event.dateTime;
         return eventDate.year == date.year && 
@@ -164,12 +151,10 @@ class DinnerEventProvider with ChangeNotifier {
       if (isJoined) {
         return false;
       }
-
       return true;
     }).toList();
   }
 
-  /// 是否還有可預約的場次
   bool get canBookMore => getBookableDates().isNotEmpty;
 
   /// 預約活動
@@ -190,9 +175,7 @@ class DinnerEventProvider with ChangeNotifier {
         district: district,
       );
       
-      // 刷新列表
       await fetchMyEvents(userId);
-      
       _setLoading(false);
       return true;
     } catch (e) {
@@ -213,5 +196,3 @@ class DinnerEventProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-

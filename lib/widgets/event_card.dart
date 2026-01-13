@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class EventCard extends StatefulWidget {
-  final String title;
-  final String date;
-  final String time;
-  final String budget;
-  final String location;
-  final bool isUpcoming;
+  final DinnerEventModel event;
   final VoidCallback? onTap;
 
   const EventCard({
     super.key,
-    required this.title,
-    required this.date,
-    required this.time,
-    required this.budget,
-    required this.location,
-    required this.isUpcoming,
+    required this.event,
     this.onTap,
   });
 
@@ -32,6 +24,36 @@ class _EventCardState extends State<EventCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final event = widget.event;
+
+    // Use statusText and budgetRangeText from model
+    final title = '${event.maxParticipants}人晚餐聚會';
+    final date = event.dateTime.toString().substring(0, 10);
+    final time = event.dateTime.toString().substring(11, 16);
+    final location = '${event.city} ${event.district}';
+    final budget = event.budgetRangeText;
+    final isUpcoming = event.dateTime.isAfter(DateTime.now());
+
+    Color statusColor;
+    Color statusBgColor;
+
+    switch (event.status) {
+      case 'confirmed':
+        statusColor = chinguTheme?.success ?? Colors.green;
+        statusBgColor = (chinguTheme?.success ?? Colors.green).withOpacity(0.1);
+        break;
+      case 'completed':
+        statusColor = theme.colorScheme.onSurface.withOpacity(0.6);
+        statusBgColor = theme.colorScheme.surfaceContainerHighest;
+        break;
+      case 'cancelled':
+        statusColor = theme.colorScheme.error;
+        statusBgColor = theme.colorScheme.error.withOpacity(0.1);
+        break;
+      default: // pending
+        statusColor = chinguTheme?.warning ?? Colors.orange;
+        statusBgColor = (chinguTheme?.warning ?? Colors.orange).withOpacity(0.1);
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -60,7 +82,12 @@ class _EventCardState extends State<EventCard> {
             ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: widget.onTap,
+              onTap: widget.onTap ?? () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.eventDetail,
+                  arguments: event,
+                );
+              },
               onHighlightChanged: (value) => setState(() => _isPressed = value),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -87,7 +114,7 @@ class _EventCardState extends State<EventCard> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.title,
+                                title,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: theme.colorScheme.onSurface,
@@ -103,7 +130,7 @@ class _EventCardState extends State<EventCard> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '6 人',
+                                    '${event.participantIds.length} / ${event.maxParticipants} 人',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                                     ),
@@ -116,17 +143,13 @@ class _EventCardState extends State<EventCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: widget.isUpcoming
-                                ? (chinguTheme?.success ?? Colors.green).withOpacity(0.1)
-                                : theme.colorScheme.surfaceContainerHighest,
+                            color: statusBgColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            widget.isUpcoming ? '已確認' : '已完成',
+                            event.statusText,
                             style: TextStyle(
-                              color: widget.isUpcoming
-                                  ? (chinguTheme?.success ?? Colors.green)
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: statusColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -152,7 +175,7 @@ class _EventCardState extends State<EventCard> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${widget.date}  ${widget.time}',
+                                '$date  $time',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w500,
                                   color: theme.colorScheme.onSurface,
@@ -170,7 +193,7 @@ class _EventCardState extends State<EventCard> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                widget.budget,
+                                budget,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                                 ),
@@ -187,7 +210,7 @@ class _EventCardState extends State<EventCard> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                widget.location,
+                                location,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                                 ),
