@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final CrashReportingService _crashReportingService = CrashReportingService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -43,9 +45,24 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+
+      // 清除 Crashlytics 用戶識別
+      try {
+        await _crashReportingService.setUserIdentifier("");
+      } catch (e) {
+        debugPrint("Error clearing crashlytics user ID: $e");
+      }
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
+
+      // 設置 Crashlytics 用戶識別
+      try {
+        await _crashReportingService.setUserIdentifier(firebaseUser.uid);
+      } catch (e) {
+        debugPrint("Error setting crashlytics user ID: $e");
+      }
+
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
     }

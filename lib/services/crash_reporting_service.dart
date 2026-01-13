@@ -10,12 +10,34 @@ class CrashReportingService {
   CrashReportingService._internal();
 
   Future<void> initialize() async {
+    // 根據除錯模式設定 Crashlytics
+    // 在除錯模式下預設關閉收集，避免污染數據
+    // 如果需要測試 Crashlytics，可以暫時設為 true
+    if (kDebugMode) {
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    }
+
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+
+      // 在除錯模式下，同時輸出到控制台，確保開發者能看到錯誤
+      if (kDebugMode) {
+        FlutterError.dumpErrorToConsole(errorDetails);
+      }
+    };
 
     // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+
+      if (kDebugMode) {
+        debugPrint('Uncaught Async Error: $error');
+        if (stack != null) debugPrint('Stack Trace: $stack');
+      }
+
       return true;
     };
   }
