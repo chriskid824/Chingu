@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'package:chingu/services/notification_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -60,12 +61,24 @@ class RichNotificationService {
   }
 
   /// 處理通知點擊事件
-  void _onNotificationTap(NotificationResponse response) {
+  Future<void> _onNotificationTap(NotificationResponse response) async {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final Map<String, dynamic>? trackingInfo = data['trackingInfo'] != null
+            ? Map<String, dynamic>.from(data['trackingInfo'])
+            : null;
+
+        // 如果有追蹤資訊，記錄點擊
+        if (trackingInfo != null) {
+          final String? type = trackingInfo['type'];
+          final String? group = trackingInfo['group'];
+          if (type != null && group != null) {
+            await NotificationService().trackNotificationClick(type, group);
+          }
+        }
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
@@ -126,7 +139,9 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  ///
+  /// [trackingInfo] 可選的追蹤資訊，用於 A/B 測試統計 (type, group)
+  Future<void> showNotification(NotificationModel notification, {Map<String, dynamic>? trackingInfo}) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +201,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'trackingInfo': trackingInfo,
     };
 
     await _flutterLocalNotificationsPlugin.show(
