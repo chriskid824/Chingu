@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
+import '../services/firestore_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -78,46 +82,119 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  Future<void> _handleNavigation(String? actionType, String? actionData, String? actionId) async {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      await _performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      await _performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  Future<void> _performAction(String action, String? data, NavigatorState navigator) async {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          try {
+            // 嘗試解析 data，如果是 JSON
+            Map<String, dynamic> chatData = {};
+            String chatRoomId = data;
+
+            try {
+              final decoded = json.decode(data);
+              if (decoded is Map<String, dynamic>) {
+                chatData = decoded;
+                if (chatData.containsKey('chatRoomId')) {
+                  chatRoomId = chatData['chatRoomId'];
+                }
+              }
+            } catch (_) {
+              // data 不是 JSON，假設它是 ID
+            }
+
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser == null) {
+              navigator.pushNamed(AppRoutes.chatList);
+              return;
+            }
+
+            // 獲取聊天室資料以找到對方 ID
+            final chatRoomDoc = await FirebaseFirestore.instance
+                .collection('chat_rooms')
+                .doc(chatRoomId)
+                .get();
+
+            if (!chatRoomDoc.exists) {
+               navigator.pushNamed(AppRoutes.chatList);
+               return;
+            }
+
+            final participants = List<String>.from(chatRoomDoc['participantIds'] ?? []);
+            final otherUserId = participants.firstWhere(
+              (id) => id != currentUser.uid,
+              orElse: () => '',
+            );
+
+            if (otherUserId.isNotEmpty) {
+              final otherUser = await FirestoreService().getUser(otherUserId);
+              if (otherUser != null) {
+                 navigator.pushNamed(
+                  AppRoutes.chatDetail,
+                  arguments: {
+                    'chatRoomId': chatRoomId,
+                    'otherUser': otherUser,
+                  },
+                );
+                return;
+              }
+            }
+
+            navigator.pushNamed(AppRoutes.chatList);
+          } catch (e) {
+            debugPrint('Error navigating to chat: $e');
+            navigator.pushNamed(AppRoutes.chatList);
+          }
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
+
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+           // 導航到活動詳情，並傳遞 eventId (data)
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: data);
         }
         break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+
+      case 'match_success':
+      case 'view_profile':
+        if (data != null) {
+          try {
+            // data 可能是 userId
+            final user = await FirestoreService().getUser(data);
+            if (user != null) {
+              navigator.pushNamed(AppRoutes.userDetail, arguments: user);
+            } else {
+               navigator.pushNamed(AppRoutes.matchesList);
+            }
+          } catch (e) {
+             debugPrint('Error navigating to profile: $e');
+             navigator.pushNamed(AppRoutes.matchesList);
+          }
+        }
         break;
+
+      case 'match_history':
+        navigator.pushNamed(AppRoutes.matchesList);
+        break;
+
       default:
         // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
