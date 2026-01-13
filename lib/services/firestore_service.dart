@@ -289,6 +289,44 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 增加通知統計數據
+  ///
+  /// [type] 通知類型 (e.g., 'match', 'message')
+  /// [group] 實驗組別 (e.g., 'control', 'variant')
+  /// [action] 動作 ('send' 或 'click')
+  Future<void> incrementNotificationStats({
+    required String type,
+    required String group,
+    required String action,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+      final docId = 'stats_${dateStr}_${group}_$type';
+
+      Map<String, dynamic> updates = {
+        'date': dateStr,
+        'group': group,
+        'type': type,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (action == 'send') {
+        updates['sendCount'] = FieldValue.increment(1);
+      } else if (action == 'click') {
+        updates['clickCount'] = FieldValue.increment(1);
+      }
+
+      await _firestore.collection('notification_stats').doc(docId).set(
+        updates,
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      // 統計失敗不應影響主流程，僅記錄日誌
+      print('更新通知統計失敗: $e');
+    }
+  }
 }
 
 
