@@ -85,6 +85,20 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
+  /// 獲取單個活動詳情
+  Future<DinnerEventModel?> getEventById(String eventId) async {
+    try {
+      _setLoading(true);
+      final event = await _dinnerEventService.getEvent(eventId);
+      _setLoading(false);
+      return event;
+    } catch (e) {
+      debugPrint('獲取活動詳情失敗: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
+
   /// 加入活動
   Future<bool> joinEvent(String eventId, String userId) async {
     try {
