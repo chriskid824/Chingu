@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -23,6 +25,9 @@ class RichNotificationService {
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // 初始化時區
+    tz.initializeTimeZones();
 
     // Android 初始化設定
     // 預設使用 app icon，需確保 drawable/mipmap 中有 @mipmap/ic_launcher
@@ -123,6 +128,62 @@ class RichNotificationService {
         navigator.pushNamed(AppRoutes.notifications);
         break;
     }
+  }
+
+  /// 排程通知 (模擬 Cloud Scheduler)
+  ///
+  /// 由於客戶端無法直接設置 Cloud Scheduler，我們使用本地通知來模擬此行為。
+  /// 這確保用戶在活動前一天能收到提醒，即使應用處於後台或關閉狀態。
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    // 確保已初始化
+    if (!_isInitialized) await initialize();
+
+    // 轉換為 TZDateTime (UTC) 以確保跨時區兼容性
+    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
+      scheduledDate.toUtc(),
+      tz.UTC,
+    );
+
+    // 如果時間已過，就不排程
+    if (tzScheduledDate.isBefore(tz.TZDateTime.now(tz.UTC))) {
+      return;
+    }
+
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'chingu_event_reminders',
+      'Event Reminders',
+      channelDescription: 'Reminders for upcoming dinner events',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tzScheduledDate,
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      payload: payload,
+    );
+  }
+
+  /// 取消排程通知
+  Future<void> cancelNotification(int id) async {
+    await _flutterLocalNotificationsPlugin.cancel(id);
   }
 
   /// 顯示豐富通知

@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import '../services/rich_notification_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -58,6 +60,10 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      // 設定活動提醒
+      await _scheduleEventReminder(docRef.id, dateTime, city);
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -155,6 +161,12 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 交易成功後設定提醒
+      final event = await getEvent(eventId);
+      if (event != null) {
+        await _scheduleEventReminder(eventId, event.dateTime, event.city);
+      }
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,6 +217,9 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 取消提醒
+      await RichNotificationService().cancelNotification(eventId.hashCode);
     } catch (e) {
       throw Exception('退出活動失敗: $e');
     }
@@ -367,6 +382,31 @@ class DinnerEventService {
     } catch (e) {
       throw Exception('報名失敗: $e');
     }
+  }
+
+  /// 排程活動提醒（活動前 24 小時）
+  Future<void> _scheduleEventReminder(String eventId, DateTime eventDate, String city) async {
+    // 設定為活動前 24 小時
+    final reminderTime = eventDate.subtract(const Duration(hours: 24));
+
+    // 如果提醒時間已過，就不排程
+    if (reminderTime.isBefore(DateTime.now())) return;
+
+    final notificationService = RichNotificationService();
+
+    // Payload for navigation
+    final payload = {
+      'actionType': 'view_event',
+      'actionData': eventId,
+    };
+
+    await notificationService.scheduleNotification(
+      id: eventId.hashCode,
+      title: '晚餐活動提醒',
+      body: '您報名的 $city 晚餐活動將在明天舉行，別忘了準時參加喔！',
+      scheduledDate: reminderTime,
+      payload: jsonEncode(payload),
+    );
   }
 }
 
