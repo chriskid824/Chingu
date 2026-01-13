@@ -3,6 +3,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
 
+/// An in-app notification banner widget that displays a notification message
+/// at the top of the screen (typically wrapped in a SafeArea).
+///
+/// It supports different notification types (match, event, message, etc.) with
+/// corresponding icons and colors defined by [ChinguTheme].
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback? onDismiss;
@@ -156,7 +161,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
