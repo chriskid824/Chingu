@@ -77,6 +77,72 @@ class RichNotificationService {
     }
   }
 
+  /// 獲取啟動時的路由設置
+  Future<List<RouteSettings>> getInitialRoutes() async {
+    // 1. 檢查 Local Notification 啟動
+    final details = await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+    if (details != null && details.didNotificationLaunchApp) {
+      final payload = details.notificationResponse?.payload;
+      if (payload != null) {
+        return _parsePayloadToRoutes(payload);
+      }
+    }
+
+    // 默認路由
+    return [const RouteSettings(name: AppRoutes.mainNavigation)];
+  }
+
+  List<RouteSettings> _parsePayloadToRoutes(String payload) {
+    try {
+      final Map<String, dynamic> data = json.decode(payload);
+      final String? actionType = data['actionType'];
+      final String? actionData = data['actionData'];
+
+      switch (actionType) {
+        case 'open_chat':
+          // 導航到 MainScreen 的聊天 Tab
+          return [
+            const RouteSettings(
+              name: AppRoutes.mainNavigation,
+              arguments: {'initialIndex': 3}
+            )
+          ];
+
+        case 'view_event':
+          // 導航到活動詳情
+          // 堆疊: Main -> EventDetail
+          // 如果有 actionData (eventId)，則傳入 arguments
+          return [
+            const RouteSettings(name: AppRoutes.mainNavigation),
+            RouteSettings(
+              name: AppRoutes.eventDetail,
+              arguments: actionData, // 假設 actionData 為 eventId
+            )
+          ];
+
+        case 'match_history':
+          // 導航到配對紀錄
+          // 堆疊: Main(Profile) -> MatchesList
+           return [
+            const RouteSettings(
+              name: AppRoutes.mainNavigation,
+              arguments: {'initialIndex': 4}
+            ),
+            const RouteSettings(name: AppRoutes.matchesList)
+          ];
+
+        default:
+          return [
+            const RouteSettings(name: AppRoutes.mainNavigation),
+            const RouteSettings(name: AppRoutes.notifications)
+          ];
+      }
+    } catch (e) {
+      debugPrint('Error parsing launch payload: $e');
+      return [const RouteSettings(name: AppRoutes.mainNavigation)];
+    }
+  }
+
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
