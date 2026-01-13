@@ -23,7 +23,9 @@ void main() {
     email: 'current@test.com',
     name: 'Current User',
     gender: 'male',
+    job: 'Dev',
     preferredMatchType: 'any',
+    country: 'Taiwan',
     city: 'Taipei',
     district: 'Xinyi',
     budgetRange: 2,
@@ -31,7 +33,6 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
   );
 
   final candidateUser = UserModel(
@@ -39,7 +40,9 @@ void main() {
     email: 'candidate@test.com',
     name: 'Candidate User',
     gender: 'female',
+    job: 'Designer',
     preferredMatchType: 'any',
+    country: 'Taiwan',
     city: 'Taipei',
     district: 'Xinyi',
     budgetRange: 2,
@@ -47,7 +50,6 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
   );
 
   setUp(() {
