@@ -26,6 +26,12 @@ class DinnerEventModel {
   final DateTime? confirmedAt;
   final DateTime? completedAt;
   
+  // 等候清單
+  final List<String> waitingList; // UID 列表
+
+  // 報名截止時間
+  final DateTime registrationDeadline;
+
   // 破冰問題
   final List<String> icebreakerQuestions;
   
@@ -51,6 +57,8 @@ class DinnerEventModel {
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
+    this.waitingList = const [],
+    required this.registrationDeadline,
     this.icebreakerQuestions = const [],
     this.ratings,
     this.reviews,
@@ -86,6 +94,9 @@ class DinnerEventModel {
       completedAt: map['completedAt'] != null 
           ? (map['completedAt'] as Timestamp).toDate() 
           : null,
+      waitingList: List<String>.from(map['waitingList'] ?? []),
+      registrationDeadline: (map['registrationDeadline'] as Timestamp?)?.toDate() ??
+          (map['dateTime'] as Timestamp).toDate().subtract(const Duration(hours: 24)),
       icebreakerQuestions: List<String>.from(map['icebreakerQuestions'] ?? []),
       ratings: map['ratings'] != null 
           ? Map<String, double>.from(map['ratings']) 
@@ -115,6 +126,8 @@ class DinnerEventModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'waitingList': waitingList,
+      'registrationDeadline': Timestamp.fromDate(registrationDeadline),
       'icebreakerQuestions': icebreakerQuestions,
       'ratings': ratings,
       'reviews': reviews,
@@ -137,6 +150,8 @@ class DinnerEventModel {
     String? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
+    List<String>? waitingList,
+    DateTime? registrationDeadline,
     List<String>? icebreakerQuestions,
     Map<String, double>? ratings,
     Map<String, String>? reviews,
@@ -159,6 +174,8 @@ class DinnerEventModel {
       createdAt: createdAt,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       completedAt: completedAt ?? this.completedAt,
+      waitingList: waitingList ?? this.waitingList,
+      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
       ratings: ratings ?? this.ratings,
       reviews: reviews ?? this.reviews,
@@ -220,6 +237,25 @@ class DinnerEventModel {
   }
 }
 
+enum EventStatus {
+  pending,
+  confirmed,
+  completed,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case EventStatus.pending:
+        return '等待配對';
+      case EventStatus.confirmed:
+        return '已確認';
+      case EventStatus.completed:
+        return '已完成';
+      case EventStatus.cancelled:
+        return '已取消';
+    }
+  }
+}
 
 
 
