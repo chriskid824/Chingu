@@ -292,6 +292,47 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 切換收藏狀態
+  Future<void> toggleFavorite(String targetUserId) async {
+    if (_userModel == null) return;
+
+    final isFavorite = _userModel!.favoriteUserIds.contains(targetUserId);
+    final uid = _userModel!.uid;
+
+    // 樂觀更新 (Optimistic Update)
+    final currentFavorites = List<String>.from(_userModel!.favoriteUserIds);
+    if (isFavorite) {
+      currentFavorites.remove(targetUserId);
+    } else {
+      currentFavorites.add(targetUserId);
+    }
+
+    _userModel = _userModel!.copyWith(favoriteUserIds: currentFavorites);
+    notifyListeners();
+
+    try {
+      if (isFavorite) {
+        await _firestoreService.removeFavorite(uid, targetUserId);
+      } else {
+        await _firestoreService.addFavorite(uid, targetUserId);
+      }
+    } catch (e) {
+      // 如果失敗，回滾變更
+      debugPrint('切換收藏失敗: $e');
+      if (isFavorite) {
+        currentFavorites.add(targetUserId);
+      } else {
+        currentFavorites.remove(targetUserId);
+      }
+      _userModel = _userModel!.copyWith(favoriteUserIds: currentFavorites);
+      notifyListeners();
+
+      // 可以選擇顯示錯誤提示
+      _errorMessage = '操作失敗，請稍後再試';
+      notifyListeners();
+    }
+  }
 }
 
 
