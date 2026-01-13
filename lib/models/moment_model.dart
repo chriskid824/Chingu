@@ -51,6 +51,37 @@ class MomentModel extends Equatable {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+      // isLiked is local state, not persisted in the document itself usually
+    };
+  }
+
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id, {bool isLiked = false}) {
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? 'Unknown',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: map['createdAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
+          : DateTime.now(),
+      likeCount: map['likeCount']?.toInt() ?? 0,
+      commentCount: map['commentCount']?.toInt() ?? 0,
+      isLiked: isLiked,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,
