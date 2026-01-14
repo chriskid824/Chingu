@@ -45,6 +45,7 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../screens/settings/login_history_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String loginHistory = '/login-history';
 }
 
 /// 應用程式路由配置
@@ -229,6 +231,9 @@ class AppRouter {
 
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.loginHistory:
+        return MaterialPageRoute(builder: (_) => const LoginHistoryScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
