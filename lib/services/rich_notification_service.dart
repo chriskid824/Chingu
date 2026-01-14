@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -23,6 +25,9 @@ class RichNotificationService {
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // 初始化 Timezone
+    tz.initializeTimeZones();
 
     // Android 初始化設定
     // 預設使用 app icon，需確保 drawable/mipmap 中有 @mipmap/ic_launcher
@@ -195,5 +200,54 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 排程通知
+  ///
+  /// [id] 通知 ID (建議使用 hashCode)
+  /// [title] 標題
+  /// [body] 內容
+  /// [scheduledDate] 排程時間
+  /// [payload] 額外數據
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    final AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'chingu_scheduled_notifications',
+      'Scheduled Notifications',
+      channelDescription: 'Notifications for scheduled events',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    final NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    // 確保排程時間在未來
+    if (scheduledDate.isBefore(DateTime.now())) {
+      return;
+    }
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
+
+  /// 取消通知
+  Future<void> cancelNotification(int id) async {
+    await _flutterLocalNotificationsPlugin.cancel(id);
   }
 }

@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final RichNotificationService _notificationService = RichNotificationService();
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
@@ -58,6 +60,10 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      // 設置本地提醒
+      _scheduleLocalReminder(docRef.id, dateTime);
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -116,6 +122,8 @@ class DinnerEventService {
   Future<void> joinEvent(String eventId, String userId) async {
     try {
       // 使用事務確保數據一致性
+      DateTime? eventDateTime;
+
       await _firestore.runTransaction((transaction) async {
         final docRef = _eventsCollection.doc(eventId);
         final snapshot = await transaction.get(docRef);
@@ -125,6 +133,8 @@ class DinnerEventService {
         }
 
         final data = snapshot.data() as Map<String, dynamic>;
+        eventDateTime = (data['dateTime'] as Timestamp).toDate();
+
         final participantIds = List<String>.from(data['participantIds'] ?? []);
         
         if (participantIds.contains(userId)) {
@@ -155,6 +165,12 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 設置本地提醒
+      if (eventDateTime != null) {
+        _scheduleLocalReminder(eventId, eventDateTime!);
+      }
+
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,8 +221,42 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 取消本地提醒
+      _cancelLocalReminder(eventId);
+
     } catch (e) {
       throw Exception('退出活動失敗: $e');
+    }
+  }
+
+  /// 設置本地提醒 (24小時前)
+  void _scheduleLocalReminder(String eventId, DateTime eventDate) {
+    try {
+      // 提醒時間：活動前 24 小時
+      final reminderDate = eventDate.subtract(const Duration(hours: 24));
+
+      // 如果提醒時間已過，則不設置（或者可以設為立即，視需求而定）
+      if (reminderDate.isBefore(DateTime.now())) return;
+
+      _notificationService.scheduleNotification(
+        id: eventId.hashCode,
+        title: '晚餐活動提醒',
+        body: '別忘了您明天晚上有晚餐聚會喔！',
+        scheduledDate: reminderDate,
+        payload: '{"actionType": "view_event", "actionData": "$eventId"}',
+      );
+    } catch (e) {
+      print('Failed to schedule reminder: $e');
+    }
+  }
+
+  /// 取消本地提醒
+  void _cancelLocalReminder(String eventId) {
+    try {
+      _notificationService.cancelNotification(eventId.hashCode);
+    } catch (e) {
+      print('Failed to cancel reminder: $e');
     }
   }
 
@@ -369,5 +419,3 @@ class DinnerEventService {
     }
   }
 }
-
-
