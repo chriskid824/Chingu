@@ -236,6 +236,34 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
                       _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
                       
+                      const SizedBox(height: 32),
+
+                      _buildSectionTitle(context, '我的帳號'),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: chinguTheme?.surfaceVariant ?? Colors.grey[200]!,
+                          ),
+                        ),
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.bookmark_rounded, color: theme.colorScheme.primary, size: 20),
+                          ),
+                          title: const Text('我的收藏'),
+                          trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey[400]),
+                          onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+
                       const SizedBox(height: 40),
                       
                       // 登出按鈕

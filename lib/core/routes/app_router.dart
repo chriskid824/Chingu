@@ -25,6 +25,8 @@ import '../../screens/matching/user_detail_screen.dart';
 import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
 import '../../screens/matching/match_success_screen.dart';
+import '../../screens/profile/favorites_screen.dart';
+import '../../models/user_model.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
@@ -70,6 +72,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String favorites = '/favorites';
   
   // 配對模組
   static const String matching = '/matching';
@@ -166,12 +169,16 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final user = settings.arguments as UserModel?;
+        return MaterialPageRoute(builder: (_) => UserDetailScreen(user: user));
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
