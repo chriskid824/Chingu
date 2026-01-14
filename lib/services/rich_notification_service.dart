@@ -59,16 +59,44 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 檢查是否由通知啟動應用
+  Future<void> checkInitialLaunch() async {
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      if (notificationAppLaunchDetails!.notificationResponse != null) {
+        _onNotificationTap(notificationAppLaunchDetails.notificationResponse!);
+      }
+    }
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
+        String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? type = data['type'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+
+        // 如果 actionType 為空，嘗試從 type 推斷
+        if (actionType == null || actionType.isEmpty) {
+          switch (type) {
+            case 'match':
+              actionType = 'view_match';
+              break;
+            case 'event':
+              actionType = 'view_event';
+              break;
+            case 'message':
+              actionType = 'open_chat';
+              break;
+          }
+        }
 
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
@@ -98,22 +126,25 @@ class RichNotificationService {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          try {
+            // 嘗試解析 JSON 參數
+            final Map<String, dynamic> args = json.decode(data);
+            navigator.pushNamed(AppRoutes.chatDetail, arguments: args);
+          } catch (e) {
+            // 解析失敗，降級到聊天列表
+            navigator.pushNamed(AppRoutes.chatList);
+          }
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
+        // EventDetailScreen 目前不使用參數
+        navigator.pushNamed(AppRoutes.eventDetail);
+        break;
+      case 'view_match':
+        // UserDetailScreen 目前不使用參數，但這裡是配對詳情的入口
+        navigator.pushNamed(AppRoutes.userDetail);
         break;
       case 'match_history':
         navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
@@ -186,6 +217,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'type': notification.type,
     };
 
     await _flutterLocalNotificationsPlugin.show(
