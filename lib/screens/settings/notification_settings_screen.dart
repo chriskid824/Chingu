@@ -1,14 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
+
+  static const Map<String, String> _regionTopics = {
+    '台北 (Taipei)': 'region_taipei',
+    '台中 (Taichung)': 'region_taichung',
+    '高雄 (Kaohsiung)': 'region_kaohsiung',
+  };
+
+  static const Map<String, String> _interestTopics = {
+    '美食 (Food)': 'interest_food',
+    '電影 (Movies)': 'interest_movie',
+    '戶外 (Outdoors)': 'interest_outdoors',
+    '音樂 (Music)': 'interest_music',
+  };
   
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = Provider.of<AuthProvider>(context);
+    final subscribedTopics = authProvider.userModel?.subscribedTopics ?? [];
+
+    void toggleTopic(String topic, bool value) {
+      final currentTopics = List<String>.from(subscribedTopics);
+      if (value) {
+        if (!currentTopics.contains(topic)) currentTopics.add(topic);
+      } else {
+        currentTopics.remove(topic);
+      }
+      authProvider.updateTopicSubscriptions(currentTopics);
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -81,6 +108,32 @@ class NotificationSettingsScreen extends StatelessWidget {
             onChanged: (v) {},
             activeColor: theme.colorScheme.primary,
           ),
+          const Divider(),
+          _buildSectionTitle(context, '地區訂閱'),
+          ..._regionTopics.entries.map((e) {
+            final isSubscribed = subscribedTopics.contains(e.value);
+            return SwitchListTile(
+              title: Text(e.key),
+              subtitle: Text('接收${e.key.split(' ')[0]}相關通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+              value: isSubscribed,
+              onChanged: (v) => toggleTopic(e.value, v),
+              activeColor: theme.colorScheme.primary,
+            );
+          }),
+
+          const Divider(),
+          _buildSectionTitle(context, '興趣訂閱'),
+          ..._interestTopics.entries.map((e) {
+            final isSubscribed = subscribedTopics.contains(e.value);
+            return SwitchListTile(
+              title: Text(e.key),
+              subtitle: Text('接收${e.key.split(' ')[0]}相關通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+              value: isSubscribed,
+              onChanged: (v) => toggleTopic(e.value, v),
+              activeColor: theme.colorScheme.primary,
+            );
+          }),
+
           const Divider(),
           _buildSectionTitle(context, '行銷通知'),
           SwitchListTile(

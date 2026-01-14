@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final NotificationService _notificationService = NotificationService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -60,6 +62,9 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+
+        // 同步 FCM 訂閱 (確保當前設備訂閱了用戶已保存的主題)
+        _syncTopicSubscriptions(_userModel!.subscribedTopics);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -291,6 +296,34 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// 更新主題訂閱
+  Future<bool> updateTopicSubscriptions(List<String> newTopics) async {
+    try {
+      if (_userModel == null) return false;
+
+      final oldTopics = _userModel!.subscribedTopics;
+
+      // 1. 更新 FCM 訂閱
+      await _notificationService.updateSubscriptions(oldTopics, newTopics);
+
+      // 2. 更新 Firestore
+      // 注意：這裡假設 User Model 已經更新了 subscribedTopics 欄位
+      await updateUserData({'subscribedTopics': newTopics});
+
+      return true;
+    } catch (e) {
+      debugPrint('Error updating topic subscriptions: $e');
+      return false;
+    }
+  }
+
+  /// 同步主題訂閱
+  Future<void> _syncTopicSubscriptions(List<String> topics) async {
+    for (final topic in topics) {
+      await _notificationService.subscribeToTopic(topic);
+    }
   }
 }
 
