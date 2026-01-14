@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -43,6 +44,7 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      RichNotificationService().setUser(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
@@ -60,6 +62,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 更新通知服務的用戶資料
+        RichNotificationService().setUser(_userModel);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
