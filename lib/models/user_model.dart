@@ -38,6 +38,17 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final bool pushNotificationsEnabled;
+  final bool newMatchNotificationsEnabled;
+  final bool matchSuccessNotificationsEnabled;
+  final bool messageNotificationsEnabled;
+  final bool messagePreviewEnabled;
+  final bool eventReminderNotificationsEnabled;
+  final bool eventChangeNotificationsEnabled;
+  final bool marketingNotificationsEnabled;
+  final bool newsletterNotificationsEnabled;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +77,15 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.pushNotificationsEnabled = true,
+    this.newMatchNotificationsEnabled = true,
+    this.matchSuccessNotificationsEnabled = true,
+    this.messageNotificationsEnabled = true,
+    this.messagePreviewEnabled = true,
+    this.eventReminderNotificationsEnabled = true,
+    this.eventChangeNotificationsEnabled = true,
+    this.marketingNotificationsEnabled = false,
+    this.newsletterNotificationsEnabled = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +124,15 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      pushNotificationsEnabled: map['pushNotificationsEnabled'] ?? true,
+      newMatchNotificationsEnabled: map['newMatchNotificationsEnabled'] ?? true,
+      matchSuccessNotificationsEnabled: map['matchSuccessNotificationsEnabled'] ?? true,
+      messageNotificationsEnabled: map['messageNotificationsEnabled'] ?? true,
+      messagePreviewEnabled: map['messagePreviewEnabled'] ?? true,
+      eventReminderNotificationsEnabled: map['eventReminderNotificationsEnabled'] ?? true,
+      eventChangeNotificationsEnabled: map['eventChangeNotificationsEnabled'] ?? true,
+      marketingNotificationsEnabled: map['marketingNotificationsEnabled'] ?? false,
+      newsletterNotificationsEnabled: map['newsletterNotificationsEnabled'] ?? false,
     );
   }
 
@@ -136,6 +165,15 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'newMatchNotificationsEnabled': newMatchNotificationsEnabled,
+      'matchSuccessNotificationsEnabled': matchSuccessNotificationsEnabled,
+      'messageNotificationsEnabled': messageNotificationsEnabled,
+      'messagePreviewEnabled': messagePreviewEnabled,
+      'eventReminderNotificationsEnabled': eventReminderNotificationsEnabled,
+      'eventChangeNotificationsEnabled': eventChangeNotificationsEnabled,
+      'marketingNotificationsEnabled': marketingNotificationsEnabled,
+      'newsletterNotificationsEnabled': newsletterNotificationsEnabled,
     };
   }
 
@@ -166,6 +204,15 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? pushNotificationsEnabled,
+    bool? newMatchNotificationsEnabled,
+    bool? matchSuccessNotificationsEnabled,
+    bool? messageNotificationsEnabled,
+    bool? messagePreviewEnabled,
+    bool? eventReminderNotificationsEnabled,
+    bool? eventChangeNotificationsEnabled,
+    bool? marketingNotificationsEnabled,
+    bool? newsletterNotificationsEnabled,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +242,15 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      newMatchNotificationsEnabled: newMatchNotificationsEnabled ?? this.newMatchNotificationsEnabled,
+      matchSuccessNotificationsEnabled: matchSuccessNotificationsEnabled ?? this.matchSuccessNotificationsEnabled,
+      messageNotificationsEnabled: messageNotificationsEnabled ?? this.messageNotificationsEnabled,
+      messagePreviewEnabled: messagePreviewEnabled ?? this.messagePreviewEnabled,
+      eventReminderNotificationsEnabled: eventReminderNotificationsEnabled ?? this.eventReminderNotificationsEnabled,
+      eventChangeNotificationsEnabled: eventChangeNotificationsEnabled ?? this.eventChangeNotificationsEnabled,
+      marketingNotificationsEnabled: marketingNotificationsEnabled ?? this.marketingNotificationsEnabled,
+      newsletterNotificationsEnabled: newsletterNotificationsEnabled ?? this.newsletterNotificationsEnabled,
     );
   }
 
