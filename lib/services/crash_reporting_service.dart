@@ -39,4 +39,7 @@ class CrashReportingService {
   Future<void> setCustomKey(String key, Object value) async {
     await FirebaseCrashlytics.instance.setCustomKey(key, value);
   }
+
+  /// Check if Crashlytics collection is enabled
+  bool get isCollectionEnabled => FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled;
 }
