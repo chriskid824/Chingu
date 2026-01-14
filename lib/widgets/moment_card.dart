@@ -4,6 +4,10 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:chingu/widgets/comment_sheet.dart';
+import 'package:provider/provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -25,6 +29,7 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  final MomentService _momentService = MomentService();
 
   @override
   void initState() {
@@ -38,19 +43,78 @@ class _MomentCardState extends State<MomentCard> {
   void didUpdateWidget(MomentCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.moment != oldWidget.moment) {
+      // Only update from parent if the IDs match or if we assume parent is source of truth.
+      // Optimistic updates are handled locally, but if parent updates (e.g. from stream), sync it.
+      // To avoid overriding local state during rapid interactions, we could add checks,
+      // but typically we trust the parent for definitive state.
       _isLiked = widget.moment.isLiked;
       _likeCount = widget.moment.likeCount;
       _commentCount = widget.moment.commentCount;
     }
   }
 
-  void _toggleLike() {
+  void _toggleLike() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.userModel?.uid;
+
+    if (userId == null) {
+      // Handle unauthenticated state if needed
+      return;
+    }
+
     HapticUtils.light();
+
+    // Optimistic Update
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
-    widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      await _momentService.toggleLike(widget.moment.id, userId, !_isLiked);
+      widget.onLikeChanged?.call(_isLiked);
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        _isLiked = !_isLiked;
+        _likeCount += _isLiked ? 1 : -1;
+      });
+      debugPrint("Error toggling like: $e");
+    }
+  }
+
+  void _showComments() {
+    if (widget.onCommentTap != null) {
+      widget.onCommentTap!();
+      return;
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.userModel;
+
+    if (user == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, controller) => CommentSheet(
+            momentId: widget.moment.id,
+            currentUserId: user.uid,
+            currentUserName: user.name,
+            currentUserAvatar: user.avatarUrl,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -167,7 +231,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _showComments,
               ),
             ],
           ),
