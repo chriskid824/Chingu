@@ -289,6 +289,41 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 添加收藏
+  Future<void> addFavorite(String uid, String targetUserId) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'favoriteUserIds': FieldValue.arrayUnion([targetUserId])
+      });
+    } catch (e) {
+      throw Exception('添加收藏失敗: $e');
+    }
+  }
+
+  /// 移除收藏
+  Future<void> removeFavorite(String uid, String targetUserId) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'favoriteUserIds': FieldValue.arrayRemove([targetUserId])
+      });
+    } catch (e) {
+      throw Exception('移除收藏失敗: $e');
+    }
+  }
+
+  /// 獲取收藏用戶列表
+  Future<List<UserModel>> getFavoriteUsers(String uid) async {
+    try {
+      final user = await getUser(uid);
+      if (user == null || user.favoriteUserIds.isEmpty) {
+        return [];
+      }
+      return await getBatchUsers(user.favoriteUserIds);
+    } catch (e) {
+      throw Exception('獲取收藏列表失敗: $e');
+    }
+  }
 }
 
 
