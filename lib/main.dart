@@ -22,7 +22,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 初始化 Crashlytics
+  // 初始化 Crashlytics (Handles global errors)
   await CrashReportingService().initialize();
 
   // 初始化日期格式化

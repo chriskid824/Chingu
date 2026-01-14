@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -34,9 +35,11 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'registerWithEmailAndPassword auth error');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'registerWithEmailAndPassword failed');
       throw Exception('註冊過程發生錯誤: $e');
     }
   }
@@ -63,9 +66,11 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'signInWithEmailAndPassword auth error');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'signInWithEmailAndPassword failed');
       throw Exception('登入過程發生錯誤: $e');
     }
   }
@@ -101,7 +106,8 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'signInWithGoogle failed');
       throw Exception('Google 登入失敗: $e');
     }
   }
@@ -113,7 +119,8 @@ class AuthService {
         _auth.signOut(),
         _googleSignIn.signOut(),
       ]);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'signOut failed');
       throw Exception('登出失敗: $e');
     }
   }
@@ -124,9 +131,11 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'sendPasswordResetEmail auth error');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'sendPasswordResetEmail failed');
       throw Exception('發送重設郵件失敗: $e');
     }
   }
@@ -138,7 +147,8 @@ class AuthService {
     try {
       await _auth.currentUser?.updateDisplayName(displayName);
       await _auth.currentUser?.reload();
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'updateDisplayName failed');
       throw Exception('更新名稱失敗: $e');
     }
   }
@@ -150,7 +160,8 @@ class AuthService {
     try {
       await _auth.currentUser?.updatePhotoURL(photoURL);
       await _auth.currentUser?.reload();
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'updatePhotoURL failed');
       throw Exception('更新照片失敗: $e');
     }
   }
@@ -159,12 +170,14 @@ class AuthService {
   Future<void> deleteAccount() async {
     try {
       await _auth.currentUser?.delete();
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
       if (e.code == 'requires-recent-login') {
         throw Exception('此操作需要最近登入，請先登出再重新登入');
       }
+      CrashReportingService().recordError(e, stack, reason: 'deleteAccount auth error');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'deleteAccount failed');
       throw Exception('刪除帳號失敗: $e');
     }
   }
