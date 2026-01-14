@@ -133,6 +133,22 @@ class ProfileDetailScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () =>
+                              Navigator.pushNamed(context, AppRoutes.userMoments),
+                          icon: const Icon(Icons.photo_album_outlined, size: 16),
+                          label: const Text('我的動態'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: theme.colorScheme.primary,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
