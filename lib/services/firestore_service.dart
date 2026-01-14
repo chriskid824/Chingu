@@ -223,10 +223,12 @@ class FirestoreService {
   /// [uid] 用戶 ID
   /// [totalDinners] 參加晚餐總數增量
   /// [totalMatches] 配對總數增量
+  /// [totalMessages] 訊息總數增量
   Future<void> updateUserStats(
     String uid, {
     int? totalDinners,
     int? totalMatches,
+    int? totalMessages,
   }) async {
     try {
       Map<String, dynamic> updates = {};
@@ -237,6 +239,10 @@ class FirestoreService {
 
       if (totalMatches != null) {
         updates['totalMatches'] = FieldValue.increment(totalMatches);
+      }
+
+      if (totalMessages != null) {
+        updates['totalMessages'] = FieldValue.increment(totalMessages);
       }
 
       if (updates.isNotEmpty) {
