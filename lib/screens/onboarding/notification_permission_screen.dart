@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class NotificationPermissionScreen extends StatefulWidget {
   const NotificationPermissionScreen({super.key});
@@ -19,11 +21,21 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
     try {
       final messaging = FirebaseMessaging.instance;
       // Request permission
-      await messaging.requestPermission(
+      final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // Get token and save to Firestore
+        final token = await messaging.getToken();
+        final user = FirebaseAuth.instance.currentUser;
+
+        if (token != null && user != null) {
+          await FirestoreService().updateFCMToken(user.uid, token);
+        }
+      }
 
       // We proceed regardless of the result
     } catch (e) {
