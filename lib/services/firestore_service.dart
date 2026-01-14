@@ -289,6 +289,33 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 提交意見回饋
+  ///
+  /// [userId] 用戶 ID
+  /// [category] 類別 (bug_report, suggestion, other)
+  /// [description] 描述
+  /// [contactEmail] 聯絡 email (可選)
+  Future<void> submitFeedback({
+    required String userId,
+    required String category,
+    required String description,
+    String? contactEmail,
+  }) async {
+    try {
+      await _firestore.collection('feedback').add({
+        'userId': userId,
+        'category': category,
+        'description': description,
+        'contactEmail': contactEmail,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'pending', // pending, reviewed, resolved
+        'platform': 'app',
+      });
+    } catch (e) {
+      throw Exception('提交意見回饋失敗: $e');
+    }
+  }
 }
 
 
