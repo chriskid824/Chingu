@@ -1,5 +1,6 @@
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/cloud_functions_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -16,6 +17,7 @@ void main() {
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
   late FakeFirebaseFirestore fakeFirestore;
+  late FakeCloudFunctionsService fakeCloudFunctionsService;
 
   // Test data
   final currentUser = UserModel(
@@ -54,11 +56,13 @@ void main() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
     fakeFirestore = FakeFirebaseFirestore();
+    fakeCloudFunctionsService = FakeCloudFunctionsService();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      cloudFunctionsService: fakeCloudFunctionsService,
     );
   });
 
@@ -174,6 +178,28 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      expect(fakeCloudFunctionsService.callCount, 1);
+      expect(fakeCloudFunctionsService.lastFunctionName, 'sendMatchNotification');
+      expect(fakeCloudFunctionsService.lastData!['user1Id'], currentUser.uid);
+      expect(fakeCloudFunctionsService.lastData!['user2Id'], candidateUser.uid);
+      expect(fakeCloudFunctionsService.lastData!['chatRoomId'], 'chat_room_id');
     });
   });
+}
+
+class FakeCloudFunctionsService implements CloudFunctionsService {
+  int callCount = 0;
+  String? lastFunctionName;
+  Map<String, dynamic>? lastData;
+
+  @override
+  Future<dynamic> callFunction(String name,
+      [Map<String, dynamic>? data]) async {
+    callCount++;
+    lastFunctionName = name;
+    lastData = data;
+    return null;
+  }
 }
