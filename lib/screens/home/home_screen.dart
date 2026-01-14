@@ -199,7 +199,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Icons.calendar_today_rounded,
                           '我的預約',
                           theme.colorScheme.secondary,
-                          () {},
+                          () {
+                            Navigator.pushNamed(context, AppRoutes.eventHistory);
+                          },
                         ),
                       ),
                     ],
@@ -231,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Spacer(),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, AppRoutes.eventsList);
+                          Navigator.pushNamed(context, AppRoutes.eventHistory);
                         },
                         child: const Text('查看全部'),
                       ),

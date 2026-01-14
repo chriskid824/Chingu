@@ -113,7 +113,10 @@ class _EventsListScreenState extends State<EventsListScreen> {
           location: '台北市信義區',
           isUpcoming: isUpcoming,
           onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+            Navigator.of(context).pushNamed(
+              AppRoutes.eventDetail,
+              arguments: {'eventId': 'mock_event_1'},
+            );
           },
         ),
         EventCard(
@@ -124,7 +127,10 @@ class _EventsListScreenState extends State<EventsListScreen> {
           location: '台北市大安區',
           isUpcoming: isUpcoming,
           onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+            Navigator.of(context).pushNamed(
+              AppRoutes.eventDetail,
+              arguments: {'eventId': 'mock_event_2'},
+            );
           },
         ),
         if (!isUpcoming)
@@ -136,7 +142,10 @@ class _EventsListScreenState extends State<EventsListScreen> {
             location: '台北市中山區',
             isUpcoming: isUpcoming,
             onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
+              Navigator.of(context).pushNamed(
+                AppRoutes.eventDetail,
+                arguments: {'eventId': 'mock_event_3'},
+              );
             },
           ),
       ],
