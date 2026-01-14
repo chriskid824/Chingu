@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
@@ -84,6 +86,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -94,7 +97,8 @@ class ChatService {
         'senderId': senderId,
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
-        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'message': message, // Standardized field
+        'text': message, // Compatibility field for legacy clients
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -103,19 +107,81 @@ class ChatService {
         'originalSenderName': originalSenderName,
       });
 
-      // 2. 更新聊天室最後訊息
-      await _chatRoomsCollection.doc(chatRoomId).update({
+      // 確定接收者 ID
+      String? targetUserId = recipientId;
+      if (targetUserId == null) {
+        final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+          final data = chatRoomDoc.data() as Map<String, dynamic>;
+          final participants = List<String>.from(data['participantIds'] ?? []);
+          targetUserId = participants.firstWhere(
+            (id) => id != senderId,
+            orElse: () => '',
+          );
+        }
+      }
+
+      // 2. 更新聊天室最後訊息和未讀計數
+      final updateData = {
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
-      });
+      };
+
+      if (targetUserId != null && targetUserId.isNotEmpty) {
+        // 更新接收者的未讀數
+        updateData['unreadCount.$targetUserId'] = FieldValue.increment(1);
+      }
+
+      await _chatRoomsCollection.doc(chatRoomId).update(updateData);
+
+      // 3. 發送推送通知
+      if (targetUserId != null && targetUserId.isNotEmpty) {
+        _sendNotification(
+          recipientId: targetUserId,
+          senderName: senderName,
+          message: type == 'text' ? message : '傳送了一張圖片',
+          chatRoomId: chatRoomId,
+          senderId: senderId,
+        );
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
+    }
+  }
+
+  /// 發送推送通知
+  Future<void> _sendNotification({
+    required String recipientId,
+    required String senderName,
+    required String message,
+    required String chatRoomId,
+    required String senderId,
+  }) async {
+    try {
+      // 獲取接收者的 FCM Token
+      final userDoc = await _firestore.collection('users').doc(recipientId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final fcmToken = userData['fcmToken'] as String?;
+
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        // 調用 Cloud Function 發送通知
+        await _functions.httpsCallable('sendChatNotification').call({
+          'token': fcmToken,
+          'title': senderName,
+          'body': message,
+          'data': {
+            'chatRoomId': chatRoomId,
+            'senderId': senderId,
+            'type': 'chat_message',
+          },
+        });
+      }
+    } catch (e) {
+      print('發送通知失敗: $e');
+      // 不拋出異常，以免影響訊息發送流程
     }
   }
 }
