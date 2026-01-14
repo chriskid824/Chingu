@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -30,6 +31,12 @@ void main() async {
 
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
+
+  // 初始化 FCM 通知服務
+  // 注意：這應該在用戶登入後才調用以獲取並儲存 Token
+  // 但我們可以在這裡初始化監聽器
+  // 不使用 await 以避免阻塞 App 啟動（iOS 請求權限會卡住）
+  NotificationService().initialize();
 
   runApp(const ChinguApp());
 }
