@@ -1,14 +1,128 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/widgets/event_registration_dialog.dart';
 
-class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key});
+class EventDetailScreen extends StatefulWidget {
+  final DinnerEventModel? event;
+  final String? eventId;
+
+  const EventDetailScreen({
+    super.key,
+    this.event,
+    this.eventId,
+  });
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  DinnerEventModel? _event;
+  bool _isLoading = false;
+  String? _error;
+  final DinnerEventService _eventService = DinnerEventService();
+  final String? _userId = FirebaseAuth.instance.currentUser?.uid;
   
+  @override
+  void initState() {
+    super.initState();
+    _initEvent();
+  }
+
+  void _initEvent() {
+    if (widget.event != null) {
+      _event = widget.event;
+      _listenToStream(widget.event!.id);
+    } else if (widget.eventId != null) {
+      _fetchEvent(widget.eventId!);
+    } else {
+      _error = '未提供活動資訊';
+    }
+  }
+
+  Future<void> _fetchEvent(String id) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final event = await _eventService.getEvent(id);
+      if (mounted) {
+        if (event != null) {
+          setState(() {
+            _event = event;
+            _isLoading = false;
+          });
+          _listenToStream(id);
+        } else {
+          setState(() {
+            _error = '找不到活動';
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = '載入失敗: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _listenToStream(String eventId) {
+    _eventService.getEventStream(eventId).listen((updatedEvent) {
+      if (updatedEvent != null && mounted) {
+        setState(() {
+          _event = updatedEvent;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('活動詳情')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null || _event == null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('活動詳情')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Text(_error ?? '未知錯誤'),
+              if (widget.eventId != null)
+                TextButton(
+                  onPressed: () => _fetchEvent(widget.eventId!),
+                  child: const Text('重試'),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final event = _event!;
+    final isUserRegistered = _userId != null && event.participantIds.contains(_userId);
+    final isUserWaitlisted = _userId != null && event.waitlist.contains(_userId);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -42,22 +156,6 @@ class EventDetailScreen extends StatelessWidget {
                   ),
                   child: Icon(
                     Icons.share_rounded,
-                    size: 18,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.more_vert_rounded,
                     size: 18,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -117,7 +215,7 @@ class EventDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '6人晚餐聚會',
+                          '${event.maxParticipants}人晚餐聚會',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -126,21 +224,23 @@ class EventDetailScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          gradient: chinguTheme?.successGradient,
+                          gradient: event.status == 'confirmed'
+                              ? chinguTheme?.successGradient
+                              : chinguTheme?.primaryGradient,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.check_circle,
+                              event.status == 'confirmed' ? Icons.check_circle : Icons.hourglass_empty,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              '已確認',
-                              style: TextStyle(
+                              event.statusText,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -157,7 +257,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    _formatDate(event.dateTime),
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +265,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    '${event.budgetRangeText} / 人',
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +273,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    event.restaurantName ?? '${event.city} ${event.district} (待定)',
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,17 +281,20 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    '${event.maxParticipants} 人（固定）\n目前已報名：${event.currentParticipants} 人${event.waitlist.isNotEmpty ? '\n候補人數：${event.waitlistCount} 人' : ''}',
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
                   const SizedBox(height: 32),
                   
+                  if (isUserRegistered)
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            // Open Chat
+                          },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: BorderSide(color: theme.colorScheme.primary),
@@ -283,14 +386,39 @@ class EventDetailScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: GradientButton(
-            text: '立即報名',
-            onPressed: () {},
+            text: _getActionButtonText(event, isUserRegistered, isUserWaitlisted),
+            onPressed: () => _showRegistrationDialog(context, event),
+            gradient: (isUserRegistered || isUserWaitlisted)
+                ? LinearGradient(colors: [theme.colorScheme.secondary, theme.colorScheme.secondary])
+                : null,
           ),
         ),
       ),
     );
   }
+
+  String _getActionButtonText(DinnerEventModel event, bool isRegistered, bool isWaitlisted) {
+    if (isRegistered) return '取消報名';
+    if (isWaitlisted) return '取消候補';
+    if (event.isFull) return '加入候補';
+    return '立即報名';
+  }
+
+  void _showRegistrationDialog(BuildContext context, DinnerEventModel event) async {
+    if (_userId == null) return;
+
+    await EventRegistrationDialog.show(
+      context,
+      event: event,
+      userId: _userId!,
+      eventService: _eventService,
+    );
+  }
   
+  String _formatDate(DateTime date) {
+    return '${date.year}年${date.month}月${date.day}日 ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildInfoCard(BuildContext context, IconData icon, String label, String value, Color color) {
     final theme = Theme.of(context);
     return Container(

@@ -27,6 +27,7 @@ import '../../screens/matching/filter_screen.dart';
 import '../../screens/matching/match_success_screen.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
+import '../../screens/events/my_events_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
@@ -83,6 +84,7 @@ class AppRoutes {
   static const String eventDetail = '/event-detail';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
+  static const String myEvents = '/my-events';
   
   // 聊天模組
   static const String chatList = '/chat-list';
@@ -182,9 +184,24 @@ class AppRouter {
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
+
+      case AppRoutes.myEvents:
+        return MaterialPageRoute(builder: (_) => const MyEventsScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final args = settings.arguments;
+        DinnerEventModel? event;
+        String? eventId;
+
+        if (args is DinnerEventModel) {
+          event = args;
+        } else if (args is String) {
+          eventId = args;
+        }
+
+        return MaterialPageRoute(
+          builder: (_) => EventDetailScreen(event: event, eventId: eventId),
+        );
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
