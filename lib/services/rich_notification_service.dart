@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -18,11 +21,23 @@ class RichNotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
   bool _isInitialized = false;
+  UserModel? _currentUser;
+
+  /// 設置當前用戶（用於偏好檢查）
+  void setUser(UserModel? user) {
+    _currentUser = user;
+    debugPrint('Notification Service user updated: ${user?.uid}');
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // 監聽前台訊息
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
     // Android 初始化設定
     // 預設使用 app icon，需確保 drawable/mipmap 中有 @mipmap/ic_launcher
@@ -125,8 +140,73 @@ class RichNotificationService {
     }
   }
 
+  /// 處理前台訊息
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
+    try {
+      // 轉換 RemoteMessage 到 NotificationModel
+      final notification = NotificationModel(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: _currentUser?.uid ?? '', // 如果有當前用戶則使用
+        type: message.data['type'] ?? 'system',
+        title: message.notification?.title ?? '新通知',
+        message: message.notification?.body ?? '',
+        imageUrl: message.data['imageUrl'],
+        actionType: message.data['actionType'],
+        actionData: message.data['actionData'],
+        createdAt: DateTime.now(),
+      );
+
+      await showNotification(notification);
+    } catch (e) {
+      debugPrint('Error handling foreground message: $e');
+    }
+  }
+
+  /// 檢查通知偏好
+  bool _checkNotificationPreference(NotificationModel notification) {
+    // 如果沒有用戶登入，預設允許（或者不允許，視需求而定）
+    // 這裡假設如果尚未設置用戶，可能是登入前或系統通知，允許顯示
+    if (_currentUser == null) return true;
+
+    // 總開關
+    if (!_currentUser!.pushNotificationsEnabled) return false;
+
+    switch (notification.type) {
+      case 'match':
+        // 區分新配對和配對成功
+        // 假設 title 或 message 包含關鍵字，或者 type 有更細分
+        // 這裡暫時統一檢查 matchNotificationsEnabled
+        // 如果後端有傳遞 subtype，可以更精確
+        if (notification.title.contains('成功') || notification.message.contains('成功')) {
+          return _currentUser!.matchSuccessNotificationsEnabled;
+        }
+        return _currentUser!.matchNotificationsEnabled;
+      case 'message':
+        return _currentUser!.messageNotificationsEnabled;
+      case 'event':
+        // 預約相關
+        if (notification.title.contains('變更') || notification.message.contains('變更')) {
+          return _currentUser!.appointmentChangeEnabled;
+        }
+        return _currentUser!.appointmentReminderEnabled;
+      case 'marketing':
+        return _currentUser!.marketingEnabled;
+      case 'newsletter':
+        return _currentUser!.newsletterEnabled;
+      case 'system':
+      default:
+        return true;
+    }
+  }
+
   /// 顯示豐富通知
   Future<void> showNotification(NotificationModel notification) async {
+    // 檢查偏好設定
+    if (!_checkNotificationPreference(notification)) {
+      debugPrint('Notification suppressed by user preference: ${notification.type}');
+      return;
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 

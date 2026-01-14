@@ -38,6 +38,16 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final bool pushNotificationsEnabled;
+  final bool matchNotificationsEnabled;
+  final bool matchSuccessNotificationsEnabled;
+  final bool messageNotificationsEnabled;
+  final bool appointmentReminderEnabled;
+  final bool appointmentChangeEnabled;
+  final bool marketingEnabled;
+  final bool newsletterEnabled;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +76,14 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.pushNotificationsEnabled = true,
+    this.matchNotificationsEnabled = true,
+    this.matchSuccessNotificationsEnabled = true,
+    this.messageNotificationsEnabled = true,
+    this.appointmentReminderEnabled = true,
+    this.appointmentChangeEnabled = true,
+    this.marketingEnabled = false,
+    this.newsletterEnabled = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +122,14 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      pushNotificationsEnabled: map['pushNotificationsEnabled'] ?? true,
+      matchNotificationsEnabled: map['matchNotificationsEnabled'] ?? true,
+      matchSuccessNotificationsEnabled: map['matchSuccessNotificationsEnabled'] ?? true,
+      messageNotificationsEnabled: map['messageNotificationsEnabled'] ?? true,
+      appointmentReminderEnabled: map['appointmentReminderEnabled'] ?? true,
+      appointmentChangeEnabled: map['appointmentChangeEnabled'] ?? true,
+      marketingEnabled: map['marketingEnabled'] ?? false,
+      newsletterEnabled: map['newsletterEnabled'] ?? false,
     );
   }
 
@@ -136,6 +162,14 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'matchNotificationsEnabled': matchNotificationsEnabled,
+      'matchSuccessNotificationsEnabled': matchSuccessNotificationsEnabled,
+      'messageNotificationsEnabled': messageNotificationsEnabled,
+      'appointmentReminderEnabled': appointmentReminderEnabled,
+      'appointmentChangeEnabled': appointmentChangeEnabled,
+      'marketingEnabled': marketingEnabled,
+      'newsletterEnabled': newsletterEnabled,
     };
   }
 
@@ -166,6 +200,14 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? pushNotificationsEnabled,
+    bool? matchNotificationsEnabled,
+    bool? matchSuccessNotificationsEnabled,
+    bool? messageNotificationsEnabled,
+    bool? appointmentReminderEnabled,
+    bool? appointmentChangeEnabled,
+    bool? marketingEnabled,
+    bool? newsletterEnabled,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +237,14 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      matchNotificationsEnabled: matchNotificationsEnabled ?? this.matchNotificationsEnabled,
+      matchSuccessNotificationsEnabled: matchSuccessNotificationsEnabled ?? this.matchSuccessNotificationsEnabled,
+      messageNotificationsEnabled: messageNotificationsEnabled ?? this.messageNotificationsEnabled,
+      appointmentReminderEnabled: appointmentReminderEnabled ?? this.appointmentReminderEnabled,
+      appointmentChangeEnabled: appointmentChangeEnabled ?? this.appointmentChangeEnabled,
+      marketingEnabled: marketingEnabled ?? this.marketingEnabled,
+      newsletterEnabled: newsletterEnabled ?? this.newsletterEnabled,
     );
   }
 
