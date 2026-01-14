@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/notification_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
@@ -7,6 +8,7 @@ class ChatService {
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
+  CollectionReference get _notificationsCollection => _firestore.collection('notifications');
 
   /// 創建或獲取現有聊天室
   /// 
@@ -95,6 +97,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Compatibility for legacy readers
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -107,6 +110,7 @@ class ChatService {
       await _chatRoomsCollection.doc(chatRoomId).update({
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
+        'lastMessageAt': timestamp, // Compatibility for legacy readers
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
         // 這裡需要知道接收者的 ID，但在這裡我們沒有。
@@ -114,6 +118,45 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送通知
+      try {
+        final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+          final data = chatRoomDoc.data() as Map<String, dynamic>;
+          final participantIds = List<String>.from(data['participantIds'] ?? []);
+
+          // Find recipient
+          final recipientId = participantIds.firstWhere(
+            (id) => id != senderId,
+            orElse: () => '',
+          );
+
+          if (recipientId.isNotEmpty) {
+            // Preview message (max 20 chars)
+            String preview = type == 'text' ? message : '[${type}]';
+            if (preview.length > 20) {
+              preview = '${preview.substring(0, 20)}...';
+            }
+
+            final notification = NotificationModel(
+              id: '', // Empty ID as Firestore will generate it
+              userId: recipientId,
+              type: 'message',
+              title: senderName,
+              message: preview,
+              actionType: 'open_chat',
+              actionData: chatRoomId,
+              createdAt: DateTime.now(),
+            );
+
+            await _notificationsCollection.add(notification.toMap());
+          }
+        }
+      } catch (e) {
+        print('發送通知失敗: $e');
+        // Do not rethrow to avoid failing the message send
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
