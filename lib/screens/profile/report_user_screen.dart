@@ -6,6 +6,8 @@ import 'package:chingu/widgets/app_icon_button.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/providers/auth_provider.dart';
 
+/// 舉報用戶頁面
+/// 允許用戶選擇舉報原因並填寫詳細描述
 class ReportUserScreen extends StatefulWidget {
   final String reportedUserId;
   final String? reportedUserName;
