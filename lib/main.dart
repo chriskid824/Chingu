@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -22,6 +23,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 註冊後台訊息處理器
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
@@ -29,13 +33,22 @@ void main() async {
   await initializeDateFormatting('zh_TW', null);
 
   // 初始化豐富通知服務
-  await RichNotificationService().initialize();
+  final richNotificationService = RichNotificationService();
+  await richNotificationService.initialize();
 
-  runApp(const ChinguApp());
+  // 檢查是否有初始通知數據 (Terminated -> Open)
+  final initialNotificationData = await richNotificationService.checkInitialLaunch();
+
+  runApp(ChinguApp(initialNotificationData: initialNotificationData));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final Map<String, dynamic>? initialNotificationData;
+
+  const ChinguApp({
+    super.key,
+    this.initialNotificationData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +68,20 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            // 如果有初始通知數據，使用 onGenerateInitialRoutes 構建路由棧
+            // 否則使用 standard initialRoute
+            initialRoute: initialNotificationData == null ? AppRoutes.mainNavigation : null,
+            onGenerateInitialRoutes: initialNotificationData != null
+                ? (_) {
+                    return [
+                      AppRouter.generateRoute(const RouteSettings(name: AppRoutes.mainNavigation)),
+                      AppRouter.generateRoute(RouteSettings(
+                        name: initialNotificationData!['route'],
+                        arguments: initialNotificationData!['args']
+                      )),
+                    ];
+                  }
+                : null,
             onGenerateRoute: AppRouter.generateRoute,
           );
         },

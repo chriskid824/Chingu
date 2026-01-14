@@ -2,8 +2,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../firebase_options.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+
+// 必須是 top-level function
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 class RichNotificationService {
   // Singleton pattern
@@ -17,6 +29,8 @@ class RichNotificationService {
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   bool _isInitialized = false;
 
@@ -47,7 +61,7 @@ class RichNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // 請求 Android 13+ 通知權限
+    // 請求 Android 13+ 通知權限 (Local Notifications)
     final androidImplementation = _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -56,10 +70,69 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    // 請求 FCM 權限
+    await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+
+    // 設定 Foreground 監聽器
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+    // 設定 Background Opened 監聽器 (當應用在背景時被點擊)
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteMessageNavigation);
+
     _isInitialized = true;
   }
 
-  /// 處理通知點擊事件
+  /// 檢查初始啟動 (Terminated -> Open)
+  Future<Map<String, dynamic>?> checkInitialLaunch() async {
+    try {
+      RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
+      if (initialMessage != null) {
+        return _getNavigationDataFromMessage(initialMessage);
+      }
+    } catch (e) {
+      debugPrint('Error checking initial launch: $e');
+    }
+    return null;
+  }
+
+  /// 處理 Foreground 訊息
+  void _handleForegroundMessage(RemoteMessage message) {
+    debugPrint('Got a message whilst in the foreground!');
+    debugPrint('Message data: ${message.data}');
+
+    if (message.notification != null) {
+      debugPrint('Message also contained a notification: ${message.notification}');
+    }
+
+    // 轉換 RemoteMessage 為 NotificationModel 並顯示
+    // 優先使用 data 中的欄位，如果沒有則使用 notification 物件
+    final String title = message.notification?.title ?? message.data['title'] ?? '新通知';
+    final String body = message.notification?.body ?? message.data['message'] ?? '';
+
+    // 只有當有內容時才顯示
+    if (title.isNotEmpty || body.isNotEmpty) {
+      final notification = NotificationModel(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: message.data['userId'] ?? '',
+        type: message.data['type'] ?? 'system',
+        title: title,
+        message: body,
+        imageUrl: message.notification?.android?.imageUrl ?? message.data['imageUrl'],
+        actionType: message.data['actionType'],
+        actionData: message.data['actionData'],
+        createdAt: DateTime.now(),
+      );
+
+      showNotification(notification);
+    }
+  }
+
+  /// 處理通知點擊事件 (Local Notification)
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
       try {
@@ -77,6 +150,12 @@ class RichNotificationService {
     }
   }
 
+  /// 處理 RemoteMessage 導航 (Background -> Open)
+  void _handleRemoteMessageNavigation(RemoteMessage message) {
+    final data = message.data;
+    _handleNavigation(data['actionType'], data['actionData'], null);
+  }
+
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
@@ -92,6 +171,50 @@ class RichNotificationService {
     if (actionType != null) {
       _performAction(actionType, actionData, navigator);
     }
+  }
+
+  /// 獲取導航數據 (用於 Initial Launch)
+  Map<String, dynamic>? _getNavigationDataFromMessage(RemoteMessage message) {
+    final data = message.data;
+    final actionType = data['actionType'];
+    final actionData = data['actionData'];
+
+    // 這裡我們需要返回路由名稱和參數，而不是直接導航
+    // 邏輯類似於 _performAction
+
+    String? route;
+    Object? args;
+
+    switch (actionType) {
+      case 'open_chat':
+        route = AppRoutes.chatList;
+        // 如果需要詳細頁面參數，可以在這裡解析 actionData
+        break;
+      case 'view_event':
+        route = AppRoutes.eventDetail;
+        break;
+      case 'match_history':
+        route = AppRoutes.matchesList;
+        break;
+      default:
+        route = AppRoutes.notifications;
+        break;
+    }
+
+    if (route != null) {
+      if (actionData != null) {
+        try {
+          args = json.decode(actionData);
+        } catch (_) {
+          args = actionData;
+        }
+      }
+      return {
+        'route': route,
+        'args': args,
+      };
+    }
+    return null;
   }
 
   void _performAction(String action, String? data, NavigatorState navigator) {
