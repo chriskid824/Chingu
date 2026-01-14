@@ -30,6 +30,7 @@ import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
+import '../../screens/events/event_history_screen.dart';
 // 聊天模組
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
@@ -81,6 +82,7 @@ class AppRoutes {
   // 活動模組
   static const String eventsList = '/events-list';
   static const String eventDetail = '/event-detail';
+  static const String eventHistory = '/event-history';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
   
@@ -184,7 +186,24 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        final eventId = args?['eventId'] as String?;
+        if (eventId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Error: Missing eventId')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => EventDetailScreen(
+            eventId: eventId,
+            initialEvent: args?['initialEvent'],
+          ),
+        );
+
+      case AppRoutes.eventHistory:
+        return MaterialPageRoute(builder: (_) => const EventHistoryScreen());
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
