@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MomentModel extends Equatable {
   final String id;
@@ -51,6 +52,34 @@ class MomentModel extends Equatable {
     );
   }
 
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id, {bool isLiked = false}) {
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? 'Unknown',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      likeCount: map['likeCount'] ?? 0,
+      commentCount: map['commentCount'] ?? 0,
+      isLiked: isLiked,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+    };
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -63,5 +92,54 @@ class MomentModel extends Equatable {
         likeCount,
         commentCount,
         isLiked,
+      ];
+}
+
+class CommentModel extends Equatable {
+  final String id;
+  final String userId;
+  final String userName;
+  final String? userAvatar;
+  final String content;
+  final DateTime createdAt;
+
+  const CommentModel({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    this.userAvatar,
+    required this.content,
+    required this.createdAt,
+  });
+
+  factory CommentModel.fromMap(Map<String, dynamic> map, String id) {
+    return CommentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? 'Unknown',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        userId,
+        userName,
+        userAvatar,
+        content,
+        createdAt,
       ];
 }
