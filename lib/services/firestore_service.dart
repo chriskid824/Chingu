@@ -289,6 +289,53 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 刪除用戶及其相關資料
+  ///
+  /// [uid] 用戶 ID
+  /// 注意：這是一個破壞性操作，且涉及多個集合的清理。
+  /// 理想情況下應通過 Cloud Functions 執行以確保完整性。
+  Future<void> deleteUserAndRelatedData(String uid) async {
+    try {
+      final batch = _firestore.batch();
+
+      // 1. 刪除用戶文檔
+      batch.delete(_usersCollection.doc(uid));
+
+      // 2. 刪除用戶的配對偏好
+      // 假設有一個 collection 'user_learned_preferences'
+      final prefsRef = _firestore.collection('user_learned_preferences').doc(uid);
+      batch.delete(prefsRef);
+
+      // 3. 提交批次操作 (僅刪除直接關聯的單一文檔)
+      await batch.commit();
+
+      // 注意：這裡無法輕易刪除所有相關的聊天記錄、滑動記錄等，
+      // 因為需要查詢多個集合且可能涉及權限問題。
+      // 建議由 Cloud Function 觸發 `auth.user.onDelete` 來清理剩餘數據。
+
+      print('用戶 $uid 基本資料已刪除');
+    } catch (e) {
+      throw Exception('刪除用戶相關資料失敗: $e');
+    }
+  }
+
+  /// 請求數據導出
+  ///
+  /// [uid] 用戶 ID
+  /// [email] 用戶 Email
+  Future<void> requestDataExport(String uid, String email) async {
+    try {
+      await _firestore.collection('data_export_requests').add({
+        'uid': uid,
+        'email': email,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('請求數據導出失敗: $e');
+    }
+  }
 }
 
 
