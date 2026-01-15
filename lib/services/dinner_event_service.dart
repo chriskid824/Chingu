@@ -7,6 +7,7 @@ class DinnerEventService {
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
+  CollectionReference get _remindersCollection => _firestore.collection('reminders');
 
   // 每桌最大人數
   static const int MAX_PARTICIPANTS = 6;
@@ -30,6 +31,7 @@ class DinnerEventService {
     try {
       // 創建新的文檔引用以獲取 ID
       final docRef = _eventsCollection.doc();
+      final eventId = docRef.id;
       
       // 初始參與者為創建者
       final participantIds = [creatorId];
@@ -43,7 +45,7 @@ class DinnerEventService {
       ];
 
       final event = DinnerEventModel(
-        id: docRef.id,
+        id: eventId,
         creatorId: creatorId,
         dateTime: dateTime,
         budgetRange: budgetRange,
@@ -57,8 +59,15 @@ class DinnerEventService {
         icebreakerQuestions: icebreakerQuestions,
       );
 
-      await docRef.set(event.toMap());
-      return docRef.id;
+      // 使用 Batch 確保原子操作 (活動創建 + 提醒設定)
+      final batch = _firestore.batch();
+      batch.set(docRef, event.toMap());
+
+      // 設定提醒 (Cloud Scheduler 會監聽此集合的創建事件)
+      _scheduleReminderInBatch(batch, creatorId, eventId, dateTime);
+
+      await batch.commit();
+      return eventId;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
     }
@@ -154,6 +163,13 @@ class DinnerEventService {
         }
 
         transaction.update(docRef, updates);
+
+        // 設定提醒
+        // 需要活動時間來計算提醒時間
+        if (data['dateTime'] != null) {
+           final eventDate = (data['dateTime'] as Timestamp).toDate();
+           _scheduleReminderInTransaction(transaction, userId, eventId, eventDate);
+        }
       });
     } catch (e) {
       throw Exception('加入活動失敗: $e');
@@ -204,6 +220,9 @@ class DinnerEventService {
         }
 
         transaction.update(docRef, updates);
+
+        // 刪除提醒
+        _cancelReminderInTransaction(transaction, userId, eventId);
       });
     } catch (e) {
       throw Exception('退出活動失敗: $e');
@@ -368,6 +387,62 @@ class DinnerEventService {
       throw Exception('報名失敗: $e');
     }
   }
+
+  // --- 提醒相關私有方法 (Cloud Scheduler 觸發) ---
+
+  /// 生成提醒文檔 ID: reminder_{eventId}_{userId}
+  String _getReminderId(String eventId, String userId) {
+    return 'reminder_${eventId}_${userId}';
+  }
+
+  /// 在 Batch 中設定提醒 (用於 createEvent)
+  void _scheduleReminderInBatch(WriteBatch batch, String userId, String eventId, DateTime eventDate) {
+    // 提醒時間為活動前 24 小時
+    final remindTime = eventDate.subtract(const Duration(hours: 24));
+
+    // 如果現在已經過了提醒時間，則不設定 (或者設為立即觸發，視需求而定，這裡假設不提醒)
+    if (remindTime.isBefore(DateTime.now())) return;
+
+    final reminderId = _getReminderId(eventId, userId);
+    final reminderRef = _remindersCollection.doc(reminderId);
+
+    batch.set(reminderRef, {
+      'type': 'dinner_event_reminder',
+      'userId': userId,
+      'eventId': eventId,
+      'eventDate': Timestamp.fromDate(eventDate),
+      'remindAt': Timestamp.fromDate(remindTime),
+      'createdAt': FieldValue.serverTimestamp(),
+      'status': 'pending', // pending -> scheduled -> sent
+    });
+  }
+
+  /// 在 Transaction 中設定提醒 (用於 joinEvent)
+  void _scheduleReminderInTransaction(Transaction transaction, String userId, String eventId, DateTime eventDate) {
+    final remindTime = eventDate.subtract(const Duration(hours: 24));
+
+    if (remindTime.isBefore(DateTime.now())) return;
+
+    final reminderId = _getReminderId(eventId, userId);
+    final reminderRef = _remindersCollection.doc(reminderId);
+
+    transaction.set(reminderRef, {
+      'type': 'dinner_event_reminder',
+      'userId': userId,
+      'eventId': eventId,
+      'eventDate': Timestamp.fromDate(eventDate),
+      'remindAt': Timestamp.fromDate(remindTime),
+      'createdAt': FieldValue.serverTimestamp(),
+      'status': 'pending',
+    });
+  }
+
+  /// 在 Transaction 中取消提醒 (用於 leaveEvent)
+  void _cancelReminderInTransaction(Transaction transaction, String userId, String eventId) {
+    final reminderId = _getReminderId(eventId, userId);
+    final reminderRef = _remindersCollection.doc(reminderId);
+
+    // 這裡我們直接刪除提醒。如果 Cloud Scheduler 已經處理了，刪除也不會有壞處。
+    transaction.delete(reminderRef);
+  }
 }
-
-
