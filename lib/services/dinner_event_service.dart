@@ -26,6 +26,7 @@ class DinnerEventService {
     required String city,
     required String district,
     String? notes,
+    bool enableReminder = true,
   }) async {
     try {
       // 創建新的文檔引用以獲取 ID
@@ -34,6 +35,7 @@ class DinnerEventService {
       // 初始參與者為創建者
       final participantIds = [creatorId];
       final participantStatus = {creatorId: 'confirmed'};
+      final participantReminders = {creatorId: enableReminder};
       
       // 預設破冰問題（之後可以從題庫隨機選取）
       final icebreakerQuestions = [
@@ -52,6 +54,7 @@ class DinnerEventService {
         notes: notes,
         participantIds: participantIds,
         participantStatus: participantStatus,
+        participantReminders: participantReminders,
         status: 'pending', // 等待配對
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
@@ -113,7 +116,8 @@ class DinnerEventService {
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
-  Future<void> joinEvent(String eventId, String userId) async {
+  /// [enableReminder] 是否開啟提醒
+  Future<void> joinEvent(String eventId, String userId, {bool enableReminder = true}) async {
     try {
       // 使用事務確保數據一致性
       await _firestore.runTransaction((transaction) async {
@@ -142,9 +146,14 @@ class DinnerEventService {
         final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
         participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
 
+        // 更新提醒設定
+        final participantReminders = Map<String, dynamic>.from(data['participantReminders'] ?? {});
+        participantReminders[userId] = enableReminder;
+
         final updates = {
           'participantIds': participantIds,
           'participantStatus': participantStatus,
+          'participantReminders': participantReminders,
         };
 
         // 如果人數達到 6 人，自動確認活動
@@ -188,9 +197,14 @@ class DinnerEventService {
         final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
         participantStatus.remove(userId);
 
+        // 移除提醒設定
+        final participantReminders = Map<String, dynamic>.from(data['participantReminders'] ?? {});
+        participantReminders.remove(userId);
+
         final updates = {
           'participantIds': participantIds,
           'participantStatus': participantStatus,
+          'participantReminders': participantReminders,
         };
 
         // 如果活動人數少於 6 人且狀態為已確認，可能需要處理（暫時簡單處理：變回 pending）
@@ -300,6 +314,7 @@ class DinnerEventService {
     required DateTime date,
     required String city,
     required String district,
+    bool enableReminder = true,
   }) async {
     try {
       // 1. 搜尋現有符合條件的活動
@@ -350,7 +365,7 @@ class DinnerEventService {
       
       // 2. 如果找到活動，加入它
       if (targetEventId != null) {
-        await joinEvent(targetEventId, userId);
+        await joinEvent(targetEventId, userId, enableReminder: enableReminder);
         return targetEventId;
       }
       
@@ -362,6 +377,7 @@ class DinnerEventService {
         city: city,
         district: district,
         notes: '週四固定晚餐聚會',
+        enableReminder: enableReminder,
       );
       
     } catch (e) {

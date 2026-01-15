@@ -13,6 +13,7 @@ class DinnerEventModel {
   // 參與者（固定6人）
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final Map<String, bool> participantReminders; // uid -> true/false
   
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
@@ -43,6 +44,7 @@ class DinnerEventModel {
     this.notes,
     required this.participantIds,
     required this.participantStatus,
+    this.participantReminders = const {},
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -74,6 +76,7 @@ class DinnerEventModel {
       notes: map['notes'],
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      participantReminders: Map<String, bool>.from(map['participantReminders'] ?? {}),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -107,6 +110,7 @@ class DinnerEventModel {
       'notes': notes,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'participantReminders': participantReminders,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -130,6 +134,7 @@ class DinnerEventModel {
     String? notes,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    Map<String, bool>? participantReminders,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -151,6 +156,7 @@ class DinnerEventModel {
       notes: notes ?? this.notes,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      participantReminders: participantReminders ?? this.participantReminders,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
