@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -7,6 +8,7 @@ class FirestoreService {
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
+  CollectionReference get _loginHistoryCollection => _firestore.collection('login_history');
 
   /// 創建新用戶資料
   /// 
@@ -287,6 +289,33 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 新增登入記錄
+  Future<void> addLoginHistory(LoginHistoryModel history) async {
+    try {
+      await _loginHistoryCollection.add(history.toMap());
+    } catch (e) {
+      print('新增登入記錄失敗: $e');
+      // 不拋出異常，以免影響登入流程
+    }
+  }
+
+  /// 獲取用戶登入歷史
+  Future<List<LoginHistoryModel>> getLoginHistory(String userId, {int limit = 20}) async {
+    try {
+      final querySnapshot = await _loginHistoryCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => LoginHistoryModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+    } catch (e) {
+      throw Exception('獲取登入歷史失敗: $e');
     }
   }
 }
