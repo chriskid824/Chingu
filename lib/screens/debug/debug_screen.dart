@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,6 +106,77 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  Future<void> _testNotification(String type) async {
+    final service = RichNotificationService();
+    // Ensure initialized
+    await service.initialize();
+
+    String title;
+    String message;
+    String? actionType;
+    String? actionData;
+
+    switch (type) {
+      case 'match':
+        title = '配對成功！';
+        message = '你和 Jessica 配對成功了！快來打個招呼吧 👋';
+        actionType = 'open_chat';
+        actionData = 'dummy_chat_id';
+        break;
+      case 'message':
+        title = '新訊息';
+        message = 'Jessica: 今晚有空去吃晚餐嗎？';
+        actionType = 'open_chat';
+        actionData = 'dummy_chat_id';
+        break;
+      case 'event':
+        title = '活動即將開始';
+        message = '您報名的「週五微醺之夜」將在 1 小時後開始。';
+        actionType = 'view_event';
+        actionData = 'dummy_event_id';
+        break;
+      case 'system':
+      default:
+        title = '系統公告';
+        message = '歡迎來到 Chingu！這是您的第一則通知。';
+        actionType = null;
+        actionData = null;
+        break;
+    }
+
+    final notification = NotificationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: FirebaseAuth.instance.currentUser?.uid ?? 'dummy_user',
+      type: type,
+      title: title,
+      message: message,
+      actionType: actionType,
+      actionData: actionData,
+      createdAt: DateTime.now(),
+    );
+
+    await service.showNotification(notification);
+
+    if (mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已發送 $type 測試通知')),
+      );
+    }
+  }
+
+  Widget _buildNotificationButton(String label, String type, Color color) {
+    return ElevatedButton(
+      onPressed: () => _testNotification(type),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        textStyle: const TextStyle(fontSize: 12),
+      ),
+      child: Text(label),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,6 +233,20 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const Divider(height: 48),
+            const Text('通知測試工具', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                _buildNotificationButton('配對成功', 'match', Colors.pink),
+                _buildNotificationButton('新訊息', 'message', Colors.blue),
+                _buildNotificationButton('活動提醒', 'event', Colors.orange),
+                _buildNotificationButton('系統公告', 'system', Colors.grey),
+              ],
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
