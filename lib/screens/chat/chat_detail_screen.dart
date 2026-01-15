@@ -58,6 +58,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
         text: text,
       );
       if (!mounted) return;
@@ -89,6 +90,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
         text: url,
         type: 'image',
       );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
 
@@ -117,6 +118,7 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    required String senderName,
     String type = 'text',
   }) async {
     try {
@@ -137,6 +139,53 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 發送推播通知
+      try {
+        // 獲取聊天室參與者
+        final chatRoomDoc =
+            await _firestore.collection('chat_rooms').doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+          final data = chatRoomDoc.data() as Map<String, dynamic>;
+          final participants = List<String>.from(data['participantIds'] ?? []);
+
+          // 找到接收者
+          final recipientId = participants.firstWhere(
+            (id) => id != senderId,
+            orElse: () => '',
+          );
+
+          if (recipientId.isNotEmpty) {
+            // 獲取接收者的 FCM Token
+            final recipientDoc =
+                await _firestore.collection('users').doc(recipientId).get();
+            if (recipientDoc.exists) {
+              final recipientData = recipientDoc.data() as Map<String, dynamic>;
+              final fcmToken = recipientData['fcmToken'] as String?;
+
+              if (fcmToken != null && fcmToken.isNotEmpty) {
+                // 調用 Cloud Function
+                final callable = FirebaseFunctions.instance
+                    .httpsCallable('sendChatNotification');
+                await callable.call({
+                  'token': fcmToken,
+                  'title': senderName,
+                  'body': type == 'text' ? text : '傳送了一個附件',
+                  'data': {
+                    'chatRoomId': chatRoomId,
+                    'senderId': senderId,
+                    'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                    'type': 'chat_message',
+                  },
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // 通知發送失敗不應影響訊息發送流程
+        print('發送推播通知失敗: $e');
+      }
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;
