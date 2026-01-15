@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/utils/image_cache_manager.dart';
 
 class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
+  final UserModel? user; // Made optional to support initial loading via arguments if needed, but optimally required
+
+  const UserDetailScreen({super.key, this.user});
   
   @override
   Widget build(BuildContext context) {
+    // If user is passed via constructor use it, otherwise try to get from arguments
+    final UserModel? targetUser = user ?? ModalRoute.of(context)?.settings.arguments as UserModel?;
+
+    if (targetUser == null) {
+      return const Scaffold(
+        body: Center(child: Text('無用戶資料')),
+      );
+    }
+
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = context.watch<AuthProvider>();
+    final currentUser = authProvider.userModel;
+    final isFavorite = currentUser?.favorites.contains(targetUser.uid) ?? false;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -42,52 +62,45 @@ class UserDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: chinguTheme?.primaryGradient,
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.person,
-                        size: 140,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  // 配對度標籤
-                  Positioned(
-                    top: 60,
-                    right: 20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: chinguTheme?.successGradient,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (chinguTheme?.success ?? Colors.green).withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                  targetUser.avatarUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: targetUser.avatarUrl!,
+                          fit: BoxFit.cover,
+                          cacheManager: ImageCacheManager().manager,
+                          placeholder: (context, url) => Container(
+                            color: theme.colorScheme.surfaceVariant,
+                            child: const Center(child: CircularProgressIndicator()),
                           ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.favorite,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            '95% 配對',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          errorWidget: (context, url, error) => Container(
+                            decoration: BoxDecoration(
+                              gradient: chinguTheme?.primaryGradient,
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.person, size: 140, color: Colors.white),
                             ),
                           ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: chinguTheme?.primaryGradient,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 140,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                  // Gradient Overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.4),
                         ],
                       ),
                     ),
@@ -95,6 +108,41 @@ class UserDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
+            actions: [
+              // Favorite Button in AppBar for easy access
+               IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      color: isFavorite ? (chinguTheme?.error ?? Colors.red) : theme.colorScheme.onSurface,
+                      size: 20,
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (currentUser == null) return;
+                    try {
+                      if (isFavorite) {
+                        await FirestoreService().removeFavorite(currentUser.uid, targetUser.uid);
+                      } else {
+                        await FirestoreService().addFavorite(currentUser.uid, targetUser.uid);
+                      }
+                      await authProvider.refreshUserData();
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('操作失敗: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+            ],
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -112,7 +160,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '${targetUser.name}, ${targetUser.age}',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -120,19 +168,20 @@ class UserDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: chinguTheme?.success ?? Colors.green,
-                                    shape: BoxShape.circle,
+                                if (targetUser.subscription == 'premium')
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: chinguTheme?.success ?? Colors.green,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '軟體工程師',
+                              targetUser.job,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -141,18 +190,19 @@ class UserDetailScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: chinguTheme?.successGradient,
-                          shape: BoxShape.circle,
+                      if (targetUser.subscription == 'premium')
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: chinguTheme?.successGradient,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.verified_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.verified_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
                     ],
                   ),
                   
@@ -162,7 +212,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.location_on_rounded,
                     '位置',
-                    '台北市, 信義區',
+                    '${targetUser.city}, ${targetUser.district}',
                     theme.colorScheme.primary,
                     theme,
                   ),
@@ -170,7 +220,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800',
+                    targetUser.budgetRangeText,
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
@@ -178,7 +228,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.favorite_rounded,
                     '配對類型',
-                    '異性配對',
+                    targetUser.preferredMatchTypeText,
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -186,84 +236,89 @@ class UserDetailScreen extends StatelessWidget {
                   const SizedBox(height: 32),
                   
                   // 關於我
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_rounded,
-                        size: 20,
-                        color: theme.colorScheme.primary,
+                  if (targetUser.bio != null && targetUser.bio!.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_rounded,
+                          size: 20,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '關於我',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '關於我',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
+                      child: Text(
+                        targetUser.bio!,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          height: 1.6,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                     ),
-                    child: Text(
-                      '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
-                        height: 1.6,
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
+                  ],
                   
                   // 興趣愛好
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.interests_rounded,
-                        size: 20,
-                        color: chinguTheme?.secondary ?? theme.colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '興趣愛好',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
+                  if (targetUser.interests.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.interests_rounded,
+                          size: 20,
+                          color: chinguTheme?.secondary ?? theme.colorScheme.secondary,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
-                      _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
-                      _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
-                      _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
-                      _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
-                    ],
-                  ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '興趣愛好',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: targetUser.interests.map((interest) {
+                        return _buildInterestChip(
+                          interest,
+                          Icons.star_rounded,
+                          theme.colorScheme.primary
+                        );
+                      }).toList(),
+                    ),
+                  ],
                   
                   const SizedBox(height: 32),
                   
-                  // 操作按鈕
+                  // 操作按鈕 (Bottom Actions)
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.3)),
@@ -280,7 +335,7 @@ class UserDetailScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '略過',
+                                '關閉',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -306,7 +361,23 @@ class UserDetailScreen extends StatelessWidget {
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () async {
+                              if (currentUser == null) return;
+                              try {
+                                if (isFavorite) {
+                                  await FirestoreService().removeFavorite(currentUser.uid, targetUser.uid);
+                                } else {
+                                  await FirestoreService().addFavorite(currentUser.uid, targetUser.uid);
+                                }
+                                await authProvider.refreshUserData();
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('操作失敗: $e')),
+                                  );
+                                }
+                              }
+                            },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: Colors.transparent,
@@ -315,14 +386,17 @@ class UserDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.favorite, color: Colors.white),
-                                SizedBox(width: 8),
+                                Icon(
+                                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                  color: Colors.white
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
-                                  '喜歡',
-                                  style: TextStyle(
+                                  isFavorite ? '取消收藏' : '收藏',
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
