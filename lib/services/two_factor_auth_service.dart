@@ -5,11 +5,17 @@ import 'package:flutter/foundation.dart';
 
 /// 雙因素認證服務
 class TwoFactorAuthService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
 
   // 集合名稱
   static const String _collection = 'two_factor_codes';
+
+  TwoFactorAuthService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService();
 
   /// 發送驗證碼
   ///
