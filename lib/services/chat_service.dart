@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -114,8 +115,76 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      // 不等待通知發送完成，避免阻塞 UI
+      _sendPushNotification(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: senderName,
+        message: message,
+        type: type,
+      ).catchError((e) {
+        print('發送通知失敗: $e');
+      });
+
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
+    }
+  }
+
+  /// 發送推送通知 (私有方法)
+  Future<void> _sendPushNotification({
+    required String chatRoomId,
+    required String senderId,
+    required String senderName,
+    required String message,
+    required String type,
+  }) async {
+    try {
+      // 1. 獲取聊天室參與者以找到接收者
+      final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+      if (!chatRoomDoc.exists) return;
+
+      final data = chatRoomDoc.data() as Map<String, dynamic>;
+      final participants = List<String>.from(data['participantIds'] ?? []);
+
+      // 找到接收者 ID (非發送者)
+      final receiverId = participants.firstWhere(
+        (id) => id != senderId,
+        orElse: () => '',
+      );
+
+      if (receiverId.isEmpty) return;
+
+      // 2. 準備訊息預覽
+      String contentPreview = message;
+      if (type == 'image') {
+        contentPreview = '[圖片]';
+      } else if (type == 'sticker') {
+        contentPreview = '[貼圖]';
+      } else if (type == 'audio') {
+        contentPreview = '[語音]';
+      } else if (type == 'video') {
+        contentPreview = '[影片]';
+      } else {
+        // 文字訊息，截取前 20 字
+        if (contentPreview.length > 20) {
+          contentPreview = contentPreview.substring(0, 20);
+        }
+      }
+
+      // 3. 調用 Cloud Function 發送通知
+      await FirebaseFunctions.instance.httpsCallable('sendChatNotification').call({
+        'receiverId': receiverId,
+        'senderName': senderName,
+        'message': contentPreview,
+        'chatRoomId': chatRoomId,
+        'type': 'chat',
+      });
+    } catch (e) {
+      print('Calling sendChatNotification failed: $e');
+      // 不拋出異常，以免影響主流程
     }
   }
 }
