@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
 
@@ -118,6 +119,8 @@ class ChatProvider with ChangeNotifier {
     required String senderId,
     required String text,
     String type = 'text',
+    UserModel? recipient,
+    String? senderName,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -137,6 +140,29 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 發送通知 (如果接收者開啟了通知)
+      if (recipient != null &&
+          (recipient.notificationSettings['pushNotifications'] ?? true) &&
+          (recipient.notificationSettings['newMessage'] ?? true)) {
+        try {
+          await FirebaseFunctions.instance
+              .httpsCallable('sendNotification')
+              .call({
+            'targetUserId': recipient.uid,
+            'title': senderName ?? '新訊息',
+            'body': type == 'image' ? '傳送了一張圖片' : text,
+            'type': 'message',
+            'data': {
+              'chatRoomId': chatRoomId,
+              'senderId': senderId,
+            }
+          });
+        } catch (e) {
+          print('發送通知失敗: $e');
+          // 通知失敗不影響訊息發送，不拋出異常
+        }
+      }
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;

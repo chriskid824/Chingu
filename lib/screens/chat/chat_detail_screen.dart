@@ -59,6 +59,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
         text: text,
+        recipient: _otherUser,
+        senderName: currentUser.name,
       );
       if (!mounted) return;
       if (_scrollController.hasClients) {
@@ -91,6 +93,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         senderId: currentUser.uid,
         text: url,
         type: 'image',
+        recipient: _otherUser,
+        senderName: currentUser.name,
       );
       if (!mounted) return;
       if (_scrollController.hasClients) {
