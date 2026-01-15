@@ -38,6 +38,12 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final bool matchingNotificationEnabled;
+  final bool messageNotificationEnabled;
+  final bool eventNotificationEnabled;
+  final String? fcmToken;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +72,10 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.matchingNotificationEnabled = true,
+    this.messageNotificationEnabled = true,
+    this.eventNotificationEnabled = true,
+    this.fcmToken,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +114,10 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      matchingNotificationEnabled: map['matchingNotificationEnabled'] ?? true,
+      messageNotificationEnabled: map['messageNotificationEnabled'] ?? true,
+      eventNotificationEnabled: map['eventNotificationEnabled'] ?? true,
+      fcmToken: map['fcmToken'],
     );
   }
 
@@ -136,6 +150,10 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'matchingNotificationEnabled': matchingNotificationEnabled,
+      'messageNotificationEnabled': messageNotificationEnabled,
+      'eventNotificationEnabled': eventNotificationEnabled,
+      'fcmToken': fcmToken,
     };
   }
 
@@ -166,6 +184,10 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? matchingNotificationEnabled,
+    bool? messageNotificationEnabled,
+    bool? eventNotificationEnabled,
+    String? fcmToken,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +217,10 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      matchingNotificationEnabled: matchingNotificationEnabled ?? this.matchingNotificationEnabled,
+      messageNotificationEnabled: messageNotificationEnabled ?? this.messageNotificationEnabled,
+      eventNotificationEnabled: eventNotificationEnabled ?? this.eventNotificationEnabled,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 
