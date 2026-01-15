@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_launch_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -31,11 +32,19 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 獲取初始路由與參數 (從通知啟動)
+  final LaunchContext launchContext = await NotificationLaunchService().getInitialLaunchContext();
+
+  runApp(ChinguApp(launchContext: launchContext));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final LaunchContext launchContext;
+
+  const ChinguApp({
+    super.key,
+    required this.launchContext,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +64,19 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
-            onGenerateRoute: AppRouter.generateRoute,
+            initialRoute: launchContext.route,
+            onGenerateRoute: (settings) {
+              // 如果是初始路由，且有參數，則使用傳入的參數
+              if (settings.name == launchContext.route && launchContext.arguments != null) {
+                return AppRouter.generateRoute(
+                  RouteSettings(
+                    name: settings.name,
+                    arguments: launchContext.arguments,
+                  ),
+                );
+              }
+              return AppRouter.generateRoute(settings);
+            },
           );
         },
       ),
