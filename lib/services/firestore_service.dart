@@ -289,6 +289,21 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 記錄通知事件 (發送/點擊)
+  ///
+  /// [eventData] 事件資料
+  Future<void> logNotificationEvent(Map<String, dynamic> eventData) async {
+    try {
+      await _firestore.collection('notification_analytics').add({
+        ...eventData,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // 記錄失敗不應影響主流程，僅打印錯誤
+      print('記錄通知事件失敗: $e');
+    }
+  }
 }
 
 
