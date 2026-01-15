@@ -206,6 +206,32 @@ class ProfileDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                              // My Moments Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.userMoments,
+                                      arguments: {
+                                        'userId': user.uid,
+                                        'isCurrentUser': true,
+                                      },
+                                    );
+                                  },
+                                  icon: const Icon(Icons.photo_library_outlined),
+                                  label: const Text('我的動態'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor: theme.colorScheme.primaryContainer,
+                                    foregroundColor: theme.colorScheme.onPrimaryContainer,
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
                       _buildSectionTitle(context, '關於我'),
                       const SizedBox(height: 12),
                       Text(
