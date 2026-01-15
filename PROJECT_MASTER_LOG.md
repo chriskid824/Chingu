@@ -50,6 +50,7 @@
 - [x] 啟動頁面 (Launch Screen)
 - [x] 首頁 (Home Screen)
 - [x] 登入頁面 (Login Screen)
+- [x] 通知權限對話框 (Notification Permission Dialog)
 
 ---
 
@@ -111,6 +112,9 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **通知權限 UI 與服務優化**:
+  - 新增 `NotificationPermissionDialog` (UI widgets) 友好的通知權限請求對話框
+  - 重構 `RichNotificationService` 分離初始化與權限請求，提升使用者體驗
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
