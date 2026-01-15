@@ -1,6 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// 晚餐活動模型（固定6人）
+enum EventRegistrationStatus {
+  registered,
+  waitlist,
+  cancelled,
+  none,
+}
+
+/// 晚餐活動模型
 class DinnerEventModel {
   final String id;
   final String creatorId;
@@ -10,11 +17,13 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者
+  final int maxParticipants;
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final List<String> waitingList; // 候補名單 UID 列表
   
-  // 餐廳資訊（系統推薦後確認）
+  // 餐廳資訊
   final String? restaurantName;
   final String? restaurantAddress;
   final GeoPoint? restaurantLocation;
@@ -29,9 +38,9 @@ class DinnerEventModel {
   // 破冰問題
   final List<String> icebreakerQuestions;
   
-  // 評價（活動結束後）
-  final Map<String, double>? ratings; // uid -> rating (1-5)
-  final Map<String, String>? reviews; // uid -> review text
+  // 評價
+  final Map<String, double>? ratings;
+  final Map<String, String>? reviews;
 
   DinnerEventModel({
     required this.id,
@@ -41,8 +50,10 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
     required this.participantIds,
     required this.participantStatus,
+    this.waitingList = const [],
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -62,7 +73,6 @@ class DinnerEventModel {
     return DinnerEventModel.fromMap(data, doc.id);
   }
 
-  /// 從 Map 創建 DinnerEventModel
   factory DinnerEventModel.fromMap(Map<String, dynamic> map, String id) {
     return DinnerEventModel(
       id: id,
@@ -72,8 +82,10 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitingList: List<String>.from(map['waitingList'] ?? []),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -96,7 +108,6 @@ class DinnerEventModel {
     );
   }
 
-  /// 轉換為 Map 以儲存到 Firestore
   Map<String, dynamic> toMap() {
     return {
       'creatorId': creatorId,
@@ -105,8 +116,10 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'waitingList': waitingList,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -121,15 +134,16 @@ class DinnerEventModel {
     };
   }
 
-  /// 複製並更新部分欄位
   DinnerEventModel copyWith({
     DateTime? dateTime,
     int? budgetRange,
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitingList,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -149,8 +163,10 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      waitingList: waitingList ?? this.waitingList,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -165,7 +181,6 @@ class DinnerEventModel {
     );
   }
 
-  /// 獲取預算範圍文字
   String get budgetRangeText {
     switch (budgetRange) {
       case 0:
@@ -181,7 +196,6 @@ class DinnerEventModel {
     }
   }
 
-  /// 獲取狀態文字
   String get statusText {
     switch (status) {
       case 'pending':
@@ -197,29 +211,29 @@ class DinnerEventModel {
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  bool get isFull => participantIds.length >= maxParticipants;
 
-  /// 獲取已確認人數
+  int get currentParticipants => participantIds.length;
+
   int get confirmedCount {
     return participantStatus.values
         .where((status) => status == 'confirmed')
         .length;
   }
 
-  /// 檢查用戶是否已確認
   bool isUserConfirmed(String userId) {
     return participantStatus[userId] == 'confirmed';
   }
 
-  /// 獲取平均評分
+  EventRegistrationStatus getUserRegistrationStatus(String userId) {
+    if (participantIds.contains(userId)) return EventRegistrationStatus.registered;
+    if (waitingList.contains(userId)) return EventRegistrationStatus.waitlist;
+    return EventRegistrationStatus.none;
+  }
+
   double get averageRating {
     if (ratings == null || ratings!.isEmpty) return 0.0;
     final sum = ratings!.values.reduce((a, b) => a + b);
     return sum / ratings!.length;
   }
 }
-
-
-
-
