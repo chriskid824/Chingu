@@ -33,6 +33,10 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 隱私模式
+  final bool isOnlineHidden;
+  final bool isLastSeenHidden;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,6 +67,8 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.isOnlineHidden = false,
+    this.isLastSeenHidden = false,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +107,8 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      isOnlineHidden: map['isOnlineHidden'] ?? false,
+      isLastSeenHidden: map['isLastSeenHidden'] ?? false,
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +141,8 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'isOnlineHidden': isOnlineHidden,
+      'isLastSeenHidden': isLastSeenHidden,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +173,8 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? isOnlineHidden,
+    bool? isLastSeenHidden,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +204,8 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      isOnlineHidden: isOnlineHidden ?? this.isOnlineHidden,
+      isLastSeenHidden: isLastSeenHidden ?? this.isLastSeenHidden,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
