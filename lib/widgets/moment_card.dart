@@ -4,6 +4,9 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:chingu/widgets/moment_comment_sheet.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -25,6 +28,7 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  final MomentService _momentService = MomentService();
 
   @override
   void initState() {
@@ -44,13 +48,50 @@ class _MomentCardState extends State<MomentCard> {
     }
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
     HapticUtils.light();
+    final oldIsLiked = _isLiked;
+    final oldLikeCount = _likeCount;
+
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
+
+    // Call external callback if any
     widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      await _momentService.toggleLike(widget.moment.id, currentUser.uid);
+    } catch (e) {
+      // Revert if failed
+      if (mounted) {
+        setState(() {
+          _isLiked = oldIsLiked;
+          _likeCount = oldLikeCount;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update like: $e')),
+        );
+      }
+    }
+  }
+
+  void _showComments() {
+    if (widget.onCommentTap != null) {
+      widget.onCommentTap!();
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MomentCommentSheet(momentId: widget.moment.id),
+    );
   }
 
   @override
@@ -167,7 +208,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _showComments,
               ),
             ],
           ),
