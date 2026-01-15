@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import '../../services/in_app_notification_service.dart';
+import '../../models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,6 +106,22 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  void _testNotification() {
+    final notification = NotificationModel(
+      id: 'test_id_${DateTime.now().millisecondsSinceEpoch}',
+      userId: 'test_user',
+      type: 'match',
+      title: '配對成功！',
+      message: '恭喜！你已經和一位新朋友配對成功了，快來打招呼吧！',
+      imageUrl: null,
+      actionType: 'match_history',
+      actionData: null,
+      createdAt: DateTime.now(),
+      isRead: false,
+    );
+    InAppNotificationService().show(notification);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,6 +175,17 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _testNotification,
+                icon: const Icon(Icons.notifications_active_rounded),
+                label: const Text('測試應用內通知'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),

@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'in_app_notification_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -56,7 +58,49 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    // 啟動前景訊息監聽
+    _startListening();
+
     _isInitialized = true;
+  }
+
+  void _startListening() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // 處理前景通知
+      _handleForegroundMessage(message);
+    });
+  }
+
+  void _handleForegroundMessage(RemoteMessage message) {
+    try {
+      final notification = message.notification;
+      final data = message.data;
+
+      final String title = notification?.title ?? data['title'] ?? '新通知';
+      final String body = notification?.body ?? data['body'] ?? data['message'] ?? '';
+
+      // 如果沒有標題和內容，忽略
+      if (title.isEmpty && body.isEmpty) return;
+
+      final model = NotificationModel(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: '', // 前景通知不需要 userId
+        type: data['type'] ?? 'system',
+        title: title,
+        message: body,
+        imageUrl: data['image'] ?? notification?.android?.imageUrl,
+        actionType: data['actionType'],
+        actionData: data['actionData'],
+        isRead: false,
+        createdAt: message.sentTime ?? DateTime.now(),
+      );
+
+      // 顯示應用內通知橫幅
+      InAppNotificationService().show(model);
+
+    } catch (e) {
+      debugPrint('Error handling foreground message: $e');
+    }
   }
 
   /// 處理通知點擊事件
@@ -70,7 +114,7 @@ class RichNotificationService {
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,7 +122,7 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
