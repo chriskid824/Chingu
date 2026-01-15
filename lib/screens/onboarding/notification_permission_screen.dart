@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/services/notification_service.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class NotificationPermissionScreen extends StatefulWidget {
   const NotificationPermissionScreen({super.key});
@@ -17,15 +19,21 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
     setState(() => _isRequesting = true);
 
     try {
-      final messaging = FirebaseMessaging.instance;
-      // Request permission
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.uid;
 
-      // We proceed regardless of the result
+      if (userId != null) {
+        // 使用 NotificationService 請求權限並初始化
+        final notificationService = NotificationService();
+        final granted = await notificationService.requestPermission();
+
+        if (granted) {
+          // 如果獲得權限，執行完整初始化 (註冊 Token)
+          await notificationService.init(userId);
+        }
+      } else {
+        debugPrint('Error: User ID is null');
+      }
     } catch (e) {
       debugPrint('Error requesting permission: $e');
     } finally {

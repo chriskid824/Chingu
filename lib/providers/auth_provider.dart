@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -43,11 +44,17 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      // 清除 Token
+      await NotificationService().deleteToken();
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+      // 初始化通知服務 (如果用戶已登入，嘗試刷新 Token)
+      // 注意：這裡只做初始化，不會請求權限，避免打擾用戶
+      // 如果用戶之前已授權，這將更新 Token
+      NotificationService().init(firebaseUser.uid);
     }
     notifyListeners();
   }
