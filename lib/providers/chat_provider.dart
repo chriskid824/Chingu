@@ -26,10 +26,11 @@ class ChatProvider with ChangeNotifier {
       print('=== ChatProvider.loadChatRooms ===');
       print('用戶 ID: $userId');
 
-      // 查詢包含該用戶的聊天室（暫時移除 orderBy 避免需要索引）
+      // 查詢包含該用戶的聊天室
       final chatRoomsQuery = await _firestore
           .collection('chat_rooms')
           .where('participantIds', arrayContains: userId)
+          .orderBy('lastMessageAt', descending: true)
           .get();
 
       print('找到 ${chatRoomsQuery.docs.length} 個聊天室');
@@ -92,23 +93,14 @@ class ChatProvider with ChangeNotifier {
     return _firestore
         .collection('messages')
         .where('chatRoomId', isEqualTo: chatRoomId)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      final messages = snapshot.docs.map((doc) {
+      return snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
-
-      // 在內存中排序
-      messages.sort((a, b) {
-        final t1 = a['timestamp'] as Timestamp?;
-        final t2 = b['timestamp'] as Timestamp?;
-        if (t1 == null || t2 == null) return 0;
-        return t2.compareTo(t1); // 降序
-      });
-
-      return messages;
     });
   }
 

@@ -123,12 +123,26 @@ class FirestoreService {
       print('查詢城市: $city');
       print('limit: $limit');
       
-      // 放寬查詢條件：只過濾城市和活躍狀態
-      // 預算和其他條件在內存中進行評分和過濾
+      // 構建查詢：城市和活躍狀態是基本條件
       Query query = _usersCollection
           .where('city', isEqualTo: city)
-          .where('isActive', isEqualTo: true)
-          .limit(limit);
+          .where('isActive', isEqualTo: true);
+
+      // 如果有性別條件，添加到查詢中
+      if (gender != null) {
+        query = query.where('gender', isEqualTo: gender);
+      }
+
+      // 如果有年齡範圍條件，添加到查詢中
+      // 注意：這需要複合索引 (city, isActive, [gender], age)
+      if (minAge != null) {
+        query = query.where('age', isGreaterThanOrEqualTo: minAge);
+      }
+      if (maxAge != null) {
+        query = query.where('age', isLessThanOrEqualTo: maxAge);
+      }
+
+      query = query.limit(limit);
 
       final querySnapshot = await query.get();
       print('Firestore 查詢返回 ${querySnapshot.docs.length} 個文檔');
@@ -141,17 +155,6 @@ class FirestoreService {
       print('成功解析 ${users.length} 個 UserModel');
       if (users.isNotEmpty) {
         print('第一個用戶: ${users.first.name}, 城市: ${users.first.city}');
-      }
-
-      // 在客戶端進行額外的過濾（因為 Firestore 查詢限制）
-      if (gender != null) {
-        users = users.where((user) => user.gender == gender).toList();
-      }
-
-      if (minAge != null && maxAge != null) {
-        users = users
-            .where((user) => user.age >= minAge && user.age <= maxAge)
-            .toList();
       }
 
       print('過濾後剩餘 ${users.length} 個用戶');
