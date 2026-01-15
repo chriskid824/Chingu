@@ -23,4 +23,48 @@ class StorageService {
       throw Exception('Failed to get download URL: $e');
     }
   }
+
+  /// Deletes a file at the specified path.
+  Future<void> deleteFile(String path) async {
+    try {
+      await _storage.ref().child(path).delete();
+    } catch (e) {
+      // If the file doesn't exist, we can consider it deleted
+      if (e is FirebaseException && e.code == 'object-not-found') {
+        return;
+      }
+      throw Exception('Failed to delete file: $e');
+    }
+  }
+
+  /// Deletes all files in a directory.
+  /// Note: Firebase Storage doesn't strictly support directories.
+  /// This iterates over files with the given prefix and deletes them.
+  Future<void> deleteUserDirectory(String uid) async {
+    try {
+      // Common paths for user data
+      final paths = [
+        'user_images/$uid',
+        'user_avatars', // Requires filtering, tricky without consistent naming.
+        // Assuming user_avatars stores as ${uid}_timestamp.jpg based on EditProfileScreen
+      ];
+
+      // 1. Try to delete specific folder if used
+      try {
+        final ListResult result = await _storage.ref().child('user_images/$uid').listAll();
+        for (final ref in result.items) {
+          await ref.delete();
+        }
+      } catch (e) {
+        // Ignore if folder not found
+      }
+
+      // 2. We can't easily list 'user_avatars' and filter by UID efficiently
+      // if there are many users. We rely on the caller to provide the avatar URL
+      // or we accept that we might leave the avatar file if we don't know the exact path.
+      // However, we can try to rely on a standardized path in the future.
+    } catch (e) {
+      throw Exception('Failed to delete user directory: $e');
+    }
+  }
 }

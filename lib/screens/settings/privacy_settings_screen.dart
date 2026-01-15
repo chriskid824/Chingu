@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -105,32 +108,7 @@ class PrivacySettingsScreen extends StatelessWidget {
                   ),
                 ),
                 trailing: Icon(Icons.chevron_right, color: theme.colorScheme.error),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('刪除帳號'),
-                      content: const Text('您確定要刪除帳號嗎？所有資料將被永久刪除且無法復原。'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('取消'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // TODO: Implement delete account logic
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('功能尚未開放')),
-                            );
-                          },
-                          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                          child: const Text('刪除'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                onTap: () => _showDeleteConfirmationDialog(context),
               ),
             ),
           ),
@@ -150,6 +128,142 @@ class PrivacySettingsScreen extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: theme.colorScheme.onSurface.withOpacity(0.5),
         ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final theme = Theme.of(context);
+
+            return AlertDialog(
+              title: const Text('刪除帳號'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('您確定要刪除帳號嗎？此操作將永久刪除：'),
+                    const SizedBox(height: 8),
+                    _buildWarningItem('• 個人資料與照片'),
+                    _buildWarningItem('• 所有配對與聊天記錄'),
+                    _buildWarningItem('• 參加的活動記錄'),
+                    const SizedBox(height: 16),
+                    Text(
+                      '此動作無法復原！',
+                      style: TextStyle(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Form(
+                      key: formKey,
+                      child: TextFormField(
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: '請輸入密碼以確認',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          errorStyle: const TextStyle(height: 0.8),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '請輸入密碼';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    if (isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                if (!isLoading)
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                if (!isLoading)
+                  TextButton(
+                    onPressed: () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() {
+                          isLoading = true;
+                        });
+
+                        try {
+                          final success = await context
+                              .read<AuthProvider>()
+                              .deleteAccount(passwordController.text);
+
+                          if (success) {
+                            if (context.mounted) {
+                              Navigator.pop(context); // Close dialog
+                              Navigator.of(context).pushNamedAndRemoveUntil(
+                                AppRoutes.login,
+                                (route) => false,
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                              // Show error from provider if available
+                              final error = context.read<AuthProvider>().errorMessage;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(error ?? '刪除失敗，請檢查密碼')),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            setState(() {
+                              isLoading = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('發生錯誤: $e')),
+                            );
+                          }
+                        }
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                    ),
+                    child: const Text('確認刪除'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildWarningItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13),
       ),
     );
   }
