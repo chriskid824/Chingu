@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -60,6 +64,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 記錄登入歷史
+        _recordLoginHistory(uid);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -70,6 +76,72 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = '載入資料失敗: $e';
       _userModel = null;
       notifyListeners();
+    }
+  }
+
+  /// 記錄登入歷史
+  Future<void> _recordLoginHistory(String uid) async {
+    try {
+      String ip = 'Unknown';
+      String location = 'Unknown';
+      String deviceInfo = 'Unknown';
+
+      // Get Device Info
+      try {
+        if (Platform.isAndroid) {
+          deviceInfo = 'Android';
+        } else if (Platform.isIOS) {
+          deviceInfo = 'iOS';
+        } else if (Platform.isMacOS) {
+          deviceInfo = 'macOS';
+        } else if (Platform.isWindows) {
+          deviceInfo = 'Windows';
+        } else if (Platform.isLinux) {
+          deviceInfo = 'Linux';
+        } else if (Platform.isFuchsia) {
+          deviceInfo = 'Fuchsia';
+        } else {
+          deviceInfo = 'Unknown Platform';
+        }
+      } catch (e) {
+        deviceInfo = 'Unknown';
+      }
+
+      // Get IP and Location
+      try {
+        // 使用 ipwho.is 獲取 IP 和地理位置 (支持 HTTPS)
+        final response = await http.get(Uri.parse('https://ipwho.is/'));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          // ipwho.is 返回 success 欄位表示是否成功
+          if (data['success'] == true) {
+            ip = data['ip'] ?? 'Unknown';
+            final city = data['city'] ?? '';
+            final country = data['country'] ?? '';
+            if (city.isNotEmpty || country.isNotEmpty) {
+              location = '$city, $country';
+            }
+          } else {
+            // 即使失敗也可能返回 IP
+            ip = data['ip'] ?? 'Unknown';
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to get location: $e');
+      }
+
+      final history = LoginHistoryModel(
+        id: '', // Firestore will generate
+        userId: uid,
+        loginTime: DateTime.now(),
+        location: location,
+        deviceInfo: deviceInfo,
+        ipAddress: ip,
+      );
+
+      await _firestoreService.recordLoginHistory(uid, history);
+    } catch (e) {
+      debugPrint('Failed to record login history: $e');
     }
   }
 
