@@ -151,7 +151,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
                   )),
               SizedBox(height: 24),
               Text(
-                '詳細描述 (選填)',
+                '詳細描述',
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
