@@ -31,8 +31,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        if (_otherUser == null && args['otherUserId'] != null) {
+          _fetchOtherUser(args['otherUserId']);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _otherUser = UserModel.fromFirestore(doc);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user: $e');
     }
   }
 
