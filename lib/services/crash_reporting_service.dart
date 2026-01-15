@@ -10,33 +10,53 @@ class CrashReportingService {
   CrashReportingService._internal();
 
   Future<void> initialize() async {
-    // Pass all uncaught "fatal" errors from the framework to Crashlytics
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    if (kDebugMode) {
+      // 測試模式下關閉 Crashlytics 資料收集
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      // 正式模式下開啟 Crashlytics 資料收集
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
-    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
+      // Pass all uncaught "fatal" errors from the framework to Crashlytics
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+      // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+    }
   }
 
   /// Log a message to Crashlytics
   void log(String message) {
-    FirebaseCrashlytics.instance.log(message);
+    if (!kDebugMode) {
+      FirebaseCrashlytics.instance.log(message);
+    } else {
+      debugPrint('[Crashlytics Log] $message');
+    }
   }
 
   /// Record an error to Crashlytics
   void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
-    FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+    if (!kDebugMode) {
+      FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+    } else {
+      debugPrint('[Crashlytics Error] $exception\nStack: $stack');
+    }
   }
 
   /// Set a user identifier for crash reports
   Future<void> setUserIdentifier(String identifier) async {
-    await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
+    if (!kDebugMode) {
+      await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
+    }
   }
 
   /// Set custom keys for crash reports
   Future<void> setCustomKey(String key, Object value) async {
-    await FirebaseCrashlytics.instance.setCustomKey(key, value);
+    if (!kDebugMode) {
+      await FirebaseCrashlytics.instance.setCustomKey(key, value);
+    }
   }
 }
