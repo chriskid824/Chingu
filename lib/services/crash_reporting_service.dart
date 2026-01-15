@@ -18,25 +18,46 @@ class CrashReportingService {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
+
+    if (kDebugMode) {
+      // Force disable Crashlytics collection while doing every day development.
+      // Temporarily toggle this to true if you want to test crash reporting in your app.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      // Enable Crashlytics collection in release mode.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    }
   }
 
   /// Log a message to Crashlytics
   void log(String message) {
-    FirebaseCrashlytics.instance.log(message);
+    if (!kDebugMode) {
+      FirebaseCrashlytics.instance.log(message);
+    } else {
+      debugPrint('[Crashlytics Log] $message');
+    }
   }
 
   /// Record an error to Crashlytics
   void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
-    FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+    if (!kDebugMode) {
+      FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+    } else {
+      debugPrint('[Crashlytics Error] $exception\n$stack');
+    }
   }
 
   /// Set a user identifier for crash reports
   Future<void> setUserIdentifier(String identifier) async {
-    await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
+    if (!kDebugMode) {
+      await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
+    }
   }
 
   /// Set custom keys for crash reports
   Future<void> setCustomKey(String key, Object value) async {
-    await FirebaseCrashlytics.instance.setCustomKey(key, value);
+    if (!kDebugMode) {
+      await FirebaseCrashlytics.instance.setCustomKey(key, value);
+    }
   }
 }
