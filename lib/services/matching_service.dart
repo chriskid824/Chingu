@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -9,14 +10,17 @@ class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final FirebaseFunctions _functions;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    FirebaseFunctions? functions,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _functions = functions ?? FirebaseFunctions.instance;
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -117,7 +121,7 @@ class MatchingService {
         final isMatch = await _checkMutualMatch(userId, targetUserId);
         if (isMatch) {
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
-          
+
           // 獲取對方資料以返回
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
@@ -157,8 +161,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
@@ -175,12 +178,53 @@ class MatchingService {
   ///
   /// 返回新創建的聊天室 ID
   Future<String> _handleMatchSuccess(String user1Id, String user2Id) async {
+    // Fetch user data for notifications
+    final user1Doc = await _firestore.collection('users').doc(user1Id).get();
+    final user2Doc = await _firestore.collection('users').doc(user2Id).get();
+
+    final user1Name = user1Doc.data()?['name'] ?? 'Someone';
+    final user2Name = user2Doc.data()?['name'] ?? 'Someone';
+
     // 更新雙方的 totalMatches
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
-    
+
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // Send notifications via Cloud Function
+    try {
+      final callable = _functions.httpsCallable('sendNotification');
+
+      // Notify User 1
+      await callable.call({
+        'targetUserId': user1Id,
+        'title': 'New Match! 🎉',
+        'body': 'You matched with $user2Name!',
+        'data': {
+          'type': 'match',
+          'partnerId': user2Id,
+          'chatRoomId': chatRoomId,
+        },
+      });
+
+      // Notify User 2
+      await callable.call({
+        'targetUserId': user2Id,
+        'title': 'New Match! 🎉',
+        'body': 'You matched with $user1Name!',
+        'data': {
+          'type': 'match',
+          'partnerId': user1Id,
+          'chatRoomId': chatRoomId,
+        },
+      });
+    } catch (e) {
+      print('Failed to send match notifications: $e');
+      // Don't fail the whole match process if notification fails
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表

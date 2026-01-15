@@ -6,16 +6,52 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 // Generate mocks
 @GenerateMocks([FirestoreService, ChatService])
 import 'matching_service_test.mocks.dart';
+
+class FakeFirebaseFunctions extends Fake implements FirebaseFunctions {
+  final Map<String, FakeHttpsCallable> callables = {};
+
+  @override
+  HttpsCallable httpsCallable(String name, {HttpsCallableOptions? options}) {
+    if (callables.containsKey(name)) {
+      return callables[name]!;
+    }
+    final callable = FakeHttpsCallable(name);
+    callables[name] = callable;
+    return callable;
+  }
+}
+
+class FakeHttpsCallable extends Fake implements HttpsCallable {
+  final String name;
+  int callCount = 0;
+  List<dynamic> calls = [];
+
+  FakeHttpsCallable(this.name);
+
+  @override
+  Future<HttpsCallableResult<T>> call<T>([dynamic data]) async {
+    callCount++;
+    calls.add(data);
+    return FakeHttpsCallableResult<T>();
+  }
+}
+
+class FakeHttpsCallableResult<T> extends Fake implements HttpsCallableResult<T> {
+  @override
+  T get data => null as T;
+}
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
   late FakeFirebaseFirestore fakeFirestore;
+  late FakeFirebaseFunctions fakeFunctions;
 
   // Test data
   final currentUser = UserModel(
@@ -54,11 +90,13 @@ void main() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
     fakeFirestore = FakeFirebaseFirestore();
+    fakeFunctions = FakeFirebaseFunctions();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      functions: fakeFunctions,
     );
   });
 
@@ -174,6 +212,21 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notifications sent
+      final notificationCallable = fakeFunctions.callables['sendNotification'];
+      expect(notificationCallable, isNotNull);
+      expect(notificationCallable!.callCount, 2);
+
+      // Check payload for current user (target is currentUser.uid)
+      final callForCurrentUser = notificationCallable.calls.firstWhere(
+        (c) => c['targetUserId'] == currentUser.uid,
+        orElse: () => null,
+      );
+      expect(callForCurrentUser, isNotNull);
+      expect(callForCurrentUser['title'], contains('New Match'));
+      expect(callForCurrentUser['data']['type'], 'match');
+      expect(callForCurrentUser['data']['partnerId'], candidateUser.uid);
     });
   });
 }
