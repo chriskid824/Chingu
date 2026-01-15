@@ -3,7 +3,10 @@ import 'package:chingu/models/user_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -73,6 +76,29 @@ class FirestoreService {
       return doc.exists;
     } catch (e) {
       throw Exception('檢查用戶失敗: $e');
+    }
+  }
+
+  /// 更新用戶 FCM Token
+  ///
+  /// [uid] 用戶 ID
+  /// [token] FCM Token
+  Future<void> updateFcmToken(String uid, String token) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // 如果文檔不存在，嘗試使用 set with merge
+      try {
+        await _usersCollection.doc(uid).set({
+          'fcmToken': token,
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e2) {
+        throw Exception('更新 FCM Token 失敗: $e2');
+      }
     }
   }
 

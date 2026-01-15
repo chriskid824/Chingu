@@ -92,6 +92,12 @@
     - Unit Tests for Dinner Event Provider & Matching Service
     - Profile Preview Mode
 
+- ✅ **通知生命週期整合 (Notification Lifecycle)**:
+  - 實作 `NotificationService` 處理 Foreground, Background, Terminated 三種狀態
+  - 在 `FirestoreService` 新增 `updateFcmToken` (支援 Upsert)
+  - 修復 Terminated 狀態下的導航問題 (使用 Pending Notification 機制)
+  - 整合至 `main.dart` 與 `MainScreen`
+
 - ✅ **聊天詳情畫面 (ChatDetailScreen)**: 完整實作即時聊天功能
   - 修復了 `AppRouter` 中缺少 `settings` 參數導致 arguments 無法傳遞的問題
   - 實作了 Firestore 即時訊息流監聽
