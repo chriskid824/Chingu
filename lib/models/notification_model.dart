@@ -6,8 +6,9 @@ class NotificationModel {
   final String userId;
   final String type; // 'match', 'event', 'message', 'rating', 'system'
   final String title;
-  final String message;
+  final String content;
   final String? imageUrl;
+  final String? deeplink;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
   final bool isRead;
@@ -18,8 +19,9 @@ class NotificationModel {
     required this.userId,
     required this.type,
     required this.title,
-    required this.message,
+    required this.content,
     this.imageUrl,
+    this.deeplink,
     this.actionType,
     this.actionData,
     this.isRead = false,
@@ -39,8 +41,9 @@ class NotificationModel {
       userId: map['userId'] ?? '',
       type: map['type'] ?? 'system',
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
+      content: map['content'] ?? map['message'] ?? '',
       imageUrl: map['imageUrl'],
+      deeplink: map['deeplink'],
       actionType: map['actionType'],
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
@@ -54,8 +57,9 @@ class NotificationModel {
       'userId': userId,
       'type': type,
       'title': title,
-      'message': message,
+      'content': content,
       'imageUrl': imageUrl,
+      'deeplink': deeplink,
       'actionType': actionType,
       'actionData': actionData,
       'isRead': isRead,
@@ -70,8 +74,9 @@ class NotificationModel {
       userId: userId,
       type: type,
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
+      deeplink: deeplink,
       actionType: actionType,
       actionData: actionData,
       isRead: true,
@@ -96,26 +101,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
