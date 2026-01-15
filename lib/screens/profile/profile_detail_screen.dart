@@ -166,11 +166,51 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-                        // Debug Button
+
+                        // Favorites Button
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.25),
+                                Colors.white.withOpacity(0.15),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pushNamed(context, AppRoutes.favorites);
+                            },
+                            borderRadius: BorderRadius.circular(30),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.favorite_rounded, size: 20, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '我的收藏',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
                         // Debug Button
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: InkWell(
@@ -183,11 +223,11 @@ class ProfileDetailScreen extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.bug_report_rounded, size: 16, color: Colors.white),
-                                  SizedBox(width: 8),
+                                  Icon(Icons.bug_report_rounded, size: 14, color: Colors.white70),
+                                  SizedBox(width: 6),
                                   Text(
                                     '開發者工具',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 13),
                                   ),
                                 ],
                               ),
