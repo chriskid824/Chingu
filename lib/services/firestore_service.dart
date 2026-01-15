@@ -289,6 +289,21 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 更新用戶 FCM Token
+  ///
+  /// [uid] 用戶 ID
+  /// [token] FCM Token
+  Future<void> updateFcmToken(String uid, String token) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'fcmToken': token,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('更新 FCM Token 失敗: $e');
+    }
+  }
 }
 
 
