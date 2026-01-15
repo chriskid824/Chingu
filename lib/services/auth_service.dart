@@ -1,5 +1,11 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -33,6 +39,7 @@ class AuthService {
         throw Exception('註冊失敗，請稍後再試');
       }
 
+      _recordLogin(userCredential.user!.uid);
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -62,6 +69,7 @@ class AuthService {
         throw Exception('登入失敗，請稍後再試');
       }
 
+      _recordLogin(userCredential.user!.uid);
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -100,6 +108,7 @@ class AuthService {
         throw Exception('Google 登入失敗');
       }
 
+      _recordLogin(userCredential.user!.uid);
       return userCredential.user!;
     } catch (e) {
       throw Exception('Google 登入失敗: $e');
@@ -169,6 +178,56 @@ class AuthService {
     }
   }
 
+  /// 記錄登入歷史
+  Future<void> _recordLogin(String userId) async {
+    try {
+      final firestoreService = FirestoreService();
+      final deviceInfo = DeviceInfoPlugin();
+      String deviceName = 'Unknown Device';
+      String osVersion = 'Unknown OS';
+
+      if (!kIsWeb) {
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          final androidInfo = await deviceInfo.androidInfo;
+          deviceName = '${androidInfo.manufacturer} ${androidInfo.model}';
+          osVersion = 'Android ${androidInfo.version.release}';
+        } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+          final iosInfo = await deviceInfo.iosInfo;
+          deviceName = iosInfo.name;
+          osVersion = '${iosInfo.systemName} ${iosInfo.systemVersion}';
+        }
+      }
+
+      String ipAddress = 'Unknown';
+      String location = 'Unknown';
+
+      try {
+        final response = await http.get(Uri.parse('https://ipwho.is/'));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          ipAddress = data['ip'] ?? 'Unknown';
+          location = '${data['city']}, ${data['country']}';
+        }
+      } catch (e) {
+        print('獲取 IP 資訊失敗: $e');
+      }
+
+      final history = LoginHistoryModel(
+        id: '', // Firestore will generate ID
+        userId: userId,
+        timestamp: DateTime.now(),
+        deviceName: deviceName,
+        osVersion: osVersion,
+        location: location,
+        ipAddress: ipAddress,
+      );
+
+      await firestoreService.addLoginHistory(history);
+    } catch (e) {
+      print('記錄登入歷史失敗: $e');
+    }
+  }
+
   /// 處理 Firebase Auth 異常
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
@@ -195,6 +254,3 @@ class AuthService {
     }
   }
 }
-
-
-
