@@ -2,12 +2,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_service.dart';
+import 'notification_ab_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
-  static final RichNotificationService _instance = RichNotificationService._internal();
+  static final RichNotificationService _instance =
+      RichNotificationService._internal();
 
   factory RichNotificationService() {
     return _instance;
@@ -66,6 +70,13 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? group = data['group'];
+        final String? type = data['type'];
+
+        // 追蹤點擊
+        if (group != null && type != null) {
+          NotificationService().trackClick(type, group);
+        }
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
@@ -126,15 +137,38 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(
+    NotificationModel notification, {
+    Map<String, dynamic>? extraPayload,
+  }) async {
+    // 獲取當前用戶 ID
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    String group = 'control';
+    if (uid != null) {
+      group = NotificationABService().getGroup(uid) == ExperimentGroup.variant
+          ? 'variant'
+          : 'control';
+    }
+
+    // 如果是來自本地觸發的通知（非 NotificationService 調用），我們需要在此追蹤發送
+    // 通過檢查 extraPayload 是否已經包含 group 來判斷
+    // 如果 extraPayload 包含 group，說明已經被追蹤過（例如來自 NotificationService）
+    if (extraPayload == null || !extraPayload.containsKey('group')) {
+      await NotificationService().trackSend(notification.type, group);
+    } else {
+      group = extraPayload['group'];
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
     // 如果有圖片，下載並設置 BigPictureStyle
     if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty) {
       try {
-        final file = await DefaultCacheManager().getSingleFile(notification.imageUrl!);
-        final ByteArrayAndroidBitmap bigPicture = ByteArrayAndroidBitmap(await file.readAsBytes());
+        final file = await DefaultCacheManager()
+            .getSingleFile(notification.imageUrl!);
+        final ByteArrayAndroidBitmap bigPicture =
+            ByteArrayAndroidBitmap(await file.readAsBytes());
 
         styleInformation = BigPictureStyleInformation(
           bigPicture,
@@ -186,6 +220,9 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'group': group,
+      'type': notification.type,
+      ...?extraPayload,
     };
 
     await _flutterLocalNotificationsPlugin.show(
