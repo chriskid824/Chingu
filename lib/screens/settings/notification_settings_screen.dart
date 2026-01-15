@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/topic_subscription_service.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
@@ -9,6 +12,7 @@ class NotificationSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -82,6 +86,8 @@ class NotificationSettingsScreen extends StatelessWidget {
             activeColor: theme.colorScheme.primary,
           ),
           const Divider(),
+          _buildTopicSubscriptions(context, authProvider),
+          const Divider(),
           _buildSectionTitle(context, '行銷通知'),
           SwitchListTile(
             title: const Text('優惠活動'),
@@ -100,6 +106,62 @@ class NotificationSettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildTopicSubscriptions(BuildContext context, AuthProvider authProvider) {
+    final theme = Theme.of(context);
+    final user = authProvider.userModel;
+
+    if (user == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, '地區訂閱'),
+        ...['Taipei', 'Taichung', 'Kaohsiung'].map((region) {
+          final isSubscribed = user.subscribedRegions.contains(region);
+          return SwitchListTile(
+            title: Text(_getRegionDisplayName(region)),
+            subtitle: Text('訂閱${_getRegionDisplayName(region)}的相關通知',
+                style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            value: isSubscribed,
+            activeColor: theme.colorScheme.primary,
+            onChanged: (val) async {
+              await TopicSubscriptionService().updateRegionSubscription(user.uid, region, val);
+              await authProvider.refreshUserData();
+            },
+          );
+        }),
+
+        if (user.interests.isNotEmpty) ...[
+          const Divider(),
+          _buildSectionTitle(context, '興趣訂閱'),
+          ...user.interests.map((interest) {
+            final isSubscribed = user.subscribedInterests.contains(interest);
+            return SwitchListTile(
+              title: Text(interest),
+              subtitle: Text('訂閱關於$interest的通知',
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+              value: isSubscribed,
+              activeColor: theme.colorScheme.primary,
+              onChanged: (val) async {
+                await TopicSubscriptionService().updateInterestSubscription(user.uid, interest, val);
+                await authProvider.refreshUserData();
+              },
+            );
+          }),
+        ]
+      ],
+    );
+  }
+
+  String _getRegionDisplayName(String region) {
+     switch(region.toLowerCase()) {
+         case 'taipei': return '台北';
+         case 'taichung': return '台中';
+         case 'kaohsiung': return '高雄';
+         default: return region;
+     }
   }
   
   Widget _buildSectionTitle(BuildContext context, String title) {
