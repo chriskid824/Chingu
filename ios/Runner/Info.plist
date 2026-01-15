@@ -45,6 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要存取您的相簿以更換頭像</string>
 	<key>NSCameraUsageDescription</key>

@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  app_links: ^6.3.2
   flutter:
     sdk: flutter
 
@@ -59,6 +60,7 @@ dependencies:
   http: ^1.2.0
 
 dev_dependencies:
+  app_links: ^6.3.2
   flutter_test:
     sdk: flutter
 

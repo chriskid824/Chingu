@@ -17,13 +17,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
   
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic> && args['inviteCode'] != null) {
+      if (_inviteCodeController.text.isEmpty) {
+        _inviteCodeController.text = args['inviteCode'];
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    _inviteCodeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -293,6 +306,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+
+                // 邀請碼 (Optional)
+                TextFormField(
+                  controller: _inviteCodeController,
+                  enabled: !_isLoading,
+                  decoration: InputDecoration(
+                    labelText: '邀請碼 (選填)',
+                    hintText: '如果有邀請碼請輸入',
+                    prefixIcon: Icon(
+                      Icons.confirmation_number_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                    filled: true,
+                    fillColor: theme.cardColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: theme.colorScheme.outline),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
                 
