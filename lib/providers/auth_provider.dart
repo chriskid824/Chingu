@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -65,8 +66,8 @@ class AuthProvider with ChangeNotifier {
         _errorMessage = '找不到用戶資料 (Document Not Found)';
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('載入用戶資料失敗: $e');
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'LoadUserData failed for uid: $uid');
       _errorMessage = '載入資料失敗: $e';
       _userModel = null;
       notifyListeners();
@@ -124,7 +125,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Register failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -151,7 +153,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SignIn failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -197,7 +200,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SignInWithGoogle failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -211,7 +215,8 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
       await _authService.signOut();
       _setLoading(false);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SignOut failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -228,7 +233,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SendPasswordResetEmail failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -254,7 +260,8 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'UpdateUserData failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -293,6 +300,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
