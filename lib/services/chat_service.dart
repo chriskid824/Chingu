@@ -1,12 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
+
+  /// 訊息集合引用 (Root collection, as per legacy design)
+  CollectionReference get _messagesCollection => _firestore.collection('messages');
 
   /// 創建或獲取現有聊天室
   /// 
@@ -84,23 +89,27 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId, // Optional, but highly recommended for notifications
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
 
       // 1. 新增訊息到 messages 集合
-      await _firestore.collection('messages').add({
+      // Note: Using root collection to match existing ChatProvider/ChatDetailScreen logic.
+      await _messagesCollection.add({
         'chatRoomId': chatRoomId,
         'senderId': senderId,
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
-        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'message': message, // Standardization on 'message'
+        'text': message, // Backward compatibility for ChatProvider
         'type': type,
         'timestamp': timestamp,
-        'readBy': [], // Empty list for readBy
+        'readBy': [],
         'isForwarded': isForwarded,
         'originalSenderId': originalSenderId,
         'originalSenderName': originalSenderName,
+        'isRead': false, // For ChatProvider compatibility
       });
 
       // 2. 更新聊天室最後訊息
@@ -108,12 +117,24 @@ class ChatService {
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推播通知
+      // 如果提供了 recipientId，我們可以直接發送通知
+      // 如果沒有提供，我們可以嘗試從 chatRoom 中查找（這會增加延遲，所以最好傳入）
+      if (recipientId != null && recipientId.isNotEmpty) {
+        try {
+          await _functions.httpsCallable('sendNotification').call({
+            'recipientUserId': recipientId,
+            'senderName': senderName,
+            'messageBody': type == 'text' ? message : '傳送了一個附件',
+            'chatRoomId': chatRoomId,
+          });
+        } catch (e) {
+          print('發送通知失敗: $e');
+          // 通知失敗不應阻擋訊息發送流程
+        }
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
