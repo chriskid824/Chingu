@@ -33,10 +33,12 @@ class NotificationStorageService {
   }
 
   /// 儲存新通知
-  Future<String> saveNotification(NotificationModel notification) async {
-    final userId = _currentUserId;
+  /// [receiverId] 指定接收通知的用戶 ID，若為 null 則預設為當前用戶
+  Future<String> saveNotification(NotificationModel notification,
+      {String? receiverId}) async {
+    final userId = receiverId ?? _currentUserId;
     if (userId == null) {
-      throw Exception('User not authenticated');
+      throw Exception('User not authenticated and receiverId is null');
     }
 
     final docRef = await _notificationsRef(userId).add(notification.toMap());
@@ -252,8 +254,9 @@ class NotificationStorageService {
     required String matchedUserName,
     required String matchedUserId,
     String? matchedUserPhotoUrl,
+    String? receiverId,
   }) async {
-    final userId = _currentUserId;
+    final userId = receiverId ?? _currentUserId;
     if (userId == null) return;
 
     final notification = NotificationModel(
