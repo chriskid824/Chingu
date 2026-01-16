@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -43,11 +44,13 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      await AnalyticsService().setUserId(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+      await AnalyticsService().setUserId(firebaseUser.uid);
     }
     notifyListeners();
   }
@@ -122,6 +125,8 @@ class AuthProvider with ChangeNotifier {
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
 
+      await AnalyticsService().logSignUp('email');
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -148,6 +153,8 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+
+      await AnalyticsService().logLogin('email');
 
       _setLoading(false);
       return true;
@@ -193,6 +200,9 @@ class AuthProvider with ChangeNotifier {
         );
 
         await _firestoreService.createUser(userModel);
+        await AnalyticsService().logSignUp('google');
+      } else {
+        await AnalyticsService().logLogin('google');
       }
 
       _setLoading(false);
@@ -210,6 +220,7 @@ class AuthProvider with ChangeNotifier {
     try {
       _setLoading(true);
       await _authService.signOut();
+      await AnalyticsService().logEvent('logout');
       _setLoading(false);
     } catch (e) {
       _errorMessage = e.toString();
