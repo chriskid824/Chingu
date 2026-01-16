@@ -113,6 +113,9 @@ class DinnerEventService {
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
+  ///
+  /// Note: Joining an event will automatically schedule a reminder 24 hours before the event
+  /// via Cloud Functions (sendEventReminders).
   Future<void> joinEvent(String eventId, String userId) async {
     try {
       // 使用事務確保數據一致性
