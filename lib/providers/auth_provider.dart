@@ -1,8 +1,11 @@
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -118,7 +121,10 @@ class AuthProvider with ChangeNotifier {
 
       await _firestoreService.createUser(userModel);
 
-      // 4. 立即重新載入用戶資料，確保 _userModel 不為空
+      // 4. 記錄登入歷史 (非阻塞)
+      _recordLoginHistory(firebaseUser.uid);
+
+      // 5. 立即重新載入用戶資料，確保 _userModel 不為空
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
 
@@ -144,10 +150,13 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      await _authService.signInWithEmailAndPassword(
+      final user = await _authService.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // 記錄登入歷史 (非阻塞)
+      _recordLoginHistory(user.uid);
 
       _setLoading(false);
       return true;
@@ -194,6 +203,9 @@ class AuthProvider with ChangeNotifier {
 
         await _firestoreService.createUser(userModel);
       }
+
+      // 記錄登入歷史 (非阻塞)
+      _recordLoginHistory(firebaseUser.uid);
 
       _setLoading(false);
       return true;
@@ -291,6 +303,46 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// 記錄登入歷史
+  Future<void> _recordLoginHistory(String uid) async {
+    try {
+      String ipAddress = 'Unknown';
+      try {
+        final response = await http
+            .get(Uri.parse('https://api.ipify.org'))
+            .timeout(const Duration(seconds: 3));
+        if (response.statusCode == 200) {
+          ipAddress = response.body;
+        }
+      } catch (_) {}
+
+      String deviceInfo = 'Unknown Device';
+      try {
+        if (Platform.isAndroid) {
+          deviceInfo = 'Android ${Platform.operatingSystemVersion}';
+        } else if (Platform.isIOS) {
+          deviceInfo = 'iOS ${Platform.operatingSystemVersion}';
+        } else {
+          deviceInfo = '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+        }
+      } catch (_) {}
+
+      // 注意：地點暫時使用 IP 或 Unknown，實際應用可能需要 Geolocation
+      final history = LoginHistoryModel(
+        id: '', // Firestore 會自動生成 ID，這裡不需要
+        userId: uid,
+        timestamp: DateTime.now(),
+        location: ipAddress != 'Unknown' ? 'IP: $ipAddress' : 'Unknown Location',
+        deviceInfo: deviceInfo,
+        ipAddress: ipAddress,
+      );
+
+      await _firestoreService.recordLoginHistory(uid, history);
+    } catch (e) {
+      debugPrint('記錄登入歷史失敗: $e');
+    }
   }
 }
 
