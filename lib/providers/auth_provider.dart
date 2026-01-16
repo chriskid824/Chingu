@@ -292,6 +292,54 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 刪除帳號
+  ///
+  /// [exportData] 是否需要導出數據
+  /// [reason] 刪除原因
+  Future<bool> deleteAccount({
+    required bool exportData,
+    String? reason,
+  }) async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      final uid = _firebaseUser!.uid;
+
+      // 1. 如果需要，請求數據導出
+      if (exportData) {
+        await _firestoreService.requestDataExport(uid);
+      }
+
+      // 2. 記錄刪除原因
+      if (reason != null) {
+        await _firestoreService.recordAccountDeletion(uid: uid, reason: reason);
+      }
+
+      // 3. 刪除 Firestore 用戶資料
+      await _firestoreService.deleteUser(uid);
+
+      // 4. 刪除 Auth 帳號
+      await _authService.deleteAccount();
+
+      // 清除本地狀態
+      _status = AuthStatus.unauthenticated;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
 }
 
 

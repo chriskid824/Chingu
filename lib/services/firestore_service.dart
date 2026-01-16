@@ -289,6 +289,39 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 請求數據導出
+  ///
+  /// [uid] 用戶 ID
+  Future<void> requestDataExport(String uid) async {
+    try {
+      await _firestore.collection('data_export_requests').add({
+        'uid': uid,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        'requestSource': 'mobile_app',
+      });
+    } catch (e) {
+      throw Exception('請求數據導出失敗: $e');
+    }
+  }
+
+  /// 記錄帳號刪除原因
+  Future<void> recordAccountDeletion({
+    required String uid,
+    required String reason,
+  }) async {
+    try {
+      await _firestore.collection('account_deletions').add({
+        'uid': uid,
+        'reason': reason,
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('記錄刪除原因失敗: $e');
+      // 不拋出異常，以免阻擋刪除流程
+    }
+  }
 }
 
 
