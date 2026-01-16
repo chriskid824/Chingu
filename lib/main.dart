@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -12,6 +13,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -22,6 +24,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 註冊後台消息處理器
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
@@ -31,11 +36,40 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 初始化通知服務 (FCM)
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  runApp(ChinguApp(initialMessage: notificationService.initialMessage));
 }
 
-class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+class ChinguApp extends StatefulWidget {
+  final RemoteMessage? initialMessage;
+
+  const ChinguApp({super.key, this.initialMessage});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMessage != null) {
+      // 在第一幀渲染後處理導航
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleInitialNavigation(widget.initialMessage!);
+      });
+    }
+  }
+
+  void _handleInitialNavigation(RemoteMessage message) {
+    final actionType = message.data['actionType'];
+    final actionData = message.data['actionData'];
+    // 使用 RichNotificationService 處理導航
+    RichNotificationService().handleNavigation(actionType, actionData, null);
+  }
 
   @override
   Widget build(BuildContext context) {
