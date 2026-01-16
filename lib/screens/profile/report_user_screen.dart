@@ -5,6 +5,7 @@ import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/widgets/app_icon_button.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 class ReportUserScreen extends StatefulWidget {
   final String reportedUserId;
@@ -27,6 +28,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
 
   String? _selectedReason;
   bool _isSubmitting = false;
+  bool _shouldBlockUser = false;
 
   final List<String> _reportReasons = [
     '垃圾訊息 / 詐騙',
@@ -71,11 +73,15 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
         description: _descriptionController.text.trim(),
       );
 
+      if (_shouldBlockUser) {
+        await UserBlockService().blockUser(currentUserId, widget.reportedUserId);
+      }
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('舉報已提交，我們會盡快處理'),
+          content: Text(_shouldBlockUser ? '舉報已提交，並已封鎖該用戶' : '舉報已提交，我們會盡快處理'),
           backgroundColor: Colors.green,
         ),
       );
@@ -169,6 +175,25 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
                   filled: true,
                   fillColor: theme.cardColor,
                 ),
+              ),
+              SizedBox(height: 24),
+              CheckboxListTile(
+                value: _shouldBlockUser,
+                onChanged: (value) {
+                  setState(() {
+                    _shouldBlockUser = value ?? false;
+                  });
+                },
+                title: Text(
+                  '同時封鎖該用戶',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text('封鎖後，您將不會再看到對方的內容'),
+                contentPadding: EdgeInsets.zero,
+                activeColor: theme.colorScheme.primary,
+                controlAffinity: ListTileControlAffinity.leading,
               ),
               SizedBox(height: 32),
               GradientButton(

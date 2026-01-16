@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/user_block_service.dart';
+import 'package:chingu/screens/profile/report_user_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -123,6 +125,49 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
+  void _showBlockConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('封鎖用戶'),
+        content: Text('確定要封鎖 ${_otherUser!.name} 嗎？封鎖後將無法再與對方傳送訊息，且對方不會出現在您的配對名單中。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _blockUser();
+            },
+            child: const Text('封鎖', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _blockUser() async {
+    final authProvider = context.read<AuthProvider>();
+    final currentUser = authProvider.userModel;
+    if (currentUser == null || _otherUser == null) return;
+
+    try {
+      await UserBlockService().blockUser(currentUser.uid, _otherUser!.uid);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已封鎖該用戶')),
+      );
+      Navigator.of(context).pop(); // Exit chat
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('封鎖失敗: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -178,9 +223,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'report') {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+                  ReportUserScreen(reportedUserId: _otherUser!.uid, reportedUserName: _otherUser!.name)
+                ));
+              } else if (value == 'block') {
+                _showBlockConfirmation(context);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'report',
+                child: Text('舉報用戶'),
+              ),
+              const PopupMenuItem(
+                value: 'block',
+                child: Text('封鎖用戶', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
         ],
       ),
