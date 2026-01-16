@@ -20,6 +20,27 @@ class RichNotificationService {
 
   bool _isInitialized = false;
 
+  /// 獲取啟動 App 的通知詳情
+  Future<Map<String, dynamic>?> getLaunchNotification() async {
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      final payload = notificationAppLaunchDetails?.notificationResponse?.payload;
+      if (payload != null) {
+        try {
+          final decoded = json.decode(payload);
+          if (decoded is Map<String, dynamic>) {
+            return decoded;
+          }
+        } catch (e) {
+          debugPrint('Error parsing notification payload: $e');
+        }
+      }
+    }
+    return null;
+  }
+
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
