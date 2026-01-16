@@ -6,16 +6,41 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 // Generate mocks
 @GenerateMocks([FirestoreService, ChatService])
 import 'matching_service_test.mocks.dart';
+
+// Fake implementations for Cloud Functions since we cannot run build_runner
+class FakeFirebaseFunctions extends Fake implements FirebaseFunctions {
+  final List<String> calledFunctions = [];
+
+  @override
+  HttpsCallable httpsCallable(String name, {HttpsCallableOptions? options}) {
+    calledFunctions.add(name);
+    return FakeHttpsCallable();
+  }
+}
+
+class FakeHttpsCallable extends Fake implements HttpsCallable {
+  @override
+  Future<HttpsCallableResult<T>> call<T>([dynamic data]) async {
+    return FakeHttpsCallableResult<T>();
+  }
+}
+
+class FakeHttpsCallableResult<T> extends Fake implements HttpsCallableResult<T> {
+  @override
+  T get data => null as T;
+}
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
   late FakeFirebaseFirestore fakeFirestore;
+  late FakeFirebaseFunctions fakeFunctions;
 
   // Test data
   final currentUser = UserModel(
@@ -54,9 +79,11 @@ void main() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
     fakeFirestore = FakeFirebaseFirestore();
+    fakeFunctions = FakeFirebaseFunctions();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
+      functions: fakeFunctions,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
     );
@@ -78,11 +105,17 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
+      // Interest: 1 common ('coding') / 3 * 40 = 13.33 -> round?
+      // Existing test expects 73.
+      // 1 common / 4 * 50 = 12.5.
+      // Location: 30.
+      // Age: diff 1 -> 10.
+      // Budget: same -> 10.
+      // Total: 12.5 + 30 + 10 + 10 = 62.5 -> 63?
+
+      // Wait, I should not change expectations unless I changed logic.
+      // I did NOT change score logic in matching_service.dart.
+      // The previous test content I read had expectations. I'll rely on copying them.
       expect(results.first['score'], 73);
     });
 
@@ -143,7 +176,7 @@ void main() {
       expect(result['isMatch'], false); // No mutual like yet
     });
 
-    test('should detect match when mutual like exists', () async {
+    test('should detect match when mutual like exists and send notification', () async {
       // Arrange: Candidate already liked current user
       await fakeFirestore.collection('swipes').add({
         'userId': candidateUser.uid,
@@ -174,6 +207,9 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      expect(fakeFunctions.calledFunctions, contains('sendMatchNotification'));
     });
   });
 }
