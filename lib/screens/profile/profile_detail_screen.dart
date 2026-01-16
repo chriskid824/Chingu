@@ -166,6 +166,29 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
+
+                        // 動態牆按鈕
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                               Navigator.pushNamed(
+                                 context,
+                                 AppRoutes.userMoments,
+                                 arguments: {'userId': user.uid},
+                               );
+                            },
+                            icon: const Icon(Icons.photo_library, color: Colors.white),
+                            label: const Text('查看動態牆', style: TextStyle(color: Colors.white)),
+                            style: OutlinedButton.styleFrom(
+                               side: const BorderSide(color: Colors.white),
+                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                               minimumSize: const Size(double.infinity, 44),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
                         // Debug Button
                         // Debug Button
                         Container(
