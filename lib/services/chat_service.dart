@@ -73,6 +73,23 @@ class ChatService {
     }
   }
 
+  /// 獲取用戶的聊天室數量（活躍度指標）
+  Future<int> getChatRoomCount(String userId) async {
+    try {
+      final query = _chatRoomsCollection
+          .where('participantIds', arrayContains: userId);
+
+      final snapshot = await query.count().get();
+      return snapshot.count;
+    } catch (e) {
+      // Fallback for older SDKs or if count() fails
+      final snapshot = await _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .get();
+      return snapshot.docs.length;
+    }
+  }
+
   /// 發送訊息
   Future<void> sendMessage({
     required String chatRoomId,
