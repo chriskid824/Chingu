@@ -22,20 +22,26 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 初始化 Crashlytics
-  await CrashReportingService().initialize();
+  // 平行初始化服務以優化啟動速度
+  await Future.wait([
+    CrashReportingService().initialize(),
+    initializeDateFormatting('zh_TW', null),
+    RichNotificationService().initialize(),
+  ]);
 
-  // 初始化日期格式化
-  await initializeDateFormatting('zh_TW', null);
+  // 獲取啟動通知資料
+  final initialNotificationData = await RichNotificationService().getLaunchNotification();
 
-  // 初始化豐富通知服務
-  await RichNotificationService().initialize();
-
-  runApp(const ChinguApp());
+  runApp(ChinguApp(initialNotificationData: initialNotificationData));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final Map<String, dynamic>? initialNotificationData;
+
+  const ChinguApp({
+    super.key,
+    this.initialNotificationData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +62,52 @@ class ChinguApp extends StatelessWidget {
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRoute) {
+              // 默認路由
+              var routes = [
+                AppRouter.generateRoute(RouteSettings(name: initialRoute)),
+              ];
+
+              if (initialNotificationData != null) {
+                final actionType = initialNotificationData!['actionType'];
+                final actionData = initialNotificationData!['actionData'];
+
+                if (actionType == 'open_chat') {
+                  // 如果是聊天，直接跳轉到聊天 Tab (index 3)
+                  routes = [
+                    AppRouter.generateRoute(
+                      const RouteSettings(
+                        name: AppRoutes.mainNavigation,
+                        arguments: {'initialIndex': 3},
+                      ),
+                    ),
+                  ];
+                } else if (actionType == 'view_event') {
+                  routes.add(
+                    AppRouter.generateRoute(
+                      RouteSettings(
+                        name: AppRoutes.eventDetail,
+                        arguments: actionData,
+                      ),
+                    ),
+                  );
+                } else if (actionType == 'match_history') {
+                  routes.add(
+                    AppRouter.generateRoute(
+                      const RouteSettings(name: AppRoutes.matchesList),
+                    ),
+                  );
+                } else {
+                  // 預設跳轉到通知頁
+                  routes.add(
+                    AppRouter.generateRoute(
+                      const RouteSettings(name: AppRoutes.notifications),
+                    ),
+                  );
+                }
+              }
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
