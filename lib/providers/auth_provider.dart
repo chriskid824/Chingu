@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_topic_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final NotificationTopicService _notificationTopicService = NotificationTopicService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -60,6 +62,13 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+
+        // 同步通知主題訂閱
+        await _notificationTopicService.syncTopics(
+          null, // Initial sync
+          _userModel!,
+          enableMarketing: _userModel!.marketingNotification
+        );
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -209,6 +218,12 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     try {
       _setLoading(true);
+
+      // 清除訂閱 (如果有用戶資料)
+      if (_userModel != null) {
+        await _notificationTopicService.clearSubscriptions(_userModel!);
+      }
+
       await _authService.signOut();
       _setLoading(false);
     } catch (e) {
@@ -246,10 +261,26 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
+      final oldUser = _userModel;
+
       await _firestoreService.updateUser(_firebaseUser!.uid, data);
 
       // 重新載入用戶資料
-      await _loadUserData(_firebaseUser!.uid);
+      await _loadUserData(_firebaseUser!.uid); // This will sync with null oldUser internally
+
+      // 手動再次同步，確保 Diff 正確處理 (雖然 _loadUserData 已經做了全量 sync，但如果需要 Diff 邏輯可能更精確)
+      // 其實 _notificationTopicService.syncTopics(null, user) 會訂閱所有 user 的 topics。
+      // 但是它不會 unsubscribe oldUser 的 topics (因為 oldUser 是 null)。
+      // 所以我們需要在這裡明確調用 syncTopics(oldUser, newUser)。
+      // _loadUserData 裡面的 syncTopics(null, user) 是為了處理冷啟動或重新整理。
+      // 當我們有 oldUser 時，應該再次調用以處理 unsubscribe。
+      if (oldUser != null && _userModel != null) {
+         await _notificationTopicService.syncTopics(
+           oldUser,
+           _userModel!,
+           enableMarketing: _userModel!.marketingNotification
+         );
+      }
 
       _setLoading(false);
       notifyListeners();
