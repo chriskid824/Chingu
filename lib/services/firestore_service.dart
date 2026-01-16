@@ -198,21 +198,37 @@ class FirestoreService {
   /// 
   /// [searchTerm] 搜尋詞
   /// [limit] 返回數量限制
+  /// [excludedIds] 要排除的用戶 ID 列表 (例如封鎖名單)
   Future<List<UserModel>> searchUsers(String searchTerm,
-      {int limit = 20}) async {
+      {int limit = 20, List<String>? excludedIds}) async {
     try {
       // 注意：此搜尋方法較簡單，實際應用中建議使用 Algolia 等專業搜尋服務
+      // 為了抵消本地過濾的損耗，稍微多獲取一些數據
+      final fetchLimit = limit + (excludedIds != null ? 10 : 0);
+
       final querySnapshot = await _usersCollection
           .where('name', isGreaterThanOrEqualTo: searchTerm)
           .where('name', isLessThan: '${searchTerm}z')
           .where('isActive', isEqualTo: true)
-          .limit(limit)
+          .limit(fetchLimit)
           .get();
 
-      return querySnapshot.docs
+      var users = querySnapshot.docs
           .map((doc) =>
               UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+
+      // 本地過濾排除名單
+      if (excludedIds != null && excludedIds.isNotEmpty) {
+        users = users.where((user) => !excludedIds.contains(user.uid)).toList();
+      }
+
+      // 再次限制數量
+      if (users.length > limit) {
+        users = users.take(limit).toList();
+      }
+
+      return users;
     } catch (e) {
       throw Exception('搜尋用戶失敗: $e');
     }
