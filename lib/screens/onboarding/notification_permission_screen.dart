@@ -25,6 +25,9 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
         sound: true,
       );
 
+      // Subscribe to all_users topic for broadcast notifications
+      await messaging.subscribeToTopic('all_users');
+
       // We proceed regardless of the result
     } catch (e) {
       debugPrint('Error requesting permission: $e');
