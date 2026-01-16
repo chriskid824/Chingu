@@ -9,12 +9,14 @@ class MomentCard extends StatefulWidget {
   final MomentModel moment;
   final Function(bool isLiked)? onLikeChanged;
   final VoidCallback? onCommentTap;
+  final VoidCallback? onDelete;
 
   const MomentCard({
     super.key,
     required this.moment,
     this.onLikeChanged,
     this.onCommentTap,
+    this.onDelete,
   });
 
   @override
@@ -110,12 +112,30 @@ class _MomentCardState extends State<MomentCard> {
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.more_horiz),
-                onPressed: () {
-                  // TODO: Implement more options
-                },
-              ),
+              if (widget.onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.more_horiz),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.delete_outline, color: Colors.red),
+                              title: const Text('刪除動態', style: TextStyle(color: Colors.red)),
+                              onTap: () {
+                                Navigator.pop(context);
+                                widget.onDelete?.call();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
 
