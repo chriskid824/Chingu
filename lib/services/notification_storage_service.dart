@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import 'package:chingu/models/user_model.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -220,6 +221,34 @@ class NotificationStorageService {
         .toList();
   }
 
+  /// 檢查通知權限 (Internal helper)
+  Future<bool> _checkPermission(String userId, String type) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (!doc.exists) return true;
+
+      final user = UserModel.fromFirestore(doc);
+
+      if (!user.pushNotificationsEnabled) return false;
+
+      switch (type) {
+        case 'match':
+          return user.matchSuccessNotification;
+        case 'message':
+          return user.newMessageNotification;
+        case 'event':
+          return user.eventUpdateNotification; // Default to update for generic event notifications
+        case 'marketing':
+          return user.marketingNotification;
+        default:
+          return true;
+      }
+    } catch (e) {
+      // 發生錯誤時預設允許，避免遺漏重要通知
+      return true;
+    }
+  }
+
   /// 創建系統通知
   Future<void> createSystemNotification({
     required String title,
@@ -230,6 +259,11 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    // 系統通知通常不被用戶設定屏蔽，除非完全關閉推播
+    if (!await _checkPermission(userId, 'system')) {
+       return;
+    }
 
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
@@ -255,6 +289,8 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    if (!await _checkPermission(userId, 'match')) return;
 
     final notification = NotificationModel(
       id: '',
@@ -282,6 +318,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    if (!await _checkPermission(userId, 'event')) return;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
@@ -307,6 +345,8 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    if (!await _checkPermission(userId, 'message')) return;
 
     final notification = NotificationModel(
       id: '',
