@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -10,6 +12,13 @@ class ABTestManager {
 
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+  StreamSubscription<User?>? _authSubscription;
+
+  @visibleForTesting
+  set firestoreInstance(FirebaseFirestore instance) => _firestoreInstance = instance;
+
+  @visibleForTesting
+  set authInstance(FirebaseAuth instance) => _authInstance = instance;
 
   FirebaseFirestore get _firestore => 
       _firestoreInstance ??= FirebaseFirestore.instance;
@@ -23,10 +32,33 @@ class ABTestManager {
   Map<String, String> _userVariants = {};
 
   /// 初始化 A/B 測試管理器
-  /// 從 Firestore 加載配置
+  /// 從 Firestore 加載配置並設置用戶狀態監聽
   Future<void> initialize() async {
     try {
-      final snapshot = await _firestore
+      await _loadConfigs();
+
+      // 監聽用戶登錄狀態變化
+      _authSubscription?.cancel();
+      _authSubscription = _auth.authStateChanges().listen((user) {
+        if (user != null) {
+          _loadUserVariants();
+        } else {
+          _userVariants.clear();
+        }
+      });
+
+      // 嘗試初始加載
+      if (_auth.currentUser != null) {
+        await _loadUserVariants();
+      }
+    } catch (e) {
+      print('Failed to initialize ABTestManager: $e');
+    }
+  }
+
+  /// 加載測試配置
+  Future<void> _loadConfigs() async {
+     final snapshot = await _firestore
           .collection('ab_tests')
           .where('isActive', isEqualTo: true)
           .get();
@@ -36,12 +68,6 @@ class ABTestManager {
         final config = ABTestConfig.fromFirestore(doc);
         _cachedTests[config.testId] = config;
       }
-
-      // 加載用戶的變體分配
-      await _loadUserVariants();
-    } catch (e) {
-      print('Failed to initialize ABTestManager: $e');
-    }
   }
 
   /// 加載用戶已分配的變體
@@ -193,11 +219,16 @@ class ABTestManager {
   void clearCache() {
     _cachedTests.clear();
     _userVariants.clear();
+    _authSubscription?.cancel();
+    _authSubscription = null;
   }
 
   /// 強制刷新配置
   Future<void> refresh() async {
-    await initialize();
+    await _loadConfigs();
+    if (_auth.currentUser != null) {
+      await _loadUserVariants();
+    }
   }
 }
 
