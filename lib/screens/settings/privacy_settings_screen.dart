@@ -66,6 +66,15 @@ class PrivacySettingsScreen extends StatelessWidget {
             onTap: () {},
           ),
           ListTile(
+            leading: Icon(Icons.history, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            title: const Text('登入歷史'),
+            subtitle: Text('查看登入裝置與地點', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.loginHistory);
+            },
+          ),
+          ListTile(
             leading: Icon(Icons.phone_android, color: theme.colorScheme.onSurface.withOpacity(0.7)),
             title: const Text('雙重驗證'),
             subtitle: Text('已啟用', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
