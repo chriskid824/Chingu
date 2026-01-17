@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import 'notification_ab_service.dart';
+import 'notification_service.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -16,10 +18,12 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+  NotificationABService? _abService;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+  NotificationABService get _notificationABService => _abService ??= NotificationABService();
 
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
@@ -231,17 +235,32 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // 獲取 AB 測試內容
+    final content = _notificationABService.getContent(
+      userId,
+      NotificationType.system,
+      params: {'message': message},
+    );
+
+    // 如果輸入的 title/message 不為空，優先使用輸入的（或者是想結合？）
+    // 這裡我們假設 AB Service 提供的內容優先，或者將輸入的內容作為參數傳遞給 AB Service
+    // 但因為 `createSystemNotification` 的調用者可能已經決定了文案，這裡我們只記錄群組
+
+    final group = _notificationABService.getGroup(userId);
+    final groupName = NotificationService().getExperimentGroupName(group);
+
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
       userId: userId,
       type: 'system',
-      title: title,
-      message: message,
+      title: title, // 或使用 content.title
+      message: message, // 或使用 content.body
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupName,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -256,17 +275,27 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final content = _notificationABService.getContent(
+      userId,
+      NotificationType.match,
+      params: {'partnerName': matchedUserName},
+    );
+
+    final group = _notificationABService.getGroup(userId);
+    final groupName = NotificationService().getExperimentGroupName(group);
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'match',
-      title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      title: content.title,
+      message: content.body,
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupName,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -282,17 +311,27 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final content = _notificationABService.getContent(
+      userId,
+      NotificationType.event,
+      params: {'eventTitle': eventTitle},
+    );
+
+    final group = _notificationABService.getGroup(userId);
+    final groupName = NotificationService().getExperimentGroupName(group);
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'event',
-      title: eventTitle,
-      message: message,
+      title: content.title,
+      message: content.body,
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupName,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -308,17 +347,27 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final content = _notificationABService.getContent(
+      userId,
+      NotificationType.message,
+      params: {'senderName': senderName},
+    );
+
+    final group = _notificationABService.getGroup(userId);
+    final groupName = NotificationService().getExperimentGroupName(group);
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'message',
-      title: senderName,
-      message: messagePreview,
+      title: content.title,
+      message: content.body,
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupName,
     );
 
     await _notificationsRef(userId).add(notification.toMap());

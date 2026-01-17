@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -66,9 +67,27 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? notificationId = data['notificationId'];
+        final String? experimentGroup = data['experimentGroup'];
+        final String? type = data['type'];
+        final String? userId = data['userId'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+
+        // 追蹤點擊
+        if (notificationId != null) {
+          final dummyNotification = NotificationModel(
+             id: notificationId,
+             userId: userId ?? '',
+             type: type ?? 'unknown',
+             title: '',
+             message: '',
+             createdAt: DateTime.now(),
+             experimentGroup: experimentGroup,
+          );
+          NotificationService().trackNotificationClick(dummyNotification, actionId: actionId);
+        }
 
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
@@ -186,6 +205,9 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'experimentGroup': notification.experimentGroup,
+      'type': notification.type,
+      'userId': notification.userId,
     };
 
     await _flutterLocalNotificationsPlugin.show(
@@ -195,5 +217,8 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+
+    // 追蹤發送
+    await NotificationService().trackNotificationSent(notification);
   }
 }
