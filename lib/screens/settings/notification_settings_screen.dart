@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/notification_service.dart';
+import 'package:chingu/models/user_model.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
   
+  // Available regions for subscription
+  static const List<String> _regions = ['Taipei', 'Taichung', 'Kaohsiung'];
+
+  // Available interests for subscription
+  static const List<String> _interests = ['Sports', 'Music', 'Food', 'Travel', 'Movie', 'Tech', 'Art'];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.userModel;
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -20,14 +35,21 @@ class NotificationSettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          _buildSectionTitle(context, '推播通知'),
-          SwitchListTile(
-            title: const Text('啟用推播通知'),
-            subtitle: Text('接收應用程式的推播通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
-          ),
+          _buildSectionTitle(context, '主題訂閱 - 地區'),
+          ..._regions.map((region) {
+            final topic = NotificationService.getRegionTopic(region);
+            final isSubscribed = user.subscribedTopics.contains(topic);
+            return _buildTopicTile(context, region, topic, isSubscribed, authProvider);
+          }),
+
+          const Divider(),
+          _buildSectionTitle(context, '主題訂閱 - 興趣'),
+          ..._interests.map((interest) {
+            final topic = NotificationService.getInterestTopic(interest);
+            final isSubscribed = user.subscribedTopics.contains(topic);
+            return _buildTopicTile(context, interest, topic, isSubscribed, authProvider);
+          }),
+
           const Divider(),
           _buildSectionTitle(context, '配對通知'),
           SwitchListTile(
@@ -114,6 +136,52 @@ class NotificationSettingsScreen extends StatelessWidget {
           color: theme.colorScheme.onSurface.withOpacity(0.5),
         ),
       ),
+    );
+  }
+
+  Widget _buildTopicTile(
+    BuildContext context,
+    String title,
+    String topic,
+    bool isSubscribed,
+    AuthProvider authProvider,
+  ) {
+    final theme = Theme.of(context);
+    final notificationService = NotificationService();
+
+    return SwitchListTile(
+      title: Text(title),
+      subtitle: Text(
+        isSubscribed ? '已訂閱' : '未訂閱',
+        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+      ),
+      value: isSubscribed,
+      onChanged: (bool value) async {
+        final currentUser = authProvider.userModel;
+        if (currentUser == null) return;
+
+        List<String> currentTopics = List.from(currentUser.subscribedTopics);
+
+        if (value) {
+          // Subscribe
+          if (!currentTopics.contains(topic)) {
+            currentTopics.add(topic);
+            await notificationService.subscribeToTopic(topic);
+          }
+        } else {
+          // Unsubscribe
+          if (currentTopics.contains(topic)) {
+            currentTopics.remove(topic);
+            await notificationService.unsubscribeFromTopic(topic);
+          }
+        }
+
+        // Update User Model in Firestore
+        await authProvider.updateUserData({
+          'subscribedTopics': currentTopics,
+        });
+      },
+      activeColor: theme.colorScheme.primary,
     );
   }
 }
