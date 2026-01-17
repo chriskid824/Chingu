@@ -289,6 +289,50 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 切換收藏狀態
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> toggleFavorite(String currentUserId, String targetUserId) async {
+    try {
+      final userDoc = _usersCollection.doc(currentUserId);
+      final snapshot = await userDoc.get();
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      List<String> favorites = List<String>.from(data['favoriteUserIds'] ?? []);
+      bool isFavorited = favorites.contains(targetUserId);
+
+      if (isFavorited) {
+        await userDoc.update({
+          'favoriteUserIds': FieldValue.arrayRemove([targetUserId])
+        });
+      } else {
+        await userDoc.update({
+          'favoriteUserIds': FieldValue.arrayUnion([targetUserId])
+        });
+      }
+    } catch (e) {
+      throw Exception('切換收藏狀態失敗: $e');
+    }
+  }
+
+  /// 獲取收藏用戶列表
+  ///
+  /// [currentUserId] 當前用戶 ID
+  Future<List<UserModel>> getFavoriteUsers(String currentUserId) async {
+    try {
+      final user = await getUser(currentUserId);
+      if (user == null || user.favoriteUserIds.isEmpty) {
+        return [];
+      }
+
+      return await getBatchUsers(user.favoriteUserIds);
+    } catch (e) {
+      throw Exception('獲取收藏列表失敗: $e');
+    }
+  }
 }
 
 
