@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/services/notification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,6 +34,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
     
     _controller.forward();
+
+    // 初始化通知服務
+    NotificationService().initialize();
     
     // 3秒後跳轉到登入頁面
     Future.delayed(const Duration(seconds: 3), () {
