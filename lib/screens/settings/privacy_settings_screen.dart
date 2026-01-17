@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
@@ -40,6 +41,14 @@ class PrivacySettingsScreen extends StatelessWidget {
             value: true,
             onChanged: (v) {},
             activeColor: theme.colorScheme.primary,
+          ),
+          ListTile(
+            title: const Text('在線狀態與最後上線時間'),
+            subtitle: Text('管理隱私模式', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.privacyMode);
+            },
           ),
           const Divider(),
           _buildSectionTitle(context, '配對設定'),
