@@ -292,6 +292,53 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 刪除帳號
+  ///
+  /// [requireDataExport] 是否需要導出數據
+  Future<bool> deleteAccount({bool requireDataExport = false}) async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      final uid = _firebaseUser!.uid;
+
+      // 如果需要導出數據，先發送請求並標記軟刪除
+      if (requireDataExport) {
+        await _firestoreService.requestDataExport(uid, _firebaseUser!.email);
+        debugPrint('已發送數據導出請求: $uid');
+
+        // 使用軟刪除以保留數據供導出
+        await _firestoreService.deleteUser(uid, softDelete: true);
+      } else {
+        // 不需要導出，直接刪除數據
+        await _firestoreService.deleteUser(uid, softDelete: false);
+      }
+
+      // 2. 刪除 Firebase Auth 帳號
+      await _authService.deleteAccount();
+
+      // 3. 清除本地狀態
+      _status = AuthStatus.unauthenticated;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      // 如果需要重新登入，拋出異常讓 UI 處理
+      if (e.toString().contains('需最近登入')) {
+        rethrow;
+      }
+      return false;
+    }
+  }
 }
 
 
