@@ -45,7 +45,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _chatRoomId == null) return;
+    if (text.isEmpty || _chatRoomId == null || _otherUser == null) return;
 
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.userModel;
@@ -58,6 +58,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
+        recipientId: _otherUser!.uid,
         text: text,
       );
       if (!mounted) return;
@@ -78,7 +81,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _sendGifMessage(String url) async {
-    if (_chatRoomId == null) return;
+    if (_chatRoomId == null || _otherUser == null) return;
 
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.userModel;
@@ -89,6 +92,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
+        recipientId: _otherUser!.uid,
         text: url,
         type: 'image',
       );
@@ -246,7 +252,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
-    final text = message['text'] ?? '';
+    // Prefer 'message' field, fallback to 'text'
+    final text = message['message'] ?? message['text'] ?? '';
     final type = message['type'] as String?;
     final isImage = (type == 'image' || type == 'gif') || (type == null && (text as String).endsWith('.gif'));
 
