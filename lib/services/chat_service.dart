@@ -118,4 +118,30 @@ class ChatService {
       throw Exception('發送訊息失敗: $e');
     }
   }
+
+  /// 獲取用戶參與的聊天室數量
+  ///
+  /// [userId] 用戶 ID
+  Future<int> getChatRoomCount(String userId) async {
+    try {
+      final query = await _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .count()
+          .get();
+
+      return query.count ?? 0;
+    } catch (e) {
+      print('獲取聊天室數量失敗: $e');
+      // 降級處理：如果 count() 失敗（例如 SDK 版本問題），嘗試獲取所有文檔計數
+      try {
+        final querySnapshot = await _chatRoomsCollection
+            .where('participantIds', arrayContains: userId)
+            .get();
+        return querySnapshot.size;
+      } catch (e2) {
+        print('降級獲取聊天室數量失敗: $e2');
+        return 0;
+      }
+    }
+  }
 }
