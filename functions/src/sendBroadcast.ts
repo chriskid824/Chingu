@@ -1,7 +1,10 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+// Defensive initialization
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -58,7 +61,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
 
         if (targetAll) {
             // Send to all users - use topic subscription
-            const message = {
+            const message: admin.messaging.Message = {
                 notification: {
                     title: title,
                     body: body,
@@ -84,15 +87,32 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             return { success: true, messageId: response, recipients: "all" };
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
-            const usersSnapshot = await admin.firestore()
-                .collection("users")
-                .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
-                .get();
+            // Firestore 'in' query limit is 30
+            const chunkSize = 30;
+            const chunks: string[][] = [];
+            for (let i = 0; i < targetUserIds.length; i += chunkSize) {
+                chunks.push(targetUserIds.slice(i, i + chunkSize));
+            }
 
-            targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
-                .filter((token) => token); // Remove null/undefined tokens
+            const snapshots = await Promise.all(chunks.map((chunk) =>
+                admin.firestore()
+                    .collection("users")
+                    .where(admin.firestore.FieldPath.documentId(), "in", chunk)
+                    .get()
+            ));
+
+            targetTokens = snapshots.flatMap((snapshot) =>
+                snapshot.docs.map((doc) => doc.data().fcmToken)
+            ).filter((token) => token); // Remove null/undefined tokens
+
         } else if (targetCities && targetCities.length > 0) {
+            if (targetCities.length > 30) {
+                 throw new functions.https.HttpsError(
+                    "invalid-argument",
+                    "Cannot target more than 30 cities at once."
+                );
+            }
+
             // Send to users in specific cities
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
             const usersSnapshot = await admin.firestore()
@@ -117,28 +137,49 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             );
         }
 
-        // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
-
-        const response = await admin.messaging().sendEachForMulticast(message);
-
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
+        // Batch tokens into groups of 500
+        const batchSize = 500;
+        const batches: string[][] = [];
+        for (let i = 0; i < targetTokens.length; i += batchSize) {
+            batches.push(targetTokens.slice(i, i + batchSize));
         }
+
+        console.log(`Sending broadcast to ${targetTokens.length} devices in ${batches.length} batches.`);
+
+        let totalSuccessCount = 0;
+        let totalFailureCount = 0;
+        const errors: any[] = [];
+
+        for (const batchTokens of batches) {
+             const message: admin.messaging.MulticastMessage = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: batchTokens,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+
+            totalSuccessCount += response.successCount;
+            totalFailureCount += response.failureCount;
+
+            if (response.failureCount > 0) {
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        errors.push({
+                            token: batchTokens[idx],
+                            error: resp.error
+                        });
+                        console.error(`Error sending to token ${batchTokens[idx]}:`, resp.error);
+                    }
+                });
+            }
+        }
+
+        console.log(`Successfully sent ${totalSuccessCount} messages. Failed: ${totalFailureCount}`);
 
         // Log the broadcast
         await admin.firestore().collection("broadcast_logs").add({
@@ -148,14 +189,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
             sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: totalSuccessCount,
+            failureCount: totalFailureCount,
         });
 
         return {
             success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: totalSuccessCount,
+            failureCount: totalFailureCount,
             totalTargets: targetTokens.length,
         };
     } catch (error) {
