@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
+///
+/// Note: Event reminders (Task 165) are handled by the backend via Cloud Scheduler.
+/// See `functions/src/sendEventReminders.ts` for the implementation of the 24-hour reminder.
 class DinnerEventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
