@@ -72,6 +72,19 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **活動報名系統完善 (Event Registration System)**:
+  - **資料模型**: 更新 `DinnerEventModel` 支援 `EventStatus`、候位清單 (`waitlist`) 與報名截止時間。
+  - **服務邏輯**:
+    - `DinnerEventService` 實作報名人數限制 (Max 6)。
+    - 實作報名截止與額滿自動轉候位邏輯。
+    - 實作取消報名與退出候位功能。
+    - 支援依賴注入以利單元測試。
+  - **前端 UI**:
+    - `EventDetailScreen` 全面更新：即時顯示報名狀態、候位人數與動態操作按鈕 (報名/取消/加入候位)。
+    - 新增 `EventHistoryScreen`：分頁顯示「即將到來」與「歷史活動」。
+    - 移除舊版 `EventsListScreen`。
+  - **測試**: 新增 `DinnerEventService` 單元測試 (包含所有狀態轉換與邊界條件)。
+
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
