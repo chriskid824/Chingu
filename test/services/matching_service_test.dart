@@ -2,6 +2,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -11,10 +12,23 @@ import 'package:mockito/mockito.dart';
 @GenerateMocks([FirestoreService, ChatService])
 import 'matching_service_test.mocks.dart';
 
+// Manual mock since we cannot run build_runner in this environment easily
+class MockNotificationService extends Mock implements NotificationService {
+  @override
+  Future<void> sendMatchNotification(String? user1Id, String? user2Id, String? chatRoomId) {
+    return super.noSuchMethod(
+      Invocation.method(#sendMatchNotification, [user1Id, user2Id, chatRoomId]),
+      returnValue: Future.value(),
+      returnValueForMissingStub: Future.value(),
+    );
+  }
+}
+
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockNotificationService mockNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -31,7 +45,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
+    job: 'Developer',
+    country: 'Taiwan',
   );
 
   final candidateUser = UserModel(
@@ -47,18 +64,23 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
+    job: 'Designer',
+    country: 'Taiwan',
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockNotificationService = MockNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: mockNotificationService,
     );
   });
 
@@ -78,12 +100,12 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Budget: same = 10
+      // Location: same city, same district = 30
+      // Age: diff 1 <= 2 = 10
+      // Total: 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -160,6 +182,10 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      // Stub sendMatchNotification
+      when(mockNotificationService.sendMatchNotification(any, any, any))
+          .thenAnswer((_) async => null);
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -174,6 +200,13 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      verify(mockNotificationService.sendMatchNotification(
+        currentUser.uid,
+        candidateUser.uid,
+        'chat_room_id',
+      )).called(1);
     });
   });
 }
