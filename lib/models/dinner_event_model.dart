@@ -1,10 +1,40 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum EventStatus {
+  pending,
+  confirmed,
+  completed,
+  cancelled;
+
+  String toStringValue() => name;
+
+  static EventStatus fromStringValue(String status) {
+    return EventStatus.values.firstWhere(
+      (e) => e.name == status,
+      orElse: () => EventStatus.pending,
+    );
+  }
+
+  String get displayName {
+    switch (this) {
+      case EventStatus.pending:
+        return '等待配對';
+      case EventStatus.confirmed:
+        return '已確認';
+      case EventStatus.completed:
+        return '已完成';
+      case EventStatus.cancelled:
+        return '已取消';
+    }
+  }
+}
+
 /// 晚餐活動模型（固定6人）
 class DinnerEventModel {
   final String id;
   final String creatorId;
   final DateTime dateTime;
+  final DateTime registrationDeadline; // 報名截止時間
   final int budgetRange; // 0: 300-500, 1: 500-800, 2: 800-1200, 3: 1200+
   final String city;
   final String district;
@@ -14,6 +44,9 @@ class DinnerEventModel {
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
   
+  // 等候清單
+  final List<String> waitlist; // 用戶 UID 列表
+
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
   final String? restaurantAddress;
@@ -21,7 +54,7 @@ class DinnerEventModel {
   final String? restaurantPhone;
   
   // 活動狀態
-  final String status; // 'pending', 'confirmed', 'completed', 'cancelled'
+  final EventStatus status;
   final DateTime createdAt;
   final DateTime? confirmedAt;
   final DateTime? completedAt;
@@ -37,17 +70,19 @@ class DinnerEventModel {
     required this.id,
     required this.creatorId,
     required this.dateTime,
+    required this.registrationDeadline,
     required this.budgetRange,
     required this.city,
     required this.district,
     this.notes,
     required this.participantIds,
     required this.participantStatus,
+    this.waitlist = const [],
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
     this.restaurantPhone,
-    this.status = 'pending',
+    this.status = EventStatus.pending,
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
@@ -64,21 +99,29 @@ class DinnerEventModel {
 
   /// 從 Map 創建 DinnerEventModel
   factory DinnerEventModel.fromMap(Map<String, dynamic> map, String id) {
+    // 默認截止時間為活動前 24 小時
+    final dateTime = (map['dateTime'] as Timestamp).toDate();
+    final defaultDeadline = dateTime.subtract(const Duration(hours: 24));
+
     return DinnerEventModel(
       id: id,
       creatorId: map['creatorId'] ?? '',
-      dateTime: (map['dateTime'] as Timestamp).toDate(),
+      dateTime: dateTime,
+      registrationDeadline: map['registrationDeadline'] != null
+          ? (map['registrationDeadline'] as Timestamp).toDate()
+          : defaultDeadline,
       budgetRange: map['budgetRange'] ?? 1,
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitlist: List<String>.from(map['waitlist'] ?? []),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
       restaurantPhone: map['restaurantPhone'],
-      status: map['status'] ?? 'pending',
+      status: EventStatus.fromStringValue(map['status'] ?? 'pending'),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       confirmedAt: map['confirmedAt'] != null 
           ? (map['confirmedAt'] as Timestamp).toDate() 
@@ -101,17 +144,19 @@ class DinnerEventModel {
     return {
       'creatorId': creatorId,
       'dateTime': Timestamp.fromDate(dateTime),
+      'registrationDeadline': Timestamp.fromDate(registrationDeadline),
       'budgetRange': budgetRange,
       'city': city,
       'district': district,
       'notes': notes,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'waitlist': waitlist,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
       'restaurantPhone': restaurantPhone,
-      'status': status,
+      'status': status.toStringValue(),
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
@@ -124,17 +169,19 @@ class DinnerEventModel {
   /// 複製並更新部分欄位
   DinnerEventModel copyWith({
     DateTime? dateTime,
+    DateTime? registrationDeadline,
     int? budgetRange,
     String? city,
     String? district,
     String? notes,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitlist,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
     String? restaurantPhone,
-    String? status,
+    EventStatus? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
     List<String>? icebreakerQuestions,
@@ -145,12 +192,14 @@ class DinnerEventModel {
       id: id,
       creatorId: creatorId,
       dateTime: dateTime ?? this.dateTime,
+      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       budgetRange: budgetRange ?? this.budgetRange,
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      waitlist: waitlist ?? this.waitlist,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -182,20 +231,7 @@ class DinnerEventModel {
   }
 
   /// 獲取狀態文字
-  String get statusText {
-    switch (status) {
-      case 'pending':
-        return '等待配對';
-      case 'confirmed':
-        return '已確認';
-      case 'completed':
-        return '已完成';
-      case 'cancelled':
-        return '已取消';
-      default:
-        return '未知';
-    }
-  }
+  String get statusText => status.displayName;
 
   /// 檢查是否已滿6人
   bool get isFull => participantIds.length >= 6;
@@ -218,8 +254,23 @@ class DinnerEventModel {
     final sum = ratings!.values.reduce((a, b) => a + b);
     return sum / ratings!.length;
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is DinnerEventModel &&
+      other.id == id &&
+      other.creatorId == creatorId &&
+      other.dateTime == dateTime &&
+      other.status == status;
+  }
+
+  @override
+  int get hashCode {
+    return id.hashCode ^
+      creatorId.hashCode ^
+      dateTime.hashCode ^
+      status.hashCode;
+  }
 }
-
-
-
-

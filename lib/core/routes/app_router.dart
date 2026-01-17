@@ -26,7 +26,7 @@ import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
 import '../../screens/matching/match_success_screen.dart';
 // 活動模組
-import '../../screens/events/events_list_screen.dart';
+import '../../screens/events/event_history_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
@@ -181,10 +181,19 @@ class AppRouter {
       
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
-        return MaterialPageRoute(builder: (_) => const EventsListScreen());
+        return MaterialPageRoute(builder: (_) => const EventHistoryScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        final eventId = args?['eventId'] as String?;
+        if (eventId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Error: Missing eventId')),
+            ),
+          );
+        }
+        return MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: eventId));
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
