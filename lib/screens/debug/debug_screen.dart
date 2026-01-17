@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/in_app_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -168,6 +170,81 @@ class _DebugScreenState extends State<DebugScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const Text('In-App Notifications', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().showNotification(
+                      NotificationModel(
+                        id: 'test_match',
+                        userId: 'current_user',
+                        type: 'match',
+                        title: 'New Match!',
+                        message: 'You have a new match with Alice.',
+                        actionType: 'match_history',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Match'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().showNotification(
+                      NotificationModel(
+                        id: 'test_message',
+                        userId: 'current_user',
+                        type: 'message',
+                        title: 'New Message',
+                        message: 'Bob sent you a message.',
+                        actionType: 'open_chat',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Message'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().showNotification(
+                      NotificationModel(
+                        id: 'test_event',
+                        userId: 'current_user',
+                        type: 'event',
+                        title: 'Event Reminder',
+                        message: 'Dinner at 7 PM tonight.',
+                        actionType: 'view_event',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Event'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().showNotification(
+                      NotificationModel(
+                        id: 'test_system',
+                        userId: 'current_user',
+                        type: 'system',
+                        title: 'System Update',
+                        message: 'We have updated our privacy policy.',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('System'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
