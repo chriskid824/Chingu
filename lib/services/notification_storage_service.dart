@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import 'notification_ab_service.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -16,10 +17,13 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+  NotificationABService? _abServiceInstance;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+  NotificationABService get _abService =>
+      _abServiceInstance ??= NotificationABService();
 
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
@@ -231,6 +235,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final experimentGroup = _abService.getGroup(userId);
+
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
       userId: userId,
@@ -242,6 +248,7 @@ class NotificationStorageService {
       actionData: actionData,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: experimentGroup.name,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -256,17 +263,26 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final experimentGroup = _abService.getGroup(userId);
+    // 配對通知使用 A/B 測試內容，因為原代碼使用硬編碼字串
+    final content = _abService.getContent(
+      userId,
+      NotificationType.match,
+      params: {'partnerName': matchedUserName}
+    );
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'match',
-      title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      title: content.title,
+      message: content.body,
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: experimentGroup.name,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -282,17 +298,20 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final experimentGroup = _abService.getGroup(userId);
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'event',
       title: eventTitle,
-      message: message,
+      message: message, // 保留傳入的特定訊息
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: experimentGroup.name,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -308,17 +327,20 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    final experimentGroup = _abService.getGroup(userId);
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'message',
       title: senderName,
-      message: messagePreview,
+      message: messagePreview, // 保留消息預覽
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: experimentGroup.name,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
