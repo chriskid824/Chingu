@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -14,6 +16,14 @@ class DebugScreen extends StatefulWidget {
 class _DebugScreenState extends State<DebugScreen> {
   bool _isLoading = false;
   String _status = '';
+  String _selectedNotificationType = 'system';
+  final List<String> _notificationTypes = [
+    'match',
+    'event',
+    'message',
+    'rating',
+    'system'
+  ];
 
   Future<void> _runSeeder() async {
     setState(() {
@@ -104,15 +114,80 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  Future<void> _sendTestNotification() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'test_user';
+    final uuid = DateTime.now().millisecondsSinceEpoch.toString();
+
+    String title = '';
+    String message = '';
+    String? actionType;
+    String? actionData;
+
+    switch (_selectedNotificationType) {
+      case 'match':
+        title = '新配對成功！';
+        message = '你和 Alice 互相喜歡了！快來聊天吧。';
+        actionType = 'open_chat';
+        actionData = 'test_chat_id';
+        break;
+      case 'event':
+        title = '活動提醒';
+        message = '你的「週末美食團」將在明天晚上 7 點舉行。';
+        actionType = 'view_event';
+        actionData = 'test_event_id';
+        break;
+      case 'message':
+        title = '新訊息';
+        message = 'Bob: 今晚有空參加活動嗎？';
+        actionType = 'open_chat';
+        actionData = 'test_chat_id';
+        break;
+      case 'rating':
+        title = '活動評價';
+        message = '請評價昨晚參加的「週五放鬆局」。';
+        actionType = 'rating';
+        break;
+      case 'system':
+      default:
+        title = '系統通知';
+        message = '歡迎使用 Chingu 開發者測試工具。';
+        break;
+    }
+
+    final notification = NotificationModel(
+      id: uuid,
+      userId: userId,
+      type: _selectedNotificationType,
+      title: title,
+      message: message,
+      actionType: actionType,
+      actionData: actionData,
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      await RichNotificationService().showNotification(notification);
+      setState(() {
+        _status = '✅ 通知發送成功 ($_selectedNotificationType)';
+      });
+    } catch (e) {
+      setState(() {
+        _status = '❌ 發送失敗: $e';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('開發者工具')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 24),
+              Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 24),
             const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -160,15 +235,57 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
-            const SizedBox(height: 24),
-            Text(
-              _status,
-              style: TextStyle(
-                color: _status.startsWith('❌') ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
+              const Divider(height: 48),
+              const Icon(Icons.notifications_active_rounded, size: 48, color: Colors.orange),
+              const SizedBox(height: 16),
+              const Text('通知測試工具', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedNotificationType,
+                  decoration: const InputDecoration(
+                    labelText: '通知類型',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  items: _notificationTypes.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(type.toUpperCase()),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedNotificationType = value;
+                      });
+                    }
+                  },
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _sendTestNotification,
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('發送測試通知'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                _status,
+                style: TextStyle(
+                  color: _status.startsWith('❌') ? Colors.red : Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
