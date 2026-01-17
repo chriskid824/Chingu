@@ -220,6 +220,8 @@ class DatabaseSeeder {
         preferredMatchType: 'any',
         minAge: 18,
         maxAge: 50,
+        isOnlineStatusVisible: true,
+        isLastSeenVisible: true,
       );
 
       await usersCollection.doc(uid).set(user.toMap());
