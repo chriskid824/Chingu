@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -8,19 +9,28 @@ class ABTestManager {
   factory ABTestManager() => _instance;
   ABTestManager._internal();
 
-  FirebaseFirestore? _firestoreInstance;
-  FirebaseAuth? _authInstance;
+  FirebaseFirestore? _firestoreOverride;
+  FirebaseAuth? _authOverride;
+
+  @visibleForTesting
+  void setDependencies({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreOverride = firestore;
+    _authOverride = auth;
+  }
 
   FirebaseFirestore get _firestore => 
-      _firestoreInstance ??= FirebaseFirestore.instance;
+      _firestoreOverride ?? FirebaseFirestore.instance;
   FirebaseAuth get _auth => 
-      _authInstance ??= FirebaseAuth.instance;
+      _authOverride ?? FirebaseAuth.instance;
 
   // 本地緩存的測試配置
-  Map<String, ABTestConfig> _cachedTests = {};
+  final Map<String, ABTestConfig> _cachedTests = {};
   
   // 用戶的變體分配緩存
-  Map<String, String> _userVariants = {};
+  final Map<String, String> _userVariants = {};
 
   /// 初始化 A/B 測試管理器
   /// 從 Firestore 加載配置
@@ -40,7 +50,7 @@ class ABTestManager {
       // 加載用戶的變體分配
       await _loadUserVariants();
     } catch (e) {
-      print('Failed to initialize ABTestManager: $e');
+      debugPrint('Failed to initialize ABTestManager: $e');
     }
   }
 
@@ -61,7 +71,7 @@ class ABTestManager {
         _userVariants[doc.id] = doc.data()['variant'] as String;
       }
     } catch (e) {
-      print('Failed to load user variants: $e');
+      debugPrint('Failed to load user variants: $e');
     }
   }
 
@@ -81,9 +91,14 @@ class ABTestManager {
 
     // 分配新變體
     final variant = _assignVariant(config);
-    await _saveVariantAssignment(testId, variant);
     
+    // 立即更新緩存以防止並發調用時重複分配不一致
     _userVariants[testId] = variant;
+
+    // 異步保存到 Firestore
+    // 不等待保存完成，以免阻塞 UI
+    _saveVariantAssignment(testId, variant);
+
     return variant;
   }
 
@@ -119,7 +134,9 @@ class ABTestManager {
         'testId': testId,
       });
     } catch (e) {
-      print('Failed to save variant assignment: $e');
+      debugPrint('Failed to save variant assignment: $e');
+      // 如果保存失敗，可能需要考慮從緩存中移除，以便下次重試？
+      // 或者只是記錄錯誤，依賴下一次的 initialize 重新加載（如果沒保存成功）
     }
   }
 
@@ -180,7 +197,7 @@ class ABTestManager {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Failed to track event: $e');
+      debugPrint('Failed to track event: $e');
     }
   }
 
@@ -190,6 +207,7 @@ class ABTestManager {
   }
 
   /// 清除緩存(用於測試)
+  @visibleForTesting
   void clearCache() {
     _cachedTests.clear();
     _userVariants.clear();
