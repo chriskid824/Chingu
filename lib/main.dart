@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -31,11 +33,58 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 檢查是否從通知啟動
+  String? initialRoute;
+  Object? initialArgs;
+
+  try {
+    // 檢查是否有初始訊息 (從終止狀態啟動)
+    final RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+
+    // 確保使用者已登入才處理通知跳轉
+    if (initialMessage != null && FirebaseAuth.instance.currentUser != null) {
+      final data = initialMessage.data;
+      final actionType = data['actionType'];
+      // final actionData = data['actionData']; // Available for future use
+
+      if (actionType != null) {
+        switch (actionType) {
+          case 'open_chat':
+            // 導航到 MainScreen 並切換到聊天頁籤 (Index 3)
+            initialRoute = AppRoutes.mainNavigation;
+            initialArgs = {'initialIndex': 3};
+            break;
+          case 'view_event':
+            initialRoute = AppRoutes.eventDetail;
+            break;
+          case 'match_history':
+            initialRoute = AppRoutes.matchesList;
+            break;
+          default:
+            initialRoute = AppRoutes.notifications;
+            break;
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint('Error handling initial notification: $e');
+  }
+
+  runApp(ChinguApp(
+    initialRoute: initialRoute,
+    initialArgs: initialArgs,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialRoute;
+  final Object? initialArgs;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute,
+    this.initialArgs,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +104,32 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            initialRoute: initialRoute ?? AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRouteName) {
+              // 預設路由列表 (MainScreen)
+              List<Route<dynamic>> routes = [
+                AppRouter.generateRoute(const RouteSettings(name: AppRoutes.mainNavigation))
+              ];
+
+              // 如果有指定初始路由且需要傳參數給 mainNavigation (例如 open_chat)
+              if (initialRouteName == AppRoutes.mainNavigation && initialArgs != null) {
+                routes = [
+                  AppRouter.generateRoute(
+                    RouteSettings(name: AppRoutes.mainNavigation, arguments: initialArgs)
+                  )
+                ];
+              }
+              // 如果是其他路由，則堆疊在 MainScreen 之上
+              else if (initialRouteName != AppRoutes.mainNavigation) {
+                routes.add(
+                  AppRouter.generateRoute(
+                    RouteSettings(name: initialRouteName, arguments: initialArgs)
+                  )
+                );
+              }
+
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
