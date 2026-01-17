@@ -42,6 +42,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         targetAll = false,
         targetCities = [],
         targetUserIds = [],
+        targetTopics = [],
         imageUrl,
     } = data;
 
@@ -82,6 +83,37 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             });
 
             return { success: true, messageId: response, recipients: "all" };
+        } else if (targetTopics && targetTopics.length > 0) {
+             // Send to topics using condition
+             // Condition format: 'topicA' in topics || 'topicB' in topics
+             const condition = targetTopics.map((t: string) => `'${t}' in topics`).join(" || ");
+
+             const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                condition: condition,
+            };
+
+            const response = await admin.messaging().send(message);
+            console.log("Successfully sent broadcast to topics:", targetTopics, response);
+
+            // Log the broadcast
+            await admin.firestore().collection("broadcast_logs").add({
+                title,
+                body,
+                targetType: "topics",
+                targetIds: targetTopics,
+                sentBy: context.auth.uid,
+                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                messageId: response,
+            });
+
+            return { success: true, messageId: response, recipients: "topics" };
+
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
             const usersSnapshot = await admin.firestore()
@@ -92,6 +124,15 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetTokens = usersSnapshot.docs
                 .map((doc) => doc.data().fcmToken)
                 .filter((token) => token); // Remove null/undefined tokens
+
+            if (targetTokens.length === 0) {
+                 // It's possible we found users but they have no tokens
+                 // or we found no users.
+                 // We proceed to sendMulticast but it requires at least one token?
+                 // admin.messaging().sendEachForMulticast([]) throws error?
+                 // Yes, "tokens" must be a non-empty array.
+            }
+
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
@@ -106,58 +147,60 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         } else {
             throw new functions.https.HttpsError(
                 "invalid-argument",
-                "Must specify targetAll, targetUserIds, or targetCities."
+                "Must specify targetAll, targetTopics, targetUserIds, or targetCities."
             );
         }
 
-        if (targetTokens.length === 0) {
-            throw new functions.https.HttpsError(
+        if (targetTokens.length > 0) {
+            // Send multicast message
+            const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: targetTokens,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+
+            console.log(`Successfully sent ${response.successCount} messages`);
+            if (response.failureCount > 0) {
+                console.log(`Failed to send ${response.failureCount} messages`);
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
+                    }
+                });
+            }
+
+            // Log the broadcast
+            await admin.firestore().collection("broadcast_logs").add({
+                title,
+                body,
+                targetType: targetUserIds.length > 0 ? "users" : "cities",
+                targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
+                sentBy: context.auth.uid,
+                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                successCount: response.successCount,
+                failureCount: response.failureCount,
+            });
+
+            return {
+                success: true,
+                successCount: response.successCount,
+                failureCount: response.failureCount,
+                totalTargets: targetTokens.length,
+            };
+        } else {
+             // If we are here, it means we selected users/cities but found no tokens
+             // and we already handled targetTopics/targetAll returning earlier.
+             throw new functions.https.HttpsError(
                 "not-found",
                 "No users found with FCM tokens for the specified criteria."
             );
         }
-
-        // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
-
-        const response = await admin.messaging().sendEachForMulticast(message);
-
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
-        }
-
-        // Log the broadcast
-        await admin.firestore().collection("broadcast_logs").add({
-            title,
-            body,
-            targetType: targetUserIds.length > 0 ? "users" : "cities",
-            targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
-            sentBy: context.auth.uid,
-            sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
-        });
-
-        return {
-            success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
-            totalTargets: targetTokens.length,
-        };
     } catch (error) {
         console.error("Error sending broadcast:", error);
         throw new functions.https.HttpsError(
