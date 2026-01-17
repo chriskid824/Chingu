@@ -8,6 +8,12 @@ class UserDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final userId = args?['userId'];
+
+    // In a real implementation, we would fetch user data using userId.
+    // For now, we will display a placeholder or log the ID.
+    // debugPrint('Viewing UserDetail for userId: $userId');
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
