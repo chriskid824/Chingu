@@ -56,11 +56,38 @@ class FirestoreService {
   /// 刪除用戶資料
   /// 
   /// [uid] 用戶 ID
-  Future<void> deleteUser(String uid) async {
+  /// [softDelete] 是否為軟刪除（保留數據但標記為已刪除，用於數據導出等）
+  Future<void> deleteUser(String uid, {bool softDelete = false}) async {
     try {
-      await _usersCollection.doc(uid).delete();
+      if (softDelete) {
+        await _usersCollection.doc(uid).update({
+          'isDeleted': true,
+          'deletedAt': FieldValue.serverTimestamp(),
+          'isActive': false,
+        });
+      } else {
+        await _usersCollection.doc(uid).delete();
+      }
     } catch (e) {
       throw Exception('刪除用戶資料失敗: $e');
+    }
+  }
+
+  /// 請求數據導出
+  ///
+  /// [uid] 用戶 ID
+  /// [email] 用戶電子郵件
+  Future<void> requestDataExport(String uid, String? email) async {
+    try {
+      await _firestore.collection('data_export_requests').add({
+        'uid': uid,
+        'email': email,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // 記錄錯誤但不阻斷流程
+      print('請求數據導出失敗: $e');
     }
   }
 
