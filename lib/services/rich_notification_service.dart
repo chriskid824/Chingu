@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:chingu/models/notification_preferences_model.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -125,8 +126,36 @@ class RichNotificationService {
     }
   }
 
+  /// 檢查是否應該顯示通知
+  bool shouldShowNotification(
+      NotificationModel notification, NotificationPreferences preferences) {
+    if (!preferences.pushEnabled) return false;
+
+    switch (notification.type) {
+      case 'match':
+        return preferences.newMatch || preferences.matchSuccess;
+      case 'message':
+        return preferences.newMessage;
+      case 'event':
+        return preferences.eventReminder || preferences.eventChange;
+      case 'marketing':
+        return preferences.marketingPromo || preferences.marketingNewsletter;
+      case 'system':
+      default:
+        return true;
+    }
+  }
+
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification,
+      {NotificationPreferences? preferences}) async {
+    if (preferences != null &&
+        !shouldShowNotification(notification, preferences)) {
+      debugPrint(
+          'Notification suppressed by user preferences: ${notification.type}');
+      return;
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
