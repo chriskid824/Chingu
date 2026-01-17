@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -178,6 +179,21 @@ class MatchingService {
     // 更新雙方的 totalMatches
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
+
+    // 發送通知 (異步執行，不阻塞 UI)
+    // 注意：這裡是 recordSwipe 調用過來的，user1Id 通常是發起操作的當前用戶，user2Id 是對方
+    try {
+      // 調用 Cloud Function 發送通知
+      FirebaseFunctions.instance.httpsCallable('notifyMatch').call({
+        'matchedUserId': user2Id,
+      }).then((_) {
+        print('配對通知已發送');
+      }).catchError((e) {
+        print('配對通知發送失敗: $e');
+      });
+    } catch (e) {
+      print('配對通知觸發失敗: $e');
+    }
     
     // 創建聊天室
     return await _chatService.createChatRoom(user1Id, user2Id);
