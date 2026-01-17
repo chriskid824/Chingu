@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -54,6 +55,9 @@ class ChinguApp extends StatelessWidget {
             title: 'Chingu - 6人晚餐社交',
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
+            navigatorObservers: [
+              AnalyticsService().getAnalyticsObserver(),
+            ],
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
