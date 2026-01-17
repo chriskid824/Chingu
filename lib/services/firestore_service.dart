@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/feedback_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -287,6 +288,15 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 提交用戶反饋
+  Future<void> submitFeedback(FeedbackModel feedback) async {
+    try {
+      await _firestore.collection('feedback').add(feedback.toMap());
+    } catch (e) {
+      throw Exception('提交反饋失敗: $e');
     }
   }
 }
