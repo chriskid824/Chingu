@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -32,9 +33,9 @@ class RichNotificationService {
     // iOS 初始化設定
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
+      requestSoundPermission: false,
+      requestBadgePermission: false,
+      requestAlertPermission: false,
     );
 
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -47,16 +48,36 @@ class RichNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // 請求 Android 13+ 通知權限
-    final androidImplementation = _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    _isInitialized = true;
+  }
 
-    if (androidImplementation != null) {
-      await androidImplementation.requestNotificationsPermission();
+  /// 請求通知權限
+  Future<bool> requestPermissions() async {
+    bool? granted = false;
+
+    if (Platform.isAndroid) {
+      final androidImplementation = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidImplementation != null) {
+        granted = await androidImplementation.requestNotificationsPermission();
+      }
+    } else if (Platform.isIOS) {
+      final iOSImplementation = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+
+      if (iOSImplementation != null) {
+        granted = await iOSImplementation.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
     }
 
-    _isInitialized = true;
+    return granted ?? false;
   }
 
   /// 處理通知點擊事件
