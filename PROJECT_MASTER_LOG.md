@@ -56,6 +56,9 @@
 ## 📋 剩餘工作事項 (Remaining Work Items)
 
 ### 🚀 階段 3：接下來的優先任務 (Phase 3 - High Priority)
+- [x] **用戶封鎖功能 (User Blocking)** ✅
+  - [x] 實作 `UserBlockService` (封鎖/解除/查詢)
+  - [x] 整合至 `MatchingService` (配對時自動過濾封鎖與被封鎖用戶)
 - [x] **實作聊天詳情畫面 (Chat Detail Screen)** ✅
   - [x] 從 Firestore 載入真實訊息
   - [x] 實作即時訊息監聽 (Real-time listener)
