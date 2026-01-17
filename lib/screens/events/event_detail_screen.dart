@@ -1,14 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/widgets/event_registration_dialog.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/services/auth_service.dart';
 
 class EventDetailScreen extends StatelessWidget {
   const EventDetailScreen({super.key});
   
   @override
   Widget build(BuildContext context) {
+    final eventId = ModalRoute.of(context)?.settings.arguments as String?;
+    if (eventId == null) {
+      return const Scaffold(body: Center(child: Text('Error: No event ID')));
+    }
+
+    final dinnerEventService = DinnerEventService();
+
+    return StreamBuilder<DinnerEventModel?>(
+      stream: dinnerEventService.getEventStream(eventId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (!snapshot.hasData || snapshot.data == null) {
+           return const Scaffold(body: Center(child: Text('活動不存在')));
+        }
+
+        final event = snapshot.data!;
+        return _EventDetailContent(event: event);
+      },
+    );
+  }
+}
+
+class _EventDetailContent extends StatelessWidget {
+  final DinnerEventModel event;
+
+  const _EventDetailContent({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final currentUser = authService.currentUser;
+    final isRegistered = currentUser != null && event.participantIds.contains(currentUser.uid);
+    final isWaitlisted = currentUser != null && event.waitlistIds.contains(currentUser.uid);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -46,23 +87,9 @@ class EventDetailScreen extends StatelessWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.more_vert_rounded,
-                    size: 18,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                onPressed: () {},
+                onPressed: () {
+                  // Share logic
+                },
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -117,7 +144,7 @@ class EventDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '6人晚餐聚會',
+                          '${event.maxParticipants}人晚餐聚會',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -126,21 +153,21 @@ class EventDetailScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          gradient: chinguTheme?.successGradient,
+                          gradient: _getStatusGradient(event.status, chinguTheme),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.check_circle,
+                              _getStatusIcon(event.status),
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              '已確認',
-                              style: TextStyle(
+                              event.statusText,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -157,7 +184,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    DateFormat('yyyy年MM月dd日 (E)\nHH:mm', 'zh_TW').format(event.dateTime),
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +192,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    '${event.budgetRangeText} / 人',
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +200,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    '${event.city} ${event.district}\n${event.restaurantName ?? "尚未決定餐廳"}',
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,88 +208,53 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    '${event.maxParticipants} 人（固定）\n目前已報名：${event.currentParticipants} 人' +
+                    (event.waitlistIds.isNotEmpty ? '\n候補人數：${event.waitlistIds.length} 人' : ''),
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
                   const SizedBox(height: 32),
                   
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: theme.colorScheme.primary),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_rounded,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '聊天',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.primary,
+                  if (isRegistered && event.status == 'confirmed')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                // Navigate to chat
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: theme.colorScheme.primary),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: chinguTheme?.primaryGradient,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.directions_rounded, color: Colors.white),
-                                SizedBox(width: 8),
-                                Text(
-                                  '導航',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.chat_bubble_rounded,
+                                    color: theme.colorScheme.primary,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '群組聊天',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
@@ -282,15 +274,143 @@ class EventDetailScreen extends StatelessWidget {
           ],
         ),
         child: SafeArea(
-          child: GradientButton(
-            text: '立即報名',
-            onPressed: () {},
-          ),
+          child: _buildActionButton(context, event, isRegistered, isWaitlisted),
         ),
       ),
     );
   }
-  
+
+  Widget _buildActionButton(BuildContext context, DinnerEventModel event, bool isRegistered, bool isWaitlisted) {
+    if (event.status == 'cancelled' || event.dateTime.isBefore(DateTime.now())) {
+      return const GradientButton(
+        text: '活動已結束/取消',
+        onPressed: null, // Disabled
+      );
+    }
+
+    if (isRegistered) {
+      return GradientButton(
+        text: '取消報名',
+        onPressed: () => _handleUnregister(context, event.id),
+        colors: [Colors.red.shade400, Colors.red.shade600],
+      );
+    }
+
+    if (isWaitlisted) {
+      return GradientButton(
+        text: '取消候補',
+        onPressed: () => _handleUnregister(context, event.id, isWaitlist: true),
+        colors: [Colors.orange.shade400, Colors.orange.shade600],
+      );
+    }
+
+    if (event.isFull) {
+       return GradientButton(
+        text: '加入候補名單',
+        onPressed: () => _handleRegister(context, event.id, isWaitlist: true),
+      );
+    }
+
+    return GradientButton(
+      text: '立即報名',
+      onPressed: () => _handleRegister(context, event.id),
+    );
+  }
+
+  Future<void> _handleRegister(BuildContext context, String eventId, {bool isWaitlist = false}) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('請先登入')));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => EventRegistrationDialog(
+        title: isWaitlist ? '加入候補' : '確認報名',
+        content: isWaitlist
+            ? '目前活動已滿，確認要加入候補名單嗎？若有人取消將自動遞補。'
+            : '確認要報名此活動嗎？',
+        onConfirm: () {}, // Action is handled in main flow
+        confirmText: isWaitlist ? '加入候補' : '確認報名',
+      ),
+    );
+
+    if (confirmed == true) {
+       try {
+         await DinnerEventService().registerForEvent(eventId, user.uid);
+         if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(isWaitlist ? '已加入候補名單' : '報名成功'))
+            );
+         }
+       } catch (e) {
+         if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')))
+            );
+         }
+       }
+    }
+  }
+
+  Future<void> _handleUnregister(BuildContext context, String eventId, {bool isWaitlist = false}) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => EventRegistrationDialog(
+        title: isWaitlist ? '取消候補' : '取消報名',
+        content: '確認要${isWaitlist ? '取消候補' : '取消報名'}嗎？',
+        onConfirm: () {},
+        confirmText: '確認取消',
+        isDestructive: true,
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await DinnerEventService().unregisterFromEvent(eventId, user.uid);
+         if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('已取消'))
+            );
+         }
+      } catch (e) {
+         if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')))
+            );
+         }
+      }
+    }
+  }
+
+  LinearGradient _getStatusGradient(String status, ChinguTheme? theme) {
+    switch (status) {
+      case 'confirmed':
+        return theme?.successGradient ?? const LinearGradient(colors: [Colors.green, Colors.teal]);
+      case 'pending':
+        return theme?.warningGradient ?? const LinearGradient(colors: [Colors.orange, Colors.deepOrange]);
+      case 'cancelled':
+        return const LinearGradient(colors: [Colors.grey, Colors.blueGrey]);
+      default:
+         return theme?.primaryGradient ?? const LinearGradient(colors: [Colors.blue, Colors.blueAccent]);
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'confirmed': return Icons.check_circle;
+      case 'pending': return Icons.hourglass_empty;
+      case 'cancelled': return Icons.cancel;
+      default: return Icons.info;
+    }
+  }
+
   Widget _buildInfoCard(BuildContext context, IconData icon, String label, String value, Color color) {
     final theme = Theme.of(context);
     return Container(

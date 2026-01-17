@@ -109,106 +109,186 @@ class DinnerEventService {
     }
   }
 
-  /// 加入活動
-  /// 
-  /// [eventId] 活動 ID
-  /// [userId] 用戶 ID
-  Future<void> joinEvent(String eventId, String userId) async {
+  /// 獲取用戶候補的活動列表
+  Future<List<DinnerEventModel>> getWaitlistedEvents(String userId) async {
     try {
-      // 使用事務確保數據一致性
+      Query query = _eventsCollection
+          .where('waitlistIds', arrayContains: userId);
+
+      final querySnapshot = await query.get();
+
+      final events = querySnapshot.docs
+          .map((doc) => DinnerEventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      events.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+      return events;
+    } catch (e) {
+      throw Exception('獲取候補活動列表失敗: $e');
+    }
+  }
+
+  /// 檢查時間衝突
+  Future<bool> _checkTimeConflict(String userId, DateTime dateTime, {String? excludeEventId}) async {
+    // 簡單檢查同一天是否有活動
+    final startOfDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final query = _eventsCollection
+        .where('participantIds', arrayContains: userId)
+        .where('dateTime', isGreaterThanOrEqualTo: startOfDay)
+        .where('dateTime', isLessThan: endOfDay);
+
+    final snapshot = await query.get();
+
+    for (var doc in snapshot.docs) {
+      if (doc.id == excludeEventId) continue;
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['status'] != 'cancelled') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// 報名活動 (替代 joinEvent)
+  Future<void> registerForEvent(String eventId, String userId) async {
+    try {
+      // 1. Check time conflict
+      final event = await getEvent(eventId);
+      if (event == null) throw Exception('活動不存在');
+
+      final hasConflict = await _checkTimeConflict(userId, event.dateTime, excludeEventId: eventId);
+      if (hasConflict) {
+        throw Exception('您在該時段已有其他活動');
+      }
+
       await _firestore.runTransaction((transaction) async {
         final docRef = _eventsCollection.doc(eventId);
         final snapshot = await transaction.get(docRef);
 
-        if (!snapshot.exists) {
-          throw Exception('活動不存在');
-        }
+        if (!snapshot.exists) throw Exception('活動不存在');
 
         final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
-        
-        if (participantIds.contains(userId)) {
-          throw Exception('您已加入此活動');
+        final currentParticipants = List<String>.from(data['participantIds'] ?? []);
+        final waitlistIds = List<String>.from(data['waitlistIds'] ?? []);
+        final maxParticipants = data['maxParticipants'] ?? 6;
+
+        if (currentParticipants.contains(userId)) {
+          throw Exception('您已報名此活動');
+        }
+        if (waitlistIds.contains(userId)) {
+          throw Exception('您已在候補名單中');
         }
 
-        if (participantIds.length >= 6) {
-          throw Exception('活動人數已滿');
+        if (currentParticipants.length < maxParticipants) {
+          // Add to participants
+          currentParticipants.add(userId);
+          final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
+          participantStatus[userId] = 'confirmed';
+
+          final updates = {
+            'participantIds': currentParticipants,
+            'currentParticipants': currentParticipants.length,
+            'participantStatus': participantStatus,
+          };
+
+          if (currentParticipants.length >= maxParticipants) {
+             updates['status'] = 'confirmed';
+             updates['confirmedAt'] = FieldValue.serverTimestamp();
+          }
+
+          transaction.update(docRef, updates);
+        } else {
+          // Add to waitlist
+          waitlistIds.add(userId);
+          transaction.update(docRef, {
+            'waitlistIds': waitlistIds,
+          });
         }
-
-        // 更新參與者列表
-        participantIds.add(userId);
-        
-        // 更新參與者狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
-
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
-
-        // 如果人數達到 6 人，自動確認活動
-        if (participantIds.length == 6) {
-          updates['status'] = 'confirmed';
-          updates['confirmedAt'] = FieldValue.serverTimestamp();
-        }
-
-        transaction.update(docRef, updates);
       });
     } catch (e) {
-      throw Exception('加入活動失敗: $e');
+      throw Exception('報名失敗: $e');
     }
   }
 
-  /// 退出活動
-  /// 
-  /// [eventId] 活動 ID
-  /// [userId] 用戶 ID
-  Future<void> leaveEvent(String eventId, String userId) async {
+  /// 取消報名 (替代 leaveEvent)
+  Future<void> unregisterFromEvent(String eventId, String userId) async {
     try {
+      final event = await getEvent(eventId);
+      if (event == null) throw Exception('活動不存在');
+
+      // Check 24h deadline
+      final now = DateTime.now();
+      if (event.dateTime.difference(now).inHours < 24) {
+         // throw Exception('活動前24小時內不可取消');
+         // For development/testing, maybe log warning but allow?
+         // Requirements say "不可取消".
+         // I will enforce it unless I see reasons not to.
+         // throw Exception('活動前24小時內不可取消');
+         if (event.status != 'cancelled') {
+             throw Exception('活動前24小時內不可取消');
+         }
+      }
+
       await _firestore.runTransaction((transaction) async {
         final docRef = _eventsCollection.doc(eventId);
         final snapshot = await transaction.get(docRef);
 
-        if (!snapshot.exists) {
-          throw Exception('活動不存在');
-        }
+        if (!snapshot.exists) throw Exception('活動不存在');
 
         final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final currentParticipants = List<String>.from(data['participantIds'] ?? []);
+        final waitlistIds = List<String>.from(data['waitlistIds'] ?? []);
         
-        if (!participantIds.contains(userId)) {
-          throw Exception('您未加入此活動');
+        if (currentParticipants.contains(userId)) {
+          // Remove from participants
+          currentParticipants.remove(userId);
+          final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
+          participantStatus.remove(userId);
+
+          // Promote from waitlist if available
+          if (waitlistIds.isNotEmpty) {
+            final nextUserId = waitlistIds.removeAt(0);
+            currentParticipants.add(nextUserId);
+            participantStatus[nextUserId] = 'confirmed';
+            // TODO: Notify nextUserId
+          }
+
+          final updates = {
+            'participantIds': currentParticipants,
+            'currentParticipants': currentParticipants.length,
+            'participantStatus': participantStatus,
+            'waitlistIds': waitlistIds,
+          };
+
+           if (currentParticipants.isEmpty) {
+             updates['status'] = 'cancelled';
+           } else if (currentParticipants.length < (data['maxParticipants'] ?? 6) && data['status'] == 'confirmed') {
+             updates['status'] = 'pending';
+           }
+
+          transaction.update(docRef, updates);
+
+        } else if (waitlistIds.contains(userId)) {
+          // Remove from waitlist
+          waitlistIds.remove(userId);
+          transaction.update(docRef, {
+            'waitlistIds': waitlistIds,
+          });
+        } else {
+          throw Exception('您未報名此活動');
         }
-
-        // 移除參與者
-        participantIds.remove(userId);
-        
-        // 移除狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus.remove(userId);
-
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
-
-        // 如果活動人數少於 6 人且狀態為已確認，可能需要處理（暫時簡單處理：變回 pending）
-        if (data['status'] == 'confirmed' && participantIds.length < 6) {
-          updates['status'] = 'pending';
-        }
-
-        // 如果沒有參與者了，可以考慮刪除活動或標記為取消
-        if (participantIds.isEmpty) {
-          updates['status'] = 'cancelled';
-        }
-
-        transaction.update(docRef, updates);
       });
     } catch (e) {
-      throw Exception('退出活動失敗: $e');
+      throw Exception('取消失敗: $e');
     }
   }
+
+  // Deprecated aliases
+  Future<void> joinEvent(String eventId, String userId) => registerForEvent(eventId, userId);
+  Future<void> leaveEvent(String eventId, String userId) => unregisterFromEvent(eventId, userId);
 
   /// 獲取推薦的活動列表（用於配對）
   /// 
