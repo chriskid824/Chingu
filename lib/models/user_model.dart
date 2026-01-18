@@ -14,6 +14,7 @@ class UserModel {
   final String district;
   final String? bio;
   final String? avatarUrl;
+  final String? fcmToken;
   
   // 配對偏好
   final String preferredMatchType; // 'opposite', 'same', 'any'
@@ -51,6 +52,7 @@ class UserModel {
     required this.district,
     this.bio,
     this.avatarUrl,
+    this.fcmToken,
     required this.preferredMatchType,
     required this.minAge,
     required this.maxAge,
@@ -89,6 +91,7 @@ class UserModel {
       district: map['district'] ?? '',
       bio: map['bio'],
       avatarUrl: map['avatarUrl'],
+      fcmToken: map['fcmToken'],
       preferredMatchType: map['preferredMatchType'] ?? 'any',
       minAge: map['minAge'] ?? 18,
       maxAge: map['maxAge'] ?? 60,
@@ -121,6 +124,7 @@ class UserModel {
       'district': district,
       'bio': bio,
       'avatarUrl': avatarUrl,
+      'fcmToken': fcmToken,
       'preferredMatchType': preferredMatchType,
       'minAge': minAge,
       'maxAge': maxAge,
@@ -152,6 +156,7 @@ class UserModel {
     String? district,
     String? bio,
     String? avatarUrl,
+    String? fcmToken,
     String? preferredMatchType,
     int? minAge,
     int? maxAge,
@@ -180,6 +185,7 @@ class UserModel {
       district: district ?? this.district,
       bio: bio ?? this.bio,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      fcmToken: fcmToken ?? this.fcmToken,
       preferredMatchType: preferredMatchType ?? this.preferredMatchType,
       minAge: minAge ?? this.minAge,
       maxAge: maxAge ?? this.maxAge,
