@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -58,6 +61,10 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      // 預約提醒
+      _scheduleEventReminder(event);
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -155,6 +162,12 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 獲取活動詳情並預約提醒
+      final event = await getEvent(eventId);
+      if (event != null) {
+        _scheduleEventReminder(event);
+      }
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,6 +218,11 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 取消該活動的預約提醒
+      // 使用活動 ID 的 hashCode 作為通知 ID
+      await RichNotificationService().cancelNotification(eventId.hashCode);
+
     } catch (e) {
       throw Exception('退出活動失敗: $e');
     }
@@ -287,6 +305,32 @@ class DinnerEventService {
     final nextThursday = thisThursday.add(const Duration(days: 7));
     
     return [thisThursday, nextThursday];
+  }
+
+  /// 預約活動提醒 (內部方法)
+  Future<void> _scheduleEventReminder(DinnerEventModel event) async {
+    try {
+      // 活動前 24 小時
+      final scheduledDate = event.dateTime.subtract(const Duration(hours: 24));
+
+      // 如果預約時間是過去，就不預約
+      if (scheduledDate.isBefore(DateTime.now())) {
+        return;
+      }
+
+      await RichNotificationService().scheduleNotification(
+        id: event.id.hashCode,
+        title: '晚餐活動提醒',
+        body: '明晚就是晚餐聚會囉！地點在 ${event.city} ${event.district}',
+        scheduledDate: scheduledDate,
+        payload: jsonEncode({
+          'actionType': 'view_event',
+          'actionData': event.id,
+        }),
+      );
+    } catch (e) {
+      debugPrint('預約提醒失敗: $e');
+    }
   }
 
   /// 加入或創建活動（智慧配對）
