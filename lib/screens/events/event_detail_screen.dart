@@ -9,6 +9,12 @@ class EventDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final eventId = args?['eventId'] as String?;
+
+    // Note: Currently the UI is hardcoded.
+    // In a real implementation, we would use eventId to fetch event details via DinnerEventService.
+    debugPrint('EventDetailScreen opened with eventId: $eventId');
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
