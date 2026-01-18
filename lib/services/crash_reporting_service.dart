@@ -18,6 +18,16 @@ class CrashReportingService {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
+
+    if (kDebugMode) {
+      // Force disable Crashlytics collection while doing every day development.
+      // Temporarily toggle this to true if you want to test crash reporting in your app.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      // Handle Crashlytics enabled status when not in Debug,
+      // e.g. allow your users to opt-in to crash reporting.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    }
   }
 
   /// Log a message to Crashlytics
@@ -26,8 +36,8 @@ class CrashReportingService {
   }
 
   /// Record an error to Crashlytics
-  void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
-    FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+  Future<void> recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) async {
+    await FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
   }
 
   /// Set a user identifier for crash reports
@@ -38,5 +48,15 @@ class CrashReportingService {
   /// Set custom keys for crash reports
   Future<void> setCustomKey(String key, Object value) async {
     await FirebaseCrashlytics.instance.setCustomKey(key, value);
+  }
+
+  /// Enable/Disable Crashlytics collection
+  Future<void> setCrashlyticsCollectionEnabled(bool enabled) async {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(enabled);
+  }
+
+  /// Check if Crashlytics collection is enabled
+  bool get isCrashlyticsCollectionEnabled {
+    return FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled;
   }
 }
