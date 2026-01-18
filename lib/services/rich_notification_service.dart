@@ -70,7 +70,7 @@ class RichNotificationService {
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,7 +78,7 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void handleNavigation(String? actionType, String? actionData, [String? actionId]) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
