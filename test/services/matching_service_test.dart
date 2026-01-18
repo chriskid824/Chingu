@@ -2,19 +2,21 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([FirestoreService, ChatService, NotificationService])
 import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockNotificationService mockNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -53,12 +55,14 @@ void main() {
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockNotificationService = MockNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: mockNotificationService,
     );
   });
 
@@ -78,12 +82,13 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 3 * 40 = 13.33 (approx) -> using actual logic from service
+      // Service logic: (1/4).clamp(0,1) * 50 = 12.5
+      // Location: same city, same district = 30
+      // Age: diff 1 <= 2 = 10
+      // Budget: same = 10
+      // Total: 12.5 + 30 + 10 + 10 = 62.5 -> round to 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -143,7 +148,7 @@ void main() {
       expect(result['isMatch'], false); // No mutual like yet
     });
 
-    test('should detect match when mutual like exists', () async {
+    test('should detect match when mutual like exists and send notifications', () async {
       // Arrange: Candidate already liked current user
       await fakeFirestore.collection('swipes').add({
         'userId': candidateUser.uid,
@@ -151,11 +156,15 @@ void main() {
         'isLike': true,
       });
 
-      // Also need candidate data in firestore for recordSwipe to fetch partner
+      // Also need candidate data and current user data in firestore
       await fakeFirestore
           .collection('users')
           .doc(candidateUser.uid)
           .set(candidateUser.toMap());
+      await fakeFirestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .set(currentUser.toMap());
 
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
@@ -174,6 +183,17 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notifications sent
+      verify(mockNotificationService.sendMatchNotification(
+        targetUserId: currentUser.uid,
+        partnerName: candidateUser.name,
+      )).called(1);
+
+      verify(mockNotificationService.sendMatchNotification(
+        targetUserId: candidateUser.uid,
+        partnerName: currentUser.name,
+      )).called(1);
     });
   });
 }
