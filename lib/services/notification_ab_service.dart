@@ -1,3 +1,5 @@
+import 'package:chingu/services/firestore_service.dart';
+
 /// Notification A/B Testing Service
 ///
 /// This service is responsible for assigning users to experimental groups (A/B testing)
@@ -26,6 +28,11 @@ class NotificationContent {
 }
 
 class NotificationABService {
+  final FirestoreService _firestoreService;
+
+  NotificationABService({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService();
+
   /// Assigns a user to an experiment group based on their user ID.
   ///
   /// This uses a deterministic hash so the user always stays in the same group.
@@ -42,9 +49,9 @@ class NotificationABService {
   /// [params] Optional parameters for dynamic content (e.g., 'partnerName', 'senderName', 'daysLeft').
   NotificationContent getContent(
     String userId,
-    NotificationType type,
-    {Map<String, dynamic>? params}
-  ) {
+    NotificationType type, {
+    Map<String, dynamic>? params,
+  }) {
     final group = getGroup(userId);
     final isVariant = group == ExperimentGroup.variant;
 
@@ -82,44 +89,44 @@ class NotificationABService {
         final eventTitle = params?['eventTitle'] ?? 'Event';
 
         if (daysLeft != null) {
-           if (isVariant) {
-             return NotificationContent(
-               title: 'Event Reminder 🍽️',
-               body: 'Get ready! "$eventTitle" is in $daysLeft days! 😋',
-             );
-           } else {
-             return NotificationContent(
-               title: 'Event Reminder',
-               body: 'You have an upcoming event "$eventTitle" in $daysLeft days.',
-             );
-           }
+          if (isVariant) {
+            return NotificationContent(
+              title: 'Event Reminder 🍽️',
+              body: 'Get ready! "$eventTitle" is in $daysLeft days! 😋',
+            );
+          } else {
+            return NotificationContent(
+              title: 'Event Reminder',
+              body: 'You have an upcoming event "$eventTitle" in $daysLeft days.',
+            );
+          }
         }
 
         // Default event message
         if (isVariant) {
-           return NotificationContent(
-             title: 'Event Update 📅',
-             body: 'Check out the latest updates for your event "$eventTitle".',
-           );
+          return NotificationContent(
+            title: 'Event Update 📅',
+            body: 'Check out the latest updates for your event "$eventTitle".',
+          );
         } else {
-           return NotificationContent(
-             title: 'Event Update',
-             body: 'There is an update for your event "$eventTitle".',
-           );
+          return NotificationContent(
+            title: 'Event Update',
+            body: 'There is an update for your event "$eventTitle".',
+          );
         }
 
       case NotificationType.rating:
-         if (isVariant) {
-           return NotificationContent(
-             title: 'How was it? ⭐',
-             body: 'Rate your experience to help us improve! 📝',
-           );
-         } else {
-           return NotificationContent(
-             title: 'Rate your experience',
-             body: 'Please rate your recent experience.',
-           );
-         }
+        if (isVariant) {
+          return NotificationContent(
+            title: 'How was it? ⭐',
+            body: 'Rate your experience to help us improve! 📝',
+          );
+        } else {
+          return NotificationContent(
+            title: 'Rate your experience',
+            body: 'Please rate your recent experience.',
+          );
+        }
 
       case NotificationType.system:
       default:
@@ -130,5 +137,37 @@ class NotificationABService {
           body: message,
         );
     }
+  }
+
+  /// 記錄通知發送 (Send)
+  Future<void> trackNotificationSent({
+    required String userId,
+    required NotificationType type,
+    String? notificationId,
+  }) async {
+    final group = getGroup(userId);
+    await _firestoreService.logNotificationEvent({
+      'userId': userId,
+      'eventType': 'sent',
+      'notificationType': type.toString().split('.').last,
+      'variant': group.toString().split('.').last,
+      'notificationId': notificationId,
+    });
+  }
+
+  /// 記錄通知點擊 (Click)
+  Future<void> trackNotificationClicked({
+    required String userId,
+    required NotificationType type,
+    String? notificationId,
+  }) async {
+    final group = getGroup(userId);
+    await _firestoreService.logNotificationEvent({
+      'userId': userId,
+      'eventType': 'clicked',
+      'notificationType': type.toString().split('.').last,
+      'variant': group.toString().split('.').last,
+      'notificationId': notificationId,
+    });
   }
 }
