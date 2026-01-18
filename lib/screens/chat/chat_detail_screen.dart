@@ -31,8 +31,54 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        if (_chatRoomId != null && _otherUser == null) {
+          _fetchChatParticipant();
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchChatParticipant() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.uid;
+
+      if (currentUserId == null || _chatRoomId == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(_chatRoomId)
+          .get();
+
+      if (!doc.exists) return;
+
+      final data = doc.data();
+      final participantIds = List<String>.from(data?['participantIds'] ?? []);
+
+      final otherUserId = participantIds.firstWhere(
+        (id) => id != currentUserId,
+        orElse: () => '',
+      );
+
+      if (otherUserId.isNotEmpty) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(otherUserId)
+            .get();
+
+        if (userDoc.exists && mounted) {
+          setState(() {
+            _otherUser = UserModel.fromMap(
+              userDoc.data() as Map<String, dynamic>,
+              userDoc.id,
+            );
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching chat participant: $e');
     }
   }
 
