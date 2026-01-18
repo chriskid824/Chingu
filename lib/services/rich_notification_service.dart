@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
+import '../models/notification_settings_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -125,30 +126,69 @@ class RichNotificationService {
     }
   }
 
+  /// 檢查是否應該顯示通知
+  bool shouldShowNotification(NotificationModel notification, NotificationSettingsModel settings) {
+    if (!settings.pushEnabled) return false;
+
+    switch (notification.type) {
+      case 'match':
+        return settings.newMatch || settings.matchSuccess;
+      case 'message':
+        return settings.newMessage;
+      case 'event':
+        // 簡單判斷：如果標題或內容包含 "提醒"，檢查 eventReminder，否則 eventChanges
+        if (notification.title.contains('提醒') || notification.message.contains('提醒')) {
+          return settings.eventReminder;
+        }
+        return settings.eventChanges;
+      case 'marketing':
+        if (notification.title.contains('電子報')) {
+          return settings.marketingNewsletter;
+        }
+        return settings.marketingPromotion;
+      default:
+        return true;
+    }
+  }
+
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification, {NotificationSettingsModel? settings}) async {
+    // 如果提供了設定，先檢查是否應該顯示
+    if (settings != null && !shouldShowNotification(notification, settings)) {
+      return;
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
-    // 如果有圖片，下載並設置 BigPictureStyle
-    if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty) {
-      try {
-        final file = await DefaultCacheManager().getSingleFile(notification.imageUrl!);
-        final ByteArrayAndroidBitmap bigPicture = ByteArrayAndroidBitmap(await file.readAsBytes());
-
-        styleInformation = BigPictureStyleInformation(
-          bigPicture,
-          contentTitle: notification.title,
-          summaryText: notification.message,
-          hideExpandedLargeIcon: true,
-        );
-      } catch (e) {
-        debugPrint('Error downloading image for notification: $e');
-        // 圖片下載失敗則降級為普通通知
-        styleInformation = BigTextStyleInformation(notification.message);
-      }
+    // 處理訊息預覽設定
+    String message = notification.message;
+    if (settings != null &&
+        notification.type == 'message' &&
+        !settings.showMessagePreview) {
+      message = '您有一則新訊息';
+      styleInformation = const DefaultStyleInformation(true, true);
     } else {
-      styleInformation = BigTextStyleInformation(notification.message);
+      // 如果有圖片，下載並設置 BigPictureStyle
+      if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty) {
+        try {
+          final file = await DefaultCacheManager().getSingleFile(notification.imageUrl!);
+          final ByteArrayAndroidBitmap bigPicture = ByteArrayAndroidBitmap(await file.readAsBytes());
+
+          styleInformation = BigPictureStyleInformation(
+            bigPicture,
+            contentTitle: notification.title,
+            summaryText: message,
+            hideExpandedLargeIcon: true,
+          );
+        } catch (e) {
+          debugPrint('Error downloading image for notification: $e');
+          // 圖片下載失敗則降級為普通通知
+          styleInformation = BigTextStyleInformation(message);
+        }
+      } else {
+        styleInformation = BigTextStyleInformation(message);
+      }
     }
 
     // 定義操作按鈕
@@ -191,7 +231,7 @@ class RichNotificationService {
     await _flutterLocalNotificationsPlugin.show(
       notification.id.hashCode, // 使用 hashCode 作為 ID
       notification.title,
-      notification.message,
+      message,
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
