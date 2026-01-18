@@ -141,6 +141,19 @@ class SettingsScreen extends StatelessWidget {
             textColor: theme.colorScheme.error,
             iconColor: theme.colorScheme.error,
           ),
+          const Divider(),
+          // Danger Zone
+          _buildSectionTitle(context, '危險區域'),
+          _buildListTile(
+            context,
+            Icons.delete_forever,
+            '刪除帳號',
+            () {
+              Navigator.of(context).pushNamed(AppRoutes.deleteAccount);
+            },
+            textColor: theme.colorScheme.error,
+            iconColor: theme.colorScheme.error,
+          ),
           const SizedBox(height: 24),
         ],
       ),
