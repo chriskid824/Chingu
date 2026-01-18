@@ -11,3 +11,4 @@ export { sendBroadcast } from "./sendBroadcast";
 // export {createWeeklyEvents} from "./createWeeklyEvents";
 // export {processEventAttendance} from "./processEventAttendance";
 // export {sendEventReminders} from "./sendEventReminders";
+export { sendMatchNotification } from "./sendMatchNotification";

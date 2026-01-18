@@ -166,3 +166,25 @@ export function getNotificationCopy(
 
     return { title, body };
 }
+
+/**
+ * 根據用戶 ID 確定性地分配測試變體
+ * @param testId 測試 ID
+ * @param userId 用戶 ID
+ */
+export function assignVariant(testId: string, userId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || test.variants.length === 0) {
+        return 'control';
+    }
+
+    // 簡單的哈希算法
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+        hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+    }
+
+    const index = Math.abs(hash) % test.variants.length;
+    return test.variants[index].variantId;
+}

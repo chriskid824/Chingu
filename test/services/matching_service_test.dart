@@ -2,6 +2,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -16,6 +17,7 @@ void main() {
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
   late FakeFirebaseFirestore fakeFirestore;
+  late FakeFirebaseFunctions fakeFunctions;
 
   // Test data
   final currentUser = UserModel(
@@ -54,11 +56,13 @@ void main() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
     fakeFirestore = FakeFirebaseFirestore();
+    fakeFunctions = FakeFirebaseFunctions();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      functions: fakeFunctions,
     );
   });
 
@@ -176,4 +180,23 @@ void main() {
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
     });
   });
+}
+
+class FakeFirebaseFunctions extends Fake implements FirebaseFunctions {
+  @override
+  HttpsCallable httpsCallable(String? name, {HttpsCallableOptions? options}) {
+    return FakeHttpsCallable();
+  }
+}
+
+class FakeHttpsCallable extends Fake implements HttpsCallable {
+  @override
+  Future<HttpsCallableResult<T>> call<T>([dynamic data]) async {
+    return FakeHttpsCallableResult<T>();
+  }
+}
+
+class FakeHttpsCallableResult<T> extends Fake implements HttpsCallableResult<T> {
+  @override
+  T get data => null as T;
 }
