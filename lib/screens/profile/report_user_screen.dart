@@ -47,7 +47,21 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedReason == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('請選擇舉報原因')),
+        SnackBar(
+          content: Text('請選擇舉報原因'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Require description if "Other" is selected
+    if (_selectedReason == '其他' && _descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('選擇"其他"時，請填寫詳細描述'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
       return;
     }
