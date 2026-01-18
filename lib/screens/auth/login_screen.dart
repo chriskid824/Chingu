@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/analytics_service.dart';
 import '../../core/routes/app_router.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -42,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      await AnalyticsService().logLogin(method: 'email');
       Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      await AnalyticsService().logLogin(method: 'google');
       Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

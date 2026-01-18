@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -43,9 +44,11 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      await AnalyticsService().setUserId(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
+      await AnalyticsService().setUserId(firebaseUser.uid);
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
     }
