@@ -15,6 +15,65 @@ class InAppNotification extends StatelessWidget {
     this.onTap,
   });
 
+  static OverlayEntry? _currentEntry;
+
+  /// Shows an in-app notification banner at the top of the screen.
+  ///
+  /// [context] is required to find the Overlay.
+  /// [notification] is the data model to display.
+  /// [duration] determines how long the notification stays visible (default 4s).
+  /// [onTap] is called when the notification body is tapped.
+  static void show({
+    required BuildContext context,
+    required NotificationModel notification,
+    Duration duration = const Duration(seconds: 4),
+    VoidCallback? onTap,
+  }) {
+    // Remove any existing notification immediately
+    _currentEntry?.remove();
+    _currentEntry = null;
+
+    final overlayState = Overlay.of(context);
+
+    // Safety check if overlayState is found
+    if (overlayState == null) return;
+
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationOverlay(
+        notification: notification,
+        duration: duration,
+        onTap: () {
+          onTap?.call();
+          // The overlay handles removal after animation in its own way if needed,
+          // but for tap we might want to dismiss immediately or animate out.
+          // Here we will trigger the animate out logic inside the widget.
+        },
+        onDismissFinished: () {
+          if (_currentEntry == overlayEntry) {
+            _currentEntry = null;
+          }
+          // Check if the entry is still mounted in the overlay before removing
+          try {
+            overlayEntry.remove();
+          } catch (e) {
+            // Entry might have been removed already
+          }
+        },
+      ),
+    );
+
+    _currentEntry = overlayEntry;
+    overlayState.insert(overlayEntry);
+  }
+
+  /// Dismisses the currently displayed notification, if any.
+  static void dismiss() {
+    _currentEntry?.remove();
+    _currentEntry = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -156,7 +215,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -180,5 +239,101 @@ class InAppNotification extends StatelessWidget {
       default:
         return chinguTheme.success; // Or primary
     }
+  }
+}
+
+class _InAppNotificationOverlay extends StatefulWidget {
+  final NotificationModel notification;
+  final Duration duration;
+  final VoidCallback onTap;
+  final VoidCallback onDismissFinished;
+
+  const _InAppNotificationOverlay({
+    required this.notification,
+    required this.duration,
+    required this.onTap,
+    required this.onDismissFinished,
+  });
+
+  @override
+  State<_InAppNotificationOverlay> createState() => _InAppNotificationOverlayState();
+}
+
+class _InAppNotificationOverlayState extends State<_InAppNotificationOverlay> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    ));
+
+    // Start animation
+    _controller.forward();
+
+    // Auto dismiss
+    Future.delayed(widget.duration, () {
+      if (mounted) {
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() async {
+    if (!mounted) return;
+    try {
+      await _controller.reverse().orCancel;
+    } catch (e) {
+      // Ignore animation cancellation or errors during disposal
+    }
+
+    if (!mounted) return;
+    widget.onDismissFinished();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: GestureDetector(
+          onVerticalDragEnd: (details) {
+            if (details.primaryVelocity! < 0) {
+              // Swipe up to dismiss
+              _dismiss();
+            }
+          },
+          child: InAppNotification(
+            notification: widget.notification,
+            onTap: () {
+              widget.onTap();
+              _dismiss();
+            },
+            onDismiss: _dismiss,
+          ),
+        ),
+      ),
+    );
   }
 }
