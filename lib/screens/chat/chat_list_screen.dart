@@ -4,6 +4,8 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/models/user_model.dart';
 import 'package:intl/intl.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -126,11 +128,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
     ThemeData theme,
     ChinguTheme? chinguTheme,
   ) {
-    final otherUser = chatRoom['otherUser'];
+    final otherUser = chatRoom['otherUser'] as UserModel;
     final lastMessage = chatRoom['lastMessage'] ?? '';
     final lastMessageAt = chatRoom['lastMessageAt'];
     final int unreadCount = chatRoom['unreadCount'] ?? 0;
-    
+    // 使用 context.watch 確保當 AuthProvider 狀態改變（如隱私設定更新）時重建 UI
+    final authProvider = context.watch<AuthProvider>();
+    final currentUser = authProvider.userModel;
+
     String timeText = '';
     if (lastMessageAt != null) {
       final timestamp = lastMessageAt.toDate();
@@ -170,23 +175,64 @@ class _ChatListScreenState extends State<ChatListScreen> {
         child: Row(
           children: [
             // 頭像
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: chinguTheme?.primaryGradient,
-              ),
-              child: Center(
-                child: Text(
-                  otherUser.name[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            Stack(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: chinguTheme?.primaryGradient,
+                  ),
+                  child: Center(
+                    child: Text(
+                      otherUser.name.isNotEmpty ? otherUser.name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: StreamBuilder<UserModel?>(
+                    stream: FirestoreService().getUserStream(otherUser.uid),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox.shrink();
+
+                      final user = snapshot.data!;
+                      if (currentUser == null) return const SizedBox.shrink();
+
+                      // 隱私檢查
+                      final canSeeOnline = currentUser.showOnlineStatus && user.showOnlineStatus;
+
+                      if (!canSeeOnline) return const SizedBox.shrink();
+
+                      final now = DateTime.now();
+                      final difference = now.difference(user.lastLogin);
+                      final isOnline = difference.inMinutes < 10;
+
+                      if (!isOnline) return const SizedBox.shrink();
+
+                      return Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: chinguTheme?.success ?? Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.scaffoldBackgroundColor,
+                            width: 2,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 12),
             // 訊息內容
