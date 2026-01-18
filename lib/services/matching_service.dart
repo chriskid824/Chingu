@@ -41,6 +41,7 @@ class MatchingService {
         city: currentUser.city,
         // budgetRange: currentUser.budgetRange, // 不再強制過濾預算
         limit: 50, // 獲取較多候選人進行內存過濾
+        blockedUserIds: currentUser.blockedUsers,
       );
 
       print('從 Firestore 獲得 ${candidates.length} 個用戶');

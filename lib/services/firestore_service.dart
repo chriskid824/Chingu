@@ -110,6 +110,7 @@ class FirestoreService {
   /// [minAge] 最小年齡（可選）
   /// [maxAge] 最大年齡（可選）
   /// [limit] 返回數量限制
+  /// [blockedUserIds] 封鎖用戶 ID 列表 (可選)
   Future<List<UserModel>> queryMatchingUsers({
     required String city,
     int? budgetRange, // 改為可選，且不強制過濾
@@ -117,6 +118,7 @@ class FirestoreService {
     int? minAge,
     int? maxAge,
     int limit = 20,
+    List<String>? blockedUserIds,
   }) async {
     try {
       print('=== FirestoreService.queryMatchingUsers ===');
@@ -141,6 +143,11 @@ class FirestoreService {
       print('成功解析 ${users.length} 個 UserModel');
       if (users.isNotEmpty) {
         print('第一個用戶: ${users.first.name}, 城市: ${users.first.city}');
+      }
+
+      // 1. 過濾封鎖用戶
+      if (blockedUserIds != null && blockedUserIds.isNotEmpty) {
+        users = users.where((user) => !blockedUserIds.contains(user.uid)).toList();
       }
 
       // 在客戶端進行額外的過濾（因為 Firestore 查詢限制）
@@ -198,8 +205,12 @@ class FirestoreService {
   /// 
   /// [searchTerm] 搜尋詞
   /// [limit] 返回數量限制
-  Future<List<UserModel>> searchUsers(String searchTerm,
-      {int limit = 20}) async {
+  /// [blockedUserIds] 封鎖用戶 ID 列表 (可選)
+  Future<List<UserModel>> searchUsers(
+    String searchTerm, {
+    int limit = 20,
+    List<String>? blockedUserIds,
+  }) async {
     try {
       // 注意：此搜尋方法較簡單，實際應用中建議使用 Algolia 等專業搜尋服務
       final querySnapshot = await _usersCollection
@@ -209,10 +220,16 @@ class FirestoreService {
           .limit(limit)
           .get();
 
-      return querySnapshot.docs
+      var users = querySnapshot.docs
           .map((doc) =>
               UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+
+      if (blockedUserIds != null && blockedUserIds.isNotEmpty) {
+        users = users.where((user) => !blockedUserIds.contains(user.uid)).toList();
+      }
+
+      return users;
     } catch (e) {
       throw Exception('搜尋用戶失敗: $e');
     }
