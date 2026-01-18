@@ -166,3 +166,21 @@ export function getNotificationCopy(
 
     return { title, body };
 }
+
+/**
+ * Assign a variant to a user deterministically based on their ID
+ * @param userId User ID
+ * @param test Notification test configuration
+ */
+export function assignVariant(userId: string, test: NotificationCopyTest): string {
+    // Simple hash to ensure deterministic assignment
+    let hash = 0;
+    const str = userId + test.testId;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    const index = Math.abs(hash) % test.variants.length;
+    return test.variants[index].variantId;
+}
