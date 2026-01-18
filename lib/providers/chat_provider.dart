@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/chat_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ChatService _chatService = ChatService();
 
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
@@ -118,25 +120,30 @@ class ChatProvider with ChangeNotifier {
     required String senderId,
     required String text,
     String type = 'text',
+    String? recipientId,
+    String? senderName,
+    String? senderAvatarUrl,
   }) async {
     try {
-      final timestamp = FieldValue.serverTimestamp();
+      // 如果缺少 senderName，嘗試獲取
+      String name = senderName ?? '';
+      if (name.isEmpty) {
+        final userDoc = await _firestore.collection('users').doc(senderId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
+          name = userData['name'] ?? '';
+        }
+      }
 
-      // 1. 新增訊息
-      await _firestore.collection('messages').add({
-        'chatRoomId': chatRoomId,
-        'senderId': senderId,
-        'text': text,
-        'type': type,
-        'timestamp': timestamp,
-        'isRead': false,
-      });
-
-      // 2. 更新聊天室最後訊息
-      await _firestore.collection('chat_rooms').doc(chatRoomId).update({
-        'lastMessage': text,
-        'lastMessageAt': timestamp,
-      });
+      await _chatService.sendMessage(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: name,
+        senderAvatarUrl: senderAvatarUrl,
+        message: text,
+        type: type,
+        recipientId: recipientId,
+      );
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;
