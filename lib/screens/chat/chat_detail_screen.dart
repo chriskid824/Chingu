@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -137,38 +138,93 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     final authProvider = context.watch<AuthProvider>();
     final currentUserId = authProvider.uid;
+    final currentUser = authProvider.userModel;
+    final firestoreService = FirestoreService();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: chinguTheme?.primaryGradient,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Center(
-                child: Text(
-                  _otherUser!.name[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+        title: StreamBuilder<UserModel?>(
+          stream: firestoreService.getUserStream(_otherUser!.uid),
+          builder: (context, snapshot) {
+            final user = snapshot.data ?? _otherUser!;
+            String statusText = '';
+
+            if (currentUser != null) {
+              final now = DateTime.now();
+              final difference = now.difference(user.lastLogin);
+              final isOnline = difference.inMinutes < 10;
+
+              // 隱私邏輯檢查
+              // 1. 如果自己隱藏了狀態，也不能看到別人的
+              // 2. 如果對方隱藏了狀態，則看不到
+              final canSeeOnline = currentUser.showOnlineStatus && user.showOnlineStatus;
+              final canSeeLastSeen = currentUser.showLastSeen && user.showLastSeen;
+
+              if (canSeeOnline && isOnline) {
+                statusText = '在線';
+              } else if (canSeeLastSeen) {
+                if (difference.inDays == 0) {
+                  statusText = '上次上線: 今天 ${DateFormat('HH:mm').format(user.lastLogin)}';
+                } else if (difference.inDays == 1) {
+                  statusText = '上次上線: 昨天 ${DateFormat('HH:mm').format(user.lastLogin)}';
+                } else if (difference.inDays < 7) {
+                  statusText = '上次上線: ${difference.inDays}天前';
+                } else {
+                  statusText = '上次上線: ${DateFormat('yyyy/MM/dd').format(user.lastLogin)}';
+                }
+              }
+            }
+
+            return Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: chinguTheme?.primaryGradient,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      user.name[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _otherUser!.name,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (statusText.isNotEmpty)
+                        Text(
+                          statusText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                            color: statusText == '在線'
+                                ? (chinguTheme?.success ?? Colors.green)
+                                : theme.colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 1,
