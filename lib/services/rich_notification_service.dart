@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -23,6 +25,9 @@ class RichNotificationService {
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // 初始化時區數據
+    tz.initializeTimeZones();
 
     // Android 初始化設定
     // 預設使用 app icon，需確保 drawable/mipmap 中有 @mipmap/ic_launcher
@@ -195,5 +200,55 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 預約通知
+  ///
+  /// [id] 通知 ID
+  /// [title] 標題
+  /// [body] 內容
+  /// [scheduledDate] 預約時間
+  /// [payload] 點擊通知攜帶的數據
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    try {
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tz.TZDateTime.from(scheduledDate, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'chingu_scheduled_notifications',
+            'Scheduled Notifications',
+            channelDescription: 'Notifications scheduled for future events',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: payload,
+      );
+      debugPrint('Notification scheduled for $scheduledDate');
+    } catch (e) {
+      debugPrint('Error scheduling notification: $e');
+    }
+  }
+
+  /// 取消預約通知
+  Future<void> cancelNotification(int id) async {
+    try {
+      await _flutterLocalNotificationsPlugin.cancel(id);
+    } catch (e) {
+      debugPrint('Error canceling notification: $e');
+    }
   }
 }
