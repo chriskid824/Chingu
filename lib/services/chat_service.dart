@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -114,6 +115,19 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      try {
+        await FirebaseFunctions.instance.httpsCallable('sendNotification').call({
+          'chatRoomId': chatRoomId,
+          'senderId': senderId,
+          'senderName': senderName,
+          'message': message,
+        });
+      } catch (e) {
+        print('發送推送通知失敗: $e');
+        // 不拋出異常，以免影響訊息發送流程
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
