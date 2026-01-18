@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -54,6 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success) {
       // 註冊成功，導航到個人資料設定流程
+      await AnalyticsService().logSignUp(method: 'email');
       Navigator.of(context).pushReplacementNamed(AppRoutes.profileSetup);
     } else {
       // 顯示錯誤訊息
@@ -79,6 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success) {
       // Google 登入成功
+      await AnalyticsService().logLogin(method: 'google');
       // 檢查是否需要完成 onboarding
       if (!authProvider.hasCompletedOnboarding()) {
         Navigator.of(context).pushReplacementNamed(AppRoutes.profileSetup);
