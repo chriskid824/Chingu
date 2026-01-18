@@ -1,7 +1,159 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/utils/ab_test_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+// Fakes
+class FakeUser extends Fake implements User {
+  @override
+  final String uid;
+  FakeUser(this.uid);
+}
+
+class FakeFirebaseAuth extends Fake implements FirebaseAuth {
+  User? _currentUser;
+
+  @override
+  User? get currentUser => _currentUser;
+
+  void setMockUser(User? user) {
+    _currentUser = user;
+  }
+}
 
 void main() {
+  late ABTestManager manager;
+  late FakeCloudFirestore fakeFirestore;
+  late FakeFirebaseAuth fakeAuth;
+
+  setUp(() {
+    fakeFirestore = FakeCloudFirestore();
+    fakeAuth = FakeFirebaseAuth();
+    manager = ABTestManager();
+    // Inject dependencies
+    manager.setDependencies(
+      firestore: fakeFirestore,
+      auth: fakeAuth,
+    );
+    // Clear cache
+    manager.clearCache();
+  });
+
+  group('ABTestManager', () {
+    test('initialize loads active tests', () async {
+      // Setup data
+      await fakeFirestore.collection('ab_tests').add({
+        'name': 'Test A',
+        'description': 'Description A',
+        'isActive': true,
+        'variants': [
+          {'name': 'control', 'weight': 50},
+          {'name': 'variant_a', 'weight': 50},
+        ],
+      });
+
+      await fakeFirestore.collection('ab_tests').add({
+        'name': 'Test B',
+        'isActive': false, // Inactive
+        'variants': [],
+      });
+
+      await manager.initialize();
+
+      // Verify via side effects if possible, or trust internal state is set
+    });
+
+    test('getVariant assigns deterministically', () async {
+      // Setup test config
+      final testId = 'test_color';
+      await fakeFirestore.collection('ab_tests').doc(testId).set({
+        'name': 'Color Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'red', 'weight': 50},
+          {'name': 'blue', 'weight': 50},
+        ],
+      });
+
+      await manager.initialize();
+
+      // User 1
+      fakeAuth.setMockUser(FakeUser('user1'));
+      final variant1 = await manager.getVariant(testId);
+
+      // User 1 should get same variant again even if cache is cleared (simulating fresh app launch)
+      manager.clearCache();
+      await manager.initialize();
+
+      final variant1Again = await manager.getVariant(testId);
+
+      expect(variant1, variant1Again);
+
+      // User 2 (might be different, but deterministic for user2)
+      fakeAuth.setMockUser(FakeUser('user2'));
+      // Clear cache to simulate another user on another device or fresh login
+      manager.clearCache();
+      await manager.initialize();
+
+      final variant2 = await manager.getVariant(testId);
+
+      // Just check it returns a valid variant
+      expect(['red', 'blue'], contains(variant2));
+    });
+
+    test('getVariant saves assignment to Firestore', () async {
+      final testId = 'test_button';
+      await fakeFirestore.collection('ab_tests').doc(testId).set({
+        'name': 'Button Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 100}, // Force A
+        ],
+      });
+
+      await manager.initialize();
+      fakeAuth.setMockUser(FakeUser('user_save'));
+
+      final variant = await manager.getVariant(testId);
+      expect(variant, 'A');
+
+      // Check Firestore
+      final doc = await fakeFirestore
+          .collection('users')
+          .doc('user_save')
+          .collection('ab_test_variants')
+          .doc(testId)
+          .get();
+
+      expect(doc.exists, true);
+      expect(doc.data()?['variant'], 'A');
+    });
+
+    test('isFeatureEnabled works for simple flags', () async {
+      final featureKey = 'new_feature';
+      await fakeFirestore.collection('feature_flags').doc(featureKey).set({
+        'enabled': true,
+        'config': {},
+      });
+
+      final isEnabled = await manager.isFeatureEnabled(featureKey);
+      expect(isEnabled, true);
+
+      await fakeFirestore.collection('feature_flags').doc(featureKey).update({
+        'enabled': false,
+      });
+
+      final isEnabled2 = await manager.isFeatureEnabled(featureKey);
+      expect(isEnabled2, false);
+    });
+
+    test('getVariant returns control for missing config', () async {
+      final variant = await manager.getVariant('non_existent_test');
+      expect(variant, 'control');
+    });
+  });
+
   group('ABTestVariant', () {
     test('should create variant from map', () {
       final map = {

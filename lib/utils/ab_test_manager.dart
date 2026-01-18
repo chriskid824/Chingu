@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -17,10 +18,20 @@ class ABTestManager {
       _authInstance ??= FirebaseAuth.instance;
 
   // 本地緩存的測試配置
-  Map<String, ABTestConfig> _cachedTests = {};
+  final Map<String, ABTestConfig> _cachedTests = {};
   
   // 用戶的變體分配緩存
-  Map<String, String> _userVariants = {};
+  final Map<String, String> _userVariants = {};
+
+  /// 設置依賴項 (用於測試)
+  @visibleForTesting
+  void setDependencies({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
 
   /// 初始化 A/B 測試管理器
   /// 從 Firestore 加載配置
@@ -40,7 +51,7 @@ class ABTestManager {
       // 加載用戶的變體分配
       await _loadUserVariants();
     } catch (e) {
-      print('Failed to initialize ABTestManager: $e');
+      debugPrint('Failed to initialize ABTestManager: $e');
     }
   }
 
@@ -61,7 +72,7 @@ class ABTestManager {
         _userVariants[doc.id] = doc.data()['variant'] as String;
       }
     } catch (e) {
-      print('Failed to load user variants: $e');
+      debugPrint('Failed to load user variants: $e');
     }
   }
 
@@ -81,25 +92,48 @@ class ABTestManager {
 
     // 分配新變體
     final variant = _assignVariant(config);
-    await _saveVariantAssignment(testId, variant);
     
-    _userVariants[testId] = variant;
+    // 如果用戶已登入，保存分配結果
+    if (_auth.currentUser != null) {
+      await _saveVariantAssignment(testId, variant);
+      _userVariants[testId] = variant;
+    }
+
     return variant;
   }
 
-  /// 分配變體(基於權重)
-  String _assignVariant(ABTestConfig config) {
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
-    var cumulative = 0.0;
+  /// 生成確定性的哈希值
+  int _getHash(String input) {
+    var hash = 0;
+    for (var i = 0; i < input.length; i++) {
+      hash = input.codeUnitAt(i) + ((hash << 5) - hash);
+    }
+    return hash;
+  }
 
+  /// 分配變體(基於權重和用戶ID的確定性算法)
+  String _assignVariant(ABTestConfig config) {
+    final userId = _auth.currentUser?.uid;
+    double randomValue;
+
+    if (userId != null) {
+      // 基於用戶ID和測試ID生成確定性的隨機值 (0-100)
+      final hash = _getHash('${userId}_${config.testId}');
+      randomValue = (hash.abs() % 10000) / 100.0;
+    } else {
+      // 未登入用戶使用隨機分配
+      randomValue = (DateTime.now().microsecondsSinceEpoch % 10000) / 100.0;
+    }
+
+    var cumulative = 0.0;
     for (var variant in config.variants) {
       cumulative += variant.weight;
-      if (random < cumulative) {
+      if (randomValue < cumulative) {
         return variant.name;
       }
     }
 
-    return config.variants.first.name;
+    return config.variants.isNotEmpty ? config.variants.first.name : 'control';
   }
 
   /// 保存用戶的變體分配到 Firestore
@@ -119,7 +153,7 @@ class ABTestManager {
         'testId': testId,
       });
     } catch (e) {
-      print('Failed to save variant assignment: $e');
+      debugPrint('Failed to save variant assignment: $e');
     }
   }
 
@@ -180,7 +214,7 @@ class ABTestManager {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Failed to track event: $e');
+      debugPrint('Failed to track event: $e');
     }
   }
 
@@ -190,6 +224,7 @@ class ABTestManager {
   }
 
   /// 清除緩存(用於測試)
+  @visibleForTesting
   void clearCache() {
     _cachedTests.clear();
     _userVariants.clear();
