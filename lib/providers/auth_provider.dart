@@ -262,6 +262,34 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 切換收藏狀態
+  Future<void> toggleFavorite(String targetUid) async {
+    try {
+      if (_userModel == null) return;
+
+      final currentUid = _userModel!.uid;
+      final isFavorite = _userModel!.favorites.contains(targetUid);
+
+      List<String> newFavorites = List.from(_userModel!.favorites);
+
+      if (isFavorite) {
+        await _firestoreService.removeFavorite(currentUid, targetUid);
+        newFavorites.remove(targetUid);
+      } else {
+        await _firestoreService.addFavorite(currentUid, targetUid);
+        newFavorites.add(targetUid);
+      }
+
+      // 更新本地狀態
+      _userModel = _userModel!.copyWith(favorites: newFavorites);
+      notifyListeners();
+
+    } catch (e) {
+      debugPrint('切換收藏狀態失敗: $e');
+      rethrow;
+    }
+  }
+
   /// 檢查用戶是否完成 Onboarding
   bool hasCompletedOnboarding() {
     if (_userModel == null) return false;
