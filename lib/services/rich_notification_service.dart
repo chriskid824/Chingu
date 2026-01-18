@@ -4,6 +4,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../services/notification_ab_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -66,6 +68,11 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? notificationId = data['notificationId'];
+        final String? notificationType = data['notificationType'];
+
+        // 追蹤點擊
+        _trackClick(notificationId, notificationType);
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
@@ -74,6 +81,38 @@ class RichNotificationService {
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
+    }
+  }
+
+  /// 追蹤通知點擊
+  Future<void> _trackClick(String? notificationId, String? notificationTypeStr) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    if (notificationTypeStr == null) return;
+
+    final type = _parseNotificationType(notificationTypeStr);
+
+    // 使用 NotificationABService 追蹤
+    await NotificationABService().trackNotificationClicked(
+      userId: user.uid,
+      type: type,
+      notificationId: notificationId
+    );
+  }
+
+  NotificationType _parseNotificationType(String type) {
+    switch (type) {
+      case 'match':
+        return NotificationType.match;
+      case 'message':
+        return NotificationType.message;
+      case 'event':
+        return NotificationType.event;
+      case 'rating':
+        return NotificationType.rating;
+      default:
+        return NotificationType.system;
     }
   }
 
@@ -186,6 +225,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'notificationType': notification.type,
     };
 
     await _flutterLocalNotificationsPlugin.show(
