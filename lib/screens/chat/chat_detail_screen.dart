@@ -178,9 +178,35 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'report') {
+                Navigator.pushNamed(
+                  context,
+                  '/report-user',
+                  arguments: {
+                    'reportedUserId': _otherUser!.uid,
+                    'reportedUserName': _otherUser!.name,
+                  },
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_outlined, color: theme.colorScheme.error, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      '舉報用戶',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

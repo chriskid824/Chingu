@@ -3,6 +3,10 @@ import 'package:chingu/core/theme/app_theme.dart';
 
 class UserDetailScreen extends StatelessWidget {
   const UserDetailScreen({super.key});
+
+  // Mock data
+  static const String _mockUserId = 'mock_user_id';
+  static const String _mockUserName = '陳大明';
   
   @override
   Widget build(BuildContext context) {
@@ -38,6 +42,56 @@ class UserDetailScreen extends StatelessWidget {
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              PopupMenuButton<String>(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.more_horiz_rounded,
+                    size: 18,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                onSelected: (value) {
+                  if (value == 'report') {
+                    Navigator.pushNamed(
+                      context,
+                      '/report-user',
+                      arguments: {
+                        'reportedUserId': 'mock_user_id', // Mock ID for now as UserDetailScreen uses mock data
+                        'reportedUserName': '陳大明',
+                      },
+                    );
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        Icon(Icons.flag_outlined, color: theme.colorScheme.error, size: 20),
+                        const SizedBox(width: 12),
+                        Text(
+                          '舉報用戶',
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -112,7 +166,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '$_mockUserName, 30',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,

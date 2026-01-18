@@ -230,6 +230,7 @@ class AppRouter {
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
 
+      // 舉報用戶頁面
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
         if (args == null) {
@@ -291,14 +292,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
