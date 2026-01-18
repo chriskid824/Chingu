@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -21,6 +22,16 @@ class NotificationStorageService {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
 
+  /// 設置依賴 (用於測試)
+  @visibleForTesting
+  void setDependencies({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
+
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
 
@@ -39,7 +50,26 @@ class NotificationStorageService {
       throw Exception('User not authenticated');
     }
 
-    final docRef = await _notificationsRef(userId).add(notification.toMap());
+    // 確保通知的 userId 與當前用戶一致 (或者是發給當前用戶的)
+    // 這裡我們假設 notification.userId 是接收者
+
+    // 如果 notification.userId 是空的，填充當前用戶
+    final notifToSave = notification.userId.isEmpty
+        ? NotificationModel(
+            id: notification.id,
+            userId: userId,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            imageUrl: notification.imageUrl,
+            actionType: notification.actionType,
+            actionData: notification.actionData,
+            isRead: notification.isRead,
+            createdAt: notification.createdAt,
+          )
+        : notification;
+
+    final docRef = await _notificationsRef(userId).add(notifToSave.toMap());
     return docRef.id;
   }
 
@@ -48,10 +78,18 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    if (notifications.isEmpty) return;
+
     final batch = _firestore.batch();
     for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
-      batch.set(docRef, notification.toMap());
+      if (notification.id.isEmpty) {
+        // 如果沒有 ID，就新增 (使用 doc() 生成新 ID)
+         final newDoc = _notificationsRef(userId).doc();
+         batch.set(newDoc, notification.toMap());
+      } else {
+         final docRef = _notificationsRef(userId).doc(notification.id);
+         batch.set(docRef, notification.toMap());
+      }
     }
     await batch.commit();
   }
