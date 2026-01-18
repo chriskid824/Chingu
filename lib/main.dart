@@ -29,13 +29,23 @@ void main() async {
   await initializeDateFormatting('zh_TW', null);
 
   // 初始化豐富通知服務
-  await RichNotificationService().initialize();
+  final launchDetails = await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  runApp(ChinguApp(
+    initialRoute: launchDetails?.$1,
+    initialRouteArgs: launchDetails?.$2,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialRoute;
+  final Object? initialRouteArgs;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute,
+    this.initialRouteArgs,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +65,25 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            initialRoute: initialRoute ?? AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
+            onGenerateInitialRoutes: (initialRouteName) {
+              // 如果有初始參數，手動生成路由
+              if (initialRouteName == initialRoute && initialRouteArgs != null) {
+                return [
+                  AppRouter.generateRoute(
+                    RouteSettings(
+                      name: initialRouteName,
+                      arguments: initialRouteArgs,
+                    ),
+                  ),
+                ];
+              }
+              // 默認行為
+              return [
+                AppRouter.generateRoute(RouteSettings(name: initialRouteName)),
+              ];
+            },
           );
         },
       ),

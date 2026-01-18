@@ -21,8 +21,9 @@ class RichNotificationService {
   bool _isInitialized = false;
 
   /// 初始化通知服務
-  Future<void> initialize() async {
-    if (_isInitialized) return;
+  /// 返回 (RouteName, Arguments) 如果是由通知啟動的
+  Future<(String, Object?)?> initialize() async {
+    if (_isInitialized) return null;
 
     // Android 初始化設定
     // 預設使用 app icon，需確保 drawable/mipmap 中有 @mipmap/ic_launcher
@@ -57,6 +58,40 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+
+    // 檢查是否由通知啟動
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      final response = notificationAppLaunchDetails!.notificationResponse;
+      if (response?.payload != null) {
+        return _parseNotificationPayload(response!.payload!);
+      }
+    }
+
+    return null;
+  }
+
+  (String, Object?)? _parseNotificationPayload(String payload) {
+    try {
+      final Map<String, dynamic> data = json.decode(payload);
+      final String? actionType = data['actionType'];
+
+      if (actionType == 'open_chat') {
+        // Navigate to Chat List Tab
+        return (AppRoutes.mainNavigation, {'initialIndex': 3});
+      } else if (actionType == 'view_event') {
+        return (AppRoutes.eventDetail, null);
+      } else if (actionType == 'match_history') {
+        return (AppRoutes.matchesList, null);
+      } else {
+        return (AppRoutes.notifications, null);
+      }
+    } catch (e) {
+      debugPrint('Error parsing notification payload on launch: $e');
+      return null;
+    }
   }
 
   /// 處理通知點擊事件
