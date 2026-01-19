@@ -26,7 +26,7 @@ import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
 import '../../screens/matching/match_success_screen.dart';
 // 活動模組
-import '../../screens/events/events_list_screen.dart';
+import '../../screens/events/my_events_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
@@ -181,10 +181,14 @@ class AppRouter {
       
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
-        return MaterialPageRoute(builder: (_) => const EventsListScreen());
+        return MaterialPageRoute(builder: (_) => const MyEventsScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final event = settings.arguments; // Allow passing arguments
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const EventDetailScreen(),
+        );
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
