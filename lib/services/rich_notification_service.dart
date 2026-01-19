@@ -59,6 +59,15 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 獲取初始通知數據（用於 App 從終止狀態啟動）
+  Future<NotificationResponse?> getInitialNotificationData() async {
+    final details = await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+    if (details != null && details.didNotificationLaunchApp) {
+      return details.notificationResponse;
+    }
+    return null;
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
@@ -66,11 +75,12 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? deeplink = data['deeplink'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        _handleNavigation(actionType, actionData, actionId, deeplink);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,9 +88,15 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void _handleNavigation(String? actionType, String? actionData, String? actionId, String? deeplink) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
+
+    // 優先處理 Deeplink
+    if (deeplink != null && deeplink.isNotEmpty) {
+      _handleDeeplink(deeplink, navigator);
+      return;
+    }
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
@@ -94,29 +110,91 @@ class RichNotificationService {
     }
   }
 
+  void _handleDeeplink(String url, NavigatorState navigator) {
+    try {
+      final uri = Uri.parse(url);
+      if (uri.scheme != 'chingu') return;
+
+      switch (uri.host) {
+        case 'chat':
+          // chingu://chat/{chatRoomId}
+          if (uri.pathSegments.isNotEmpty) {
+             final id = uri.pathSegments.first;
+             navigator.pushNamed(
+               AppRoutes.chatDetail,
+               arguments: {'chatRoomId': id},
+             );
+          } else {
+             navigator.pushNamed(AppRoutes.chatList);
+          }
+          break;
+        case 'event':
+           // chingu://event/{eventId}
+           if (uri.pathSegments.isNotEmpty) {
+             // final id = uri.pathSegments.first;
+             // 目前 EventDetailScreen 使用 hardcoded data，但傳遞參數以備將來使用
+             navigator.pushNamed(
+               AppRoutes.eventDetail,
+               arguments: {'eventId': uri.pathSegments.first},
+             );
+           }
+           break;
+        case 'match_detail':
+        case 'user':
+           // chingu://user/{userId}
+           if (uri.pathSegments.isNotEmpty) {
+              // final id = uri.pathSegments.first;
+              navigator.pushNamed(
+                AppRoutes.userDetail,
+                arguments: {'userId': uri.pathSegments.first},
+              );
+           }
+           break;
+        default:
+           navigator.pushNamed(AppRoutes.home);
+      }
+    } catch (e) {
+      debugPrint('Error handling deeplink: $e');
+      navigator.pushNamed(AppRoutes.home);
+    }
+  }
+
   void _performAction(String action, String? data, NavigatorState navigator) {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          // data 預期是 chatRoomId
+          navigator.pushNamed(
+            AppRoutes.chatDetail,
+            arguments: {'chatRoomId': data},
+          );
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          navigator.pushNamed(
+            AppRoutes.eventDetail,
+            arguments: {'eventId': data},
+          );
+        } else {
+           navigator.pushNamed(AppRoutes.eventDetail);
+        }
+        break;
+      case 'view_match':
+      case 'match_detail':
+        if (data != null) {
+           navigator.pushNamed(
+             AppRoutes.userDetail,
+             arguments: {'userId': data},
+           );
+        } else {
+           navigator.pushNamed(AppRoutes.matchesList);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
@@ -185,6 +263,7 @@ class RichNotificationService {
     final Map<String, dynamic> payload = {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
+      'deeplink': notification.deeplink,
       'notificationId': notification.id,
     };
 
@@ -195,5 +274,34 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 解析路由
+  static Map<String, dynamic>? resolveRoute(String? deeplink, String? actionType, String? actionData) {
+    if (deeplink != null && deeplink.isNotEmpty) {
+      final uri = Uri.tryParse(deeplink);
+      if (uri != null && uri.scheme == 'chingu') {
+        if (uri.host == 'chat' && uri.pathSegments.isNotEmpty) {
+          return {'route': AppRoutes.chatDetail, 'args': {'chatRoomId': uri.pathSegments.first}};
+        } else if (uri.host == 'event' && uri.pathSegments.isNotEmpty) {
+          return {'route': AppRoutes.eventDetail, 'args': {'eventId': uri.pathSegments.first}};
+        } else if ((uri.host == 'user' || uri.host == 'match_detail') && uri.pathSegments.isNotEmpty) {
+          return {'route': AppRoutes.userDetail, 'args': {'userId': uri.pathSegments.first}};
+        }
+      }
+    }
+
+    if (actionType != null) {
+      switch (actionType) {
+        case 'open_chat':
+          return {'route': AppRoutes.chatDetail, 'args': actionData != null ? {'chatRoomId': actionData} : null};
+        case 'view_event':
+          return {'route': AppRoutes.eventDetail, 'args': actionData != null ? {'eventId': actionData} : null};
+        case 'view_match':
+        case 'match_detail':
+          return {'route': AppRoutes.userDetail, 'args': actionData != null ? {'userId': actionData} : null};
+      }
+    }
+    return null;
   }
 }
