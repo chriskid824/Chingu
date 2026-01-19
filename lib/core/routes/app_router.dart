@@ -30,6 +30,7 @@ import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
+import '../../screens/events/event_history_screen.dart';
 // 聊天模組
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
@@ -79,7 +80,7 @@ class AppRoutes {
   static const String matchSuccess = '/match-success';
   
   // 活動模組
-  static const String eventsList = '/events-list';
+  static const String eventHistory = '/event-history';
   static const String eventDetail = '/event-detail';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
@@ -180,11 +181,12 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const FilterScreen());
       
       // ==================== 活動模組 ====================
-      case AppRoutes.eventsList:
-        return MaterialPageRoute(builder: (_) => const EventsListScreen());
+      case AppRoutes.eventHistory:
+        return MaterialPageRoute(builder: (_) => const EventHistoryScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final eventId = settings.arguments as String;
+        return MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: eventId));
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
@@ -291,14 +293,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
