@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final NotificationService _notificationService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    NotificationService? notificationService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _notificationService = notificationService ?? NotificationService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -180,7 +184,43 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送配對通知
+    try {
+      final users = await _firestoreService.getBatchUsers([user1Id, user2Id]);
+      final userMap = {for (var u in users) u.uid: u};
+      final user1 = userMap[user1Id];
+      final user2 = userMap[user2Id];
+
+      if (user1 != null && user2 != null) {
+        // 通知用戶 1 (配對成功)
+        await _notificationService.sendNotification(
+          userId: user1Id,
+          type: 'match',
+          title: '配對成功！',
+          message: '你和 ${user2.name} 配對成功了！',
+          imageUrl: user2.avatarUrl,
+          actionType: 'open_chat',
+          actionData: chatRoomId,
+        );
+
+        // 通知用戶 2 (被配對)
+        await _notificationService.sendNotification(
+          userId: user2Id,
+          type: 'match',
+          title: '配對成功！',
+          message: '你和 ${user1.name} 配對成功了！',
+          imageUrl: user1.avatarUrl,
+          actionType: 'open_chat',
+          actionData: chatRoomId,
+        );
+      }
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表

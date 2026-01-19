@@ -2,6 +2,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -11,10 +12,29 @@ import 'package:mockito/mockito.dart';
 @GenerateMocks([FirestoreService, ChatService])
 import 'matching_service_test.mocks.dart';
 
+class FakeNotificationService extends Fake implements NotificationService {
+  int callCount = 0;
+
+  @override
+  Future<void> sendNotification({
+    required String userId,
+    required String type,
+    required String title,
+    required String message,
+    String? imageUrl,
+    String? actionType,
+    String? actionData,
+  }) async {
+    callCount++;
+    return Future.value();
+  }
+}
+
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late FakeNotificationService fakeNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -53,12 +73,14 @@ void main() {
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    fakeNotificationService = FakeNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: fakeNotificationService,
     );
   });
 
@@ -160,6 +182,10 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      // Stub getBatchUsers for notification
+      when(mockFirestoreService.getBatchUsers(any))
+          .thenAnswer((_) async => [currentUser, candidateUser]);
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -174,6 +200,9 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent twice
+      expect(fakeNotificationService.callCount, 2);
     });
   });
 }
