@@ -99,6 +99,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String deleteAccount = '/delete-account';
 }
 
 /// 應用程式路由配置
@@ -229,6 +230,9 @@ class AppRouter {
 
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.deleteAccount:
+        return MaterialPageRoute(builder: (_) => const DeleteAccountScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
