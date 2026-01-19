@@ -236,7 +236,47 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
                       _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
                       
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 32),
+
+                      // 我的收藏
+                      InkWell(
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: theme.dividerColor),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                              ),
+                              const SizedBox(width: 16),
+                              Text(
+                                '我的收藏',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                                color: theme.colorScheme.onSurface.withOpacity(0.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
                       
                       // 登出按鈕
                       SizedBox(
