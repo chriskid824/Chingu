@@ -98,25 +98,79 @@ class RichNotificationService {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          // data 可能是 JSON string (包含 userId or chatRoomId) 或直接是 ID
+          // 我們嘗試解析它
+          Map<String, dynamic>? args;
+          try {
+            final parsed = json.decode(data);
+            if (parsed is Map<String, dynamic>) {
+              args = parsed;
+            }
+          } catch (_) {
+            // 如果不是 JSON，假設它是 chatRoomId
+            args = {'chatRoomId': data};
+          }
+
+          if (args != null) {
+            navigator.pushNamed(AppRoutes.chatDetail, arguments: args);
+          } else {
+            navigator.pushNamed(AppRoutes.chatList);
+          }
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+           // data 預期是 eventId
+           // 嘗試解析 JSON (以防萬一)
+           String? eventId;
+           try {
+             final parsed = json.decode(data);
+             if (parsed is Map<String, dynamic>) {
+               eventId = parsed['eventId'];
+             } else {
+               eventId = data;
+             }
+           } catch (_) {
+             eventId = data;
+           }
+
+           if (eventId != null) {
+             navigator.pushNamed(AppRoutes.eventDetail, arguments: {'eventId': eventId});
+           } else {
+             navigator.pushNamed(AppRoutes.eventsList);
+           }
+        } else {
+          navigator.pushNamed(AppRoutes.eventsList);
+        }
+        break;
+      case 'match':
+        // 配對成功，導航到用戶詳情或配對列表
+        if (data != null) {
+           String? userId;
+           try {
+             final parsed = json.decode(data);
+             if (parsed is Map<String, dynamic>) {
+               userId = parsed['userId'];
+             } else {
+               userId = data;
+             }
+           } catch (_) {
+             userId = data;
+           }
+
+           if (userId != null) {
+             navigator.pushNamed(AppRoutes.userDetail, arguments: {'userId': userId});
+           } else {
+             navigator.pushNamed(AppRoutes.matchesList);
+           }
+        } else {
+          navigator.pushNamed(AppRoutes.matchesList);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
