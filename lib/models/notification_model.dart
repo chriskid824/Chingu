@@ -6,24 +6,22 @@ class NotificationModel {
   final String userId;
   final String type; // 'match', 'event', 'message', 'rating', 'system'
   final String title;
-  final String message;
-  final String? imageUrl;
-  final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
-  final String? actionData; // JSON string or ID
+  final String content;
+  final DateTime timestamp;
   final bool isRead;
-  final DateTime createdAt;
+  final String? deeplink;
+  final String? imageUrl;
 
   NotificationModel({
     required this.id,
     required this.userId,
     required this.type,
     required this.title,
-    required this.message,
-    this.imageUrl,
-    this.actionType,
-    this.actionData,
+    required this.content,
+    required this.timestamp,
     this.isRead = false,
-    required this.createdAt,
+    this.deeplink,
+    this.imageUrl,
   });
 
   /// 從 Firestore 文檔創建 NotificationModel
@@ -34,17 +32,28 @@ class NotificationModel {
 
   /// 從 Map 創建 NotificationModel
   factory NotificationModel.fromMap(Map<String, dynamic> map, String id) {
+    // Handle timestamp compatibility
+    final timestampVal = map['timestamp'] ?? map['createdAt'];
+    DateTime timestamp;
+    if (timestampVal is Timestamp) {
+      timestamp = timestampVal.toDate();
+    } else if (timestampVal is String) {
+       // Just in case it's a string in some contexts (e.g. JSON)
+       timestamp = DateTime.tryParse(timestampVal) ?? DateTime.now();
+    } else {
+      timestamp = DateTime.now();
+    }
+
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
       type: map['type'] ?? 'system',
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
-      imageUrl: map['imageUrl'],
-      actionType: map['actionType'],
-      actionData: map['actionData'],
+      content: map['content'] ?? map['message'] ?? '',
+      timestamp: timestamp,
       isRead: map['isRead'] ?? false,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      deeplink: map['deeplink'],
+      imageUrl: map['imageUrl'],
     );
   }
 
@@ -54,29 +63,46 @@ class NotificationModel {
       'userId': userId,
       'type': type,
       'title': title,
-      'message': message,
-      'imageUrl': imageUrl,
-      'actionType': actionType,
-      'actionData': actionData,
+      'content': content,
+      // Save as both timestamp and createdAt to support legacy queries and new model
+      'timestamp': Timestamp.fromDate(timestamp),
+      'createdAt': Timestamp.fromDate(timestamp),
       'isRead': isRead,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'deeplink': deeplink,
+      'imageUrl': imageUrl,
+      // Also save message for legacy support if needed, but content is new standard
+      'message': content,
     };
+  }
+
+  /// 複製並修改
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? content,
+    DateTime? timestamp,
+    bool? isRead,
+    String? deeplink,
+    String? imageUrl,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+      deeplink: deeplink ?? this.deeplink,
+      imageUrl: imageUrl ?? this.imageUrl,
+    );
   }
 
   /// 複製並標記為已讀
   NotificationModel markAsRead() {
-    return NotificationModel(
-      id: id,
-      userId: userId,
-      type: type,
-      title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
-      isRead: true,
-      createdAt: createdAt,
-    );
+    return copyWith(isRead: true);
   }
 
   /// 獲取通知圖標
@@ -96,27 +122,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

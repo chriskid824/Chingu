@@ -74,7 +74,7 @@ class InAppNotification extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          notification.message,
+                          notification.content,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.7),
                           ),
@@ -156,7 +156,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':

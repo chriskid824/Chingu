@@ -18,8 +18,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       userId: 'current_user',
       type: 'match',
       title: '王小華 喜歡了您的個人資料',
-      message: '王小華 喜歡了您的個人資料',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      content: '王小華 喜歡了您的個人資料',
+      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
       isRead: false,
     ),
     NotificationModel(
@@ -27,8 +27,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       userId: 'current_user',
       type: 'message',
       title: '李小美 傳送了一則訊息給您',
-      message: '李小美 傳送了一則訊息給您',
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+      content: '李小美 傳送了一則訊息給您',
+      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
       isRead: false,
     ),
     NotificationModel(
@@ -36,8 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       userId: 'current_user',
       type: 'event',
       title: '您與 陳大明 的晚餐預約已確認',
-      message: '您與 陳大明 的晚餐預約已確認',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      content: '您與 陳大明 的晚餐預約已確認',
+      timestamp: DateTime.now().subtract(const Duration(days: 1)),
       isRead: true,
     ),
     NotificationModel(
@@ -45,8 +45,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       userId: 'current_user',
       type: 'rating',
       title: '恭喜！您獲得了新的成就徽章',
-      message: '恭喜！您獲得了新的成就徽章',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      content: '恭喜！您獲得了新的成就徽章',
+      timestamp: DateTime.now().subtract(const Duration(days: 2)),
       isRead: true,
     ),
     // 為了區分 "喜歡" 和 "配對請求"，這裡我們可能需要更細的類型，但目前暫用 match
@@ -57,8 +57,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       userId: 'current_user',
       type: 'match',
       title: '林小芳 想要與您配對',
-      message: '林小芳 想要與您配對',
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
+      content: '林小芳 想要與您配對',
+      timestamp: DateTime.now().subtract(const Duration(days: 3)),
       isRead: true,
     ),
     NotificationModel(
@@ -66,8 +66,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       userId: 'current_user',
       type: 'event',
       title: '本週三晚餐報名即將截止',
-      message: '本週三晚餐報名即將截止',
-      createdAt: DateTime.now().subtract(const Duration(days: 4)),
+      content: '本週三晚餐報名即將截止',
+      timestamp: DateTime.now().subtract(const Duration(days: 4)),
       isRead: true,
     ),
   ];
@@ -75,6 +75,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // ChinguTheme is used in the app but strict analysis might flag it if not defined
+    // Assuming ChinguTheme exists as per previous code
     final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
@@ -223,7 +225,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // 格式化時間 (簡單模擬)
-    final diff = DateTime.now().difference(notification.createdAt);
+    final diff = DateTime.now().difference(notification.timestamp);
     String timeStr;
     if (diff.inHours < 24) {
       timeStr = '${diff.inHours} 小時前';

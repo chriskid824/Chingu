@@ -64,6 +64,7 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return [];
 
+    // Use 'createdAt' for ordering to maintain backward compatibility
     Query<Map<String, dynamic>> query = _notificationsRef(userId)
         .orderBy('createdAt', descending: true)
         .limit(limit);
@@ -83,6 +84,7 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return [];
 
+    // Use 'createdAt' for ordering to maintain backward compatibility
     final snapshot = await _notificationsRef(userId)
         .where('isRead', isEqualTo: false)
         .orderBy('createdAt', descending: true)
@@ -185,6 +187,7 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return Stream.value([]);
 
+    // Use 'createdAt' for ordering to maintain backward compatibility
     return _notificationsRef(userId)
         .orderBy('createdAt', descending: true)
         .limit(limit)
@@ -210,6 +213,7 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return [];
 
+    // Use 'createdAt' for ordering to maintain backward compatibility
     final snapshot = await _notificationsRef(userId)
         .where('type', isEqualTo: type)
         .orderBy('createdAt', descending: true)
@@ -225,8 +229,7 @@ class NotificationStorageService {
     required String title,
     required String message,
     String? imageUrl,
-    String? actionType,
-    String? actionData,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -236,12 +239,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'system',
       title: title,
-      message: message,
+      content: message,
       imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
+      deeplink: deeplink,
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -261,12 +263,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'match',
       title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      content: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
-      actionType: 'open_chat',
-      actionData: matchedUserId,
+      deeplink: 'chingu://chat/$matchedUserId',
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -287,12 +288,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'event',
       title: eventTitle,
-      message: message,
+      content: message,
       imageUrl: imageUrl,
-      actionType: 'view_event',
-      actionData: eventId,
+      deeplink: 'chingu://event/$eventId',
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -313,12 +313,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'message',
       title: senderName,
-      message: messagePreview,
+      content: messagePreview,
       imageUrl: senderPhotoUrl,
-      actionType: 'open_chat',
-      actionData: senderId,
+      deeplink: 'chingu://chat/$senderId',
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
