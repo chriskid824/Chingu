@@ -289,6 +289,33 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 增加通知統計數據 (發送數/點擊數)
+  ///
+  /// [docId] 統計文檔 ID (stats_{YYYYMMDD}_{group}_{type})
+  /// [isSend] 是否為發送
+  /// [isClick] 是否為點擊
+  Future<void> incrementNotificationStats(String docId,
+      {bool isSend = false, bool isClick = false}) async {
+    try {
+      Map<String, dynamic> updates = {};
+      if (isSend) {
+        updates['sendCount'] = FieldValue.increment(1);
+      }
+      if (isClick) {
+        updates['clickCount'] = FieldValue.increment(1);
+      }
+
+      if (updates.isNotEmpty) {
+        await _firestore
+            .collection('notification_stats')
+            .doc(docId)
+            .set(updates, SetOptions(merge: true));
+      }
+    } catch (e) {
+      print('更新通知統計失敗: $e');
+    }
+  }
 }
 
 
