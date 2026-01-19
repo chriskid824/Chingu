@@ -4,6 +4,11 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:chingu/models/comment_model.dart';
+import 'package:chingu/widgets/custom_bottom_sheet.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -25,6 +30,8 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  final MomentService _momentService = MomentService();
+  bool _isProcessingLike = false;
 
   @override
   void initState() {
@@ -44,13 +51,48 @@ class _MomentCardState extends State<MomentCard> {
     }
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
+    if (_isProcessingLike) return;
+    _isProcessingLike = true;
+
     HapticUtils.light();
+
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.uid == null) {
+      _isProcessingLike = false;
+      return;
+    }
+
+    // Optimistic update
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
-    widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      await _momentService.toggleLike(widget.moment.id, authProvider.uid!);
+      widget.onLikeChanged?.call(_isLiked);
+    } catch (e) {
+      // Revert on error
+      setState(() {
+         _isLiked = !_isLiked;
+        _likeCount += _isLiked ? 1 : -1;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('操作失敗: $e')),
+      );
+    } finally {
+      _isProcessingLike = false;
+    }
+  }
+
+  void _showCommentsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CommentsBottomSheet(momentId: widget.moment.id),
+    );
   }
 
   @override
@@ -167,7 +209,10 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: () {
+                  widget.onCommentTap?.call();
+                  _showCommentsBottomSheet();
+                },
               ),
             ],
           ),
@@ -211,6 +256,233 @@ class _ActionButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CommentsBottomSheet extends StatefulWidget {
+  final String momentId;
+
+  const _CommentsBottomSheet({required this.momentId});
+
+  @override
+  State<_CommentsBottomSheet> createState() => _CommentsBottomSheetState();
+}
+
+class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
+  final TextEditingController _commentController = TextEditingController();
+  final MomentService _momentService = MomentService();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendComment() async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.userModel;
+
+    if (user == null) return;
+
+    setState(() {
+      _isSending = true;
+    });
+
+    try {
+      await _momentService.addComment(
+        widget.momentId,
+        user.uid,
+        content,
+        user.name,
+        user.avatarUrl,
+      );
+      _commentController.clear();
+      FocusScope.of(context).unfocus();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('發送評論失敗: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteComment(String commentId) async {
+    try {
+      await _momentService.deleteComment(widget.momentId, commentId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('評論已刪除')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('刪除失敗: $e')),
+        );
+      }
+    }
+  }
+
+  void _confirmDeleteComment(String commentId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('刪除評論'),
+        content: const Text('確定要刪除這則評論嗎？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteComment(commentId);
+            },
+            child: const Text('刪除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
+    return CustomBottomSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                '評論',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: StreamBuilder<List<CommentModel>>(
+                stream: _momentService.getCommentsStream(widget.momentId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text('加載評論失敗: ${snapshot.error}'));
+                  }
+
+                  final comments = snapshot.data ?? [];
+
+                  if (comments.isEmpty) {
+                    return Center(
+                      child: Text(
+                        '還沒有評論，來搶頭香吧！',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: scrollController,
+                    itemCount: comments.length,
+                    itemBuilder: (context, index) {
+                      final comment = comments[index];
+                      final isMyComment = comment.userId == authProvider.uid;
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: comment.userAvatar != null
+                              ? CachedNetworkImageProvider(comment.userAvatar!)
+                              : null,
+                          child: comment.userAvatar == null
+                              ? const Icon(Icons.person)
+                              : null,
+                        ),
+                        title: Text(comment.userName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(comment.content),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat('MM/dd HH:mm').format(comment.createdAt),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        onLongPress: isMyComment ? () => _confirmDeleteComment(comment.id) : null,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commentController,
+                      decoration: InputDecoration(
+                        hintText: '輸入評論...',
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      minLines: 1,
+                      maxLines: 4,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _isSending ? null : _sendComment,
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.send_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
