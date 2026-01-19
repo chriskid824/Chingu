@@ -31,6 +31,9 @@ class DatabaseSeeder {
       
       print('步驟 3/3: 生成配對和聊天數據...');
       await _seedTestMatchesAndChats();
+
+      print('步驟 4/4: 生成 A/B 測試數據...');
+      await _seedABTests();
       
       print('測試數據生成完成！');
     } catch (e) {
@@ -420,6 +423,41 @@ class DatabaseSeeder {
       print('創建測試配對失敗: $e');
       print('錯誤堆疊: ${StackTrace.current}');
       // 不拋出異常，允許其他數據生成繼續
+    }
+  }
+
+  Future<void> _seedABTests() async {
+    print('正在生成 A/B 測試數據...');
+    try {
+      // 1. 創建 A/B 測試配置
+      await _firestore.collection('ab_tests').doc('home_feed_algorithm').set({
+        'name': 'Home Feed Algorithm',
+        'description': 'Test different algorithms for home feed',
+        'isActive': true,
+        'startDate': FieldValue.serverTimestamp(),
+        'variants': [
+          {
+            'name': 'control',
+            'weight': 50,
+            'config': {'algorithm': 'legacy'},
+          },
+          {
+            'name': 'algorithm_b',
+            'weight': 50,
+            'config': {'algorithm': 'ml_v1'},
+          },
+        ],
+      });
+
+      // 2. 創建功能開關
+      await _firestore.collection('feature_flags').doc('new_profile_ui').set({
+        'enabled': true,
+        'config': {'version': '2.0'},
+      });
+
+      print('✓ A/B 測試數據生成完成');
+    } catch (e) {
+      print('生成 A/B 測試數據失敗: $e');
     }
   }
 }
