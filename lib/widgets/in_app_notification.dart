@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
+import '../core/routes/app_router.dart';
 
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
@@ -14,6 +16,45 @@ class InAppNotification extends StatelessWidget {
     this.onDismiss,
     this.onTap,
   });
+
+  static OverlayEntry? _currentEntry;
+  static Timer? _dismissTimer;
+
+  static void show({
+    required NotificationModel notification,
+    VoidCallback? onTap,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    // Dismiss current if exists
+    dismiss();
+
+    final overlayState = AppRouter.navigatorKey.currentState?.overlay;
+    if (overlayState == null) return;
+
+    _currentEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationAnimator(
+        notification: notification,
+        onDismiss: dismiss,
+        onTap: () {
+          onTap?.call();
+          dismiss();
+        },
+      ),
+    );
+
+    overlayState.insert(_currentEntry!);
+
+    _dismissTimer = Timer(duration, () {
+      dismiss();
+    });
+  }
+
+  static void dismiss() {
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+    _currentEntry?.remove();
+    _currentEntry = null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,5 +221,67 @@ class InAppNotification extends StatelessWidget {
       default:
         return chinguTheme.success; // Or primary
     }
+  }
+}
+
+class _InAppNotificationAnimator extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback onDismiss;
+  final VoidCallback onTap;
+
+  const _InAppNotificationAnimator({
+    required this.notification,
+    required this.onDismiss,
+    required this.onTap,
+  });
+
+  @override
+  State<_InAppNotificationAnimator> createState() => _InAppNotificationAnimatorState();
+}
+
+class _InAppNotificationAnimatorState extends State<_InAppNotificationAnimator> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: InAppNotification(
+          notification: widget.notification,
+          onDismiss: widget.onDismiss,
+          onTap: widget.onTap,
+        ),
+      ),
+    );
   }
 }
