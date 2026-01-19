@@ -21,6 +21,7 @@ class AuthProvider with ChangeNotifier {
   UserModel? _userModel;
   String? _errorMessage;
   bool _isLoading = false;
+  bool _isTwoFactorVerified = false;
 
   // Getters
   AuthStatus get status => _status;
@@ -29,11 +30,17 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+  bool get isTwoFactorVerified => _isTwoFactorVerified;
   String? get uid => _firebaseUser?.uid;
 
   AuthProvider() {
     // 監聽認證狀態變化
     _authService.authStateChanges.listen(_onAuthStateChanged);
+  }
+
+  void verifyTwoFactor() {
+    _isTwoFactorVerified = true;
+    notifyListeners();
   }
 
   /// 處理認證狀態變化
@@ -43,11 +50,14 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      _isTwoFactorVerified = false;
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+      // Note: _isTwoFactorVerified remains false by default on auto-login,
+      // forcing 2FA check if enabled.
     }
     notifyListeners();
   }

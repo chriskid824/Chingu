@@ -43,6 +43,8 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/two_factor_settings_screen.dart';
+import '../../screens/auth/two_factor_verification_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
@@ -55,6 +57,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String emailVerification = '/email-verification';
+  static const String twoFactorVerification = '/two-factor-verification';
   
   // 主導航
   static const String mainNavigation = '/main';
@@ -96,6 +99,7 @@ class AppRoutes {
   static const String privacySettings = '/privacy-settings';
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
+  static const String twoFactorSettings = '/two-factor-settings';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
@@ -125,6 +129,15 @@ class AppRouter {
       
       case AppRoutes.emailVerification:
         return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
+
+      case AppRoutes.twoFactorVerification:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => TwoFactorVerificationScreen(
+            verificationId: args['verificationId'] ?? '',
+            target: args['target'] ?? '',
+          ),
+        );
       
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
@@ -223,6 +236,9 @@ class AppRouter {
       
       case AppRoutes.notificationPreview:
         return MaterialPageRoute(builder: (_) => const NotificationPreviewScreen());
+
+      case AppRoutes.twoFactorSettings:
+        return MaterialPageRoute(builder: (_) => const TwoFactorSettingsScreen());
 
       case AppRoutes.helpCenter:
         return MaterialPageRoute(builder: (_) => const HelpCenterScreen());
