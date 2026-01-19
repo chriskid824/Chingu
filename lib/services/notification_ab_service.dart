@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+
 /// Notification A/B Testing Service
 ///
 /// This service is responsible for assigning users to experimental groups (A/B testing)
@@ -129,6 +132,29 @@ class NotificationABService {
           title: 'System Notification',
           body: message,
         );
+    }
+  }
+
+  /// Tracks notification events for A/B testing analysis.
+  ///
+  /// [userId] The ID of the user.
+  /// [type] The notification type string (e.g., 'match', 'message').
+  /// [event] The event name ('sent' or 'click').
+  Future<void> trackEvent(String userId, String type, String event) async {
+    try {
+      final group = getGroup(userId);
+      final variant = group == ExperimentGroup.variant ? 'variant' : 'control';
+
+      await FirebaseFirestore.instance.collection('notification_stats').add({
+        'userId': userId,
+        'type': type,
+        'variant': variant,
+        'event': event,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // Fail silently to not disrupt the app flow
+      debugPrint('Error tracking notification event: $e');
     }
   }
 }
