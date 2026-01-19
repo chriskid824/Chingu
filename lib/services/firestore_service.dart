@@ -3,7 +3,10 @@ import 'package:chingu/models/user_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -265,6 +268,43 @@ class FirestoreService {
       await updateUser(uid, {'averageRating': newAverage});
     } catch (e) {
       throw Exception('更新用戶評分失敗: $e');
+    }
+  }
+
+  /// 獲取用戶通知設定
+  ///
+  /// [uid] 用戶 ID
+  Future<Map<String, dynamic>?> getNotificationSettings(String uid) async {
+    try {
+      final doc = await _usersCollection
+          .doc(uid)
+          .collection('settings')
+          .doc('notifications')
+          .get();
+
+      if (!doc.exists) {
+        return null;
+      }
+      return doc.data() as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('獲取通知設定失敗: $e');
+    }
+  }
+
+  /// 更新用戶通知設定
+  ///
+  /// [uid] 用戶 ID
+  /// [settings] 設定 Map
+  Future<void> updateNotificationSettings(
+      String uid, Map<String, dynamic> settings) async {
+    try {
+      await _usersCollection
+          .doc(uid)
+          .collection('settings')
+          .doc('notifications')
+          .set(settings, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('更新通知設定失敗: $e');
     }
   }
 
