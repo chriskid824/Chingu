@@ -22,6 +22,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -31,8 +32,47 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        // 如果有 chatRoomId 但沒有 otherUser，嘗試獲取資料
+        if (_chatRoomId != null && _otherUser == null) {
+          _fetchChatDetails(_chatRoomId!);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchChatDetails(String chatRoomId) async {
+    setState(() => _isLoading = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.uid;
+
+      if (currentUserId == null) {
+        throw Exception('User not logged in');
+      }
+
+      final doc = await FirebaseFirestore.instance.collection('chat_rooms').doc(chatRoomId).get();
+      if (!doc.exists) throw Exception('Chat room not found');
+
+      final data = doc.data() as Map<String, dynamic>;
+      final participantIds = List<String>.from(data['participantIds'] ?? []);
+      final otherUserId = participantIds.firstWhere((id) => id != currentUserId, orElse: () => '');
+
+      if (otherUserId.isNotEmpty) {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+        if (userDoc.exists) {
+          if (mounted) {
+            setState(() {
+              _otherUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>, userDoc.id);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching chat details: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -128,7 +168,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
-    if (_chatRoomId == null || _otherUser == null) {
+    if (_chatRoomId == null || _otherUser == null || _isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),

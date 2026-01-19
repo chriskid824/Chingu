@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -31,11 +33,65 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 處理初始通知路由
+  String? initialRoute;
+  Object? initialArguments;
+
+  // 1. 檢查本地通知啟動
+  final localLaunchDetails = await RichNotificationService().getInitialNotificationData();
+  if (localLaunchDetails != null && localLaunchDetails.payload != null) {
+    try {
+      final Map<String, dynamic> data = json.decode(localLaunchDetails.payload!);
+      final deeplink = data['deeplink'] as String?;
+      final actionType = data['actionType'] as String?;
+      final actionData = data['actionData'] as String?;
+
+      final result = RichNotificationService.resolveRoute(deeplink, actionType, actionData);
+      if (result != null) {
+        initialRoute = result['route'];
+        initialArguments = result['args'];
+      }
+    } catch (e) {
+      debugPrint('Error parsing local notification payload: $e');
+    }
+  }
+
+  // 2. 檢查 FCM 啟動 (如果本地通知未觸發)
+  if (initialRoute == null) {
+    try {
+      final remoteMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (remoteMessage != null) {
+        final data = remoteMessage.data;
+        final deeplink = data['deeplink'] as String?;
+        final actionType = data['actionType'] as String?;
+        final actionData = data['actionData'] as String?;
+
+        final result = RichNotificationService.resolveRoute(deeplink, actionType, actionData);
+        if (result != null) {
+          initialRoute = result['route'];
+          initialArguments = result['args'];
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting initial FCM message: $e');
+    }
+  }
+
+  runApp(ChinguApp(
+    initialRoute: initialRoute,
+    initialArguments: initialArguments,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialRoute;
+  final Object? initialArguments;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute,
+    this.initialArguments,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +111,18 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
-            onGenerateRoute: AppRouter.generateRoute,
+            initialRoute: initialRoute ?? AppRoutes.mainNavigation,
+            onGenerateRoute: (settings) {
+              if (settings.name == initialRoute && initialArguments != null) {
+                return AppRouter.generateRoute(
+                  RouteSettings(
+                    name: settings.name,
+                    arguments: initialArguments,
+                  ),
+                );
+              }
+              return AppRouter.generateRoute(settings);
+            },
           );
         },
       ),
