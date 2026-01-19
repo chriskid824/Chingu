@@ -64,13 +64,15 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
+        final String? route = data['route'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        // Note: actionId usage here depends on how we set up actions.
+        // For now, if we have a route, we navigate to it.
+        // We might need a proper routing handler that parses the route string.
+        _handleNavigation(route, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,50 +80,24 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void _handleNavigation(String? route, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
-    // 優先處理按鈕點擊
-    if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
-      return;
-    }
+    // TODO: Implement proper route parsing logic if route contains parameters like /chat/123
+    // For now, we will do basic mapping based on string startsWith or similar if needed,
+    // or rely on a router that can handle deep links.
 
-    // 處理一般通知點擊
-    if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
-    }
-  }
-
-  void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
-      case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+    if (route != null) {
+        if (route.startsWith('/chat')) {
+             navigator.pushNamed(AppRoutes.chatList);
+        } else if (route.startsWith('/event')) {
+             navigator.pushNamed(AppRoutes.eventDetail);
         } else {
-          navigator.pushNamed(AppRoutes.chatList);
+             navigator.pushNamed(AppRoutes.notifications);
         }
-        break;
-      case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
-        break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
-      default:
-        // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
-        break;
+    } else {
+         navigator.pushNamed(AppRoutes.notifications);
     }
   }
 
@@ -139,27 +115,28 @@ class RichNotificationService {
         styleInformation = BigPictureStyleInformation(
           bigPicture,
           contentTitle: notification.title,
-          summaryText: notification.message,
+          summaryText: notification.content,
           hideExpandedLargeIcon: true,
         );
       } catch (e) {
         debugPrint('Error downloading image for notification: $e');
         // 圖片下載失敗則降級為普通通知
-        styleInformation = BigTextStyleInformation(notification.message);
+        styleInformation = BigTextStyleInformation(notification.content);
       }
     } else {
-      styleInformation = BigTextStyleInformation(notification.message);
+      styleInformation = BigTextStyleInformation(notification.content);
     }
 
     // 定義操作按鈕
     List<AndroidNotificationAction> actions = [];
-    if (notification.actionType == 'open_chat') {
+    // Currently, actions were tied to actionType. Now we can check route or type.
+    if (notification.type == NotificationType.message) {
       actions.add(const AndroidNotificationAction(
         'open_chat',
         '回覆',
         showsUserInterface: true,
       ));
-    } else if (notification.actionType == 'view_event') {
+    } else if (notification.type == NotificationType.event) {
       actions.add(const AndroidNotificationAction(
         'view_event',
         '查看詳情',
@@ -183,15 +160,14 @@ class RichNotificationService {
 
     // 構建 Payload
     final Map<String, dynamic> payload = {
-      'actionType': notification.actionType,
-      'actionData': notification.actionData,
+      'route': notification.route,
       'notificationId': notification.id,
     };
 
     await _flutterLocalNotificationsPlugin.show(
       notification.id.hashCode, // 使用 hashCode 作為 ID
       notification.title,
-      notification.message,
+      notification.content,
       platformChannelSpecifics,
       payload: json.encode(payload),
     );

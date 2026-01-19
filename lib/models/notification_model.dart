@@ -1,122 +1,113 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// 通知模型
+enum NotificationType {
+  match,
+  message,
+  event,
+  system,
+}
+
+/// Notification Model
+/// Contains type (match/message/event), title, content, timestamp, read status, deeplink route
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final NotificationType type;
   final String title;
-  final String message;
-  final String? imageUrl;
-  final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
-  final String? actionData; // JSON string or ID
+  final String content;
+  final DateTime timestamp;
   final bool isRead;
-  final DateTime createdAt;
+  final String? route;
+  final String? imageUrl; // Kept for UI compatibility
 
   NotificationModel({
     required this.id,
     required this.userId,
     required this.type,
     required this.title,
-    required this.message,
-    this.imageUrl,
-    this.actionType,
-    this.actionData,
+    required this.content,
+    required this.timestamp,
     this.isRead = false,
-    required this.createdAt,
+    this.route,
+    this.imageUrl,
   });
 
-  /// 從 Firestore 文檔創建 NotificationModel
+  /// Create NotificationModel from Firestore DocumentSnapshot
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return NotificationModel.fromMap(data, doc.id);
   }
 
-  /// 從 Map 創建 NotificationModel
+  /// Create NotificationModel from Map
   factory NotificationModel.fromMap(Map<String, dynamic> map, String id) {
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
-      type: map['type'] ?? 'system',
+      type: _parseType(map['type']),
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
-      imageUrl: map['imageUrl'],
-      actionType: map['actionType'],
-      actionData: map['actionData'],
+      content: map['content'] ?? map['message'] ?? '', // Fallback for migration
+      timestamp: (map['timestamp'] ?? map['createdAt'] ?? Timestamp.now()) is Timestamp
+          ? (map['timestamp'] ?? map['createdAt']).toDate()
+          : DateTime.now(),
       isRead: map['isRead'] ?? false,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      route: map['route'] ?? map['deeplink'],
+      imageUrl: map['imageUrl'],
     );
   }
 
-  /// 轉換為 Map 以儲存到 Firestore
+  /// Convert to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'type': type,
+      'type': type.name,
       'title': title,
-      'message': message,
-      'imageUrl': imageUrl,
-      'actionType': actionType,
-      'actionData': actionData,
+      'content': content,
+      'timestamp': Timestamp.fromDate(timestamp),
       'isRead': isRead,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'route': route,
+      'imageUrl': imageUrl,
     };
   }
 
-  /// 複製並標記為已讀
+  /// Copy and mark as read
   NotificationModel markAsRead() {
     return NotificationModel(
       id: id,
       userId: userId,
       type: type,
       title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
+      content: content,
+      timestamp: timestamp,
       isRead: true,
-      createdAt: createdAt,
+      route: route,
+      imageUrl: imageUrl,
     );
   }
 
-  /// 獲取通知圖標
+  static NotificationType _parseType(String? typeStr) {
+    if (typeStr == null) return NotificationType.system;
+    try {
+      return NotificationType.values.firstWhere(
+        (e) => e.name == typeStr,
+        orElse: () => NotificationType.system,
+      );
+    } catch (_) {
+      return NotificationType.system;
+    }
+  }
+
+  /// Helper for UI icons
   String get iconName {
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return 'favorite';
-      case 'event':
+      case NotificationType.event:
         return 'event';
-      case 'message':
+      case NotificationType.message:
         return 'message';
-      case 'rating':
-        return 'star';
-      case 'system':
+      case NotificationType.system:
       default:
         return 'notifications';
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

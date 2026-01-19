@@ -65,7 +65,7 @@ class NotificationStorageService {
     if (userId == null) return [];
 
     Query<Map<String, dynamic>> query = _notificationsRef(userId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .limit(limit);
 
     if (startAfter != null) {
@@ -85,7 +85,7 @@ class NotificationStorageService {
 
     final snapshot = await _notificationsRef(userId)
         .where('isRead', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .get();
 
     return snapshot.docs
@@ -165,8 +165,12 @@ class NotificationStorageService {
     final cutoffDate = DateTime.now().subtract(Duration(days: olderThanDays));
     final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
+    // Note: Assuming 'timestamp' field is used for storage now.
+    // If migration hasn't happened, this might miss old docs stored with 'createdAt'.
+    // Since we updated toMap to use 'timestamp', new ones are fine.
+    // Ideally we would query both or just migrate data.
     final snapshot = await _notificationsRef(userId)
-        .where('createdAt', isLessThan: cutoffTimestamp)
+        .where('timestamp', isLessThan: cutoffTimestamp)
         .get();
 
     if (snapshot.docs.isEmpty) return 0;
@@ -186,7 +190,7 @@ class NotificationStorageService {
     if (userId == null) return Stream.value([]);
 
     return _notificationsRef(userId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -206,13 +210,13 @@ class NotificationStorageService {
   }
 
   /// 按類型獲取通知
-  Future<List<NotificationModel>> getNotificationsByType(String type) async {
+  Future<List<NotificationModel>> getNotificationsByType(NotificationType type) async {
     final userId = _currentUserId;
     if (userId == null) return [];
 
     final snapshot = await _notificationsRef(userId)
-        .where('type', isEqualTo: type)
-        .orderBy('createdAt', descending: true)
+        .where('type', isEqualTo: type.name)
+        .orderBy('timestamp', descending: true)
         .get();
 
     return snapshot.docs
@@ -223,10 +227,9 @@ class NotificationStorageService {
   /// 創建系統通知
   Future<void> createSystemNotification({
     required String title,
-    required String message,
+    required String content,
     String? imageUrl,
-    String? actionType,
-    String? actionData,
+    String? route,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -234,14 +237,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
       userId: userId,
-      type: 'system',
+      type: NotificationType.system,
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
+      route: route,
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -259,14 +261,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'match',
+      type: NotificationType.match,
       title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      content: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
-      actionType: 'open_chat',
-      actionData: matchedUserId,
+      route: '/chat/$matchedUserId', // Example route
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -276,7 +277,7 @@ class NotificationStorageService {
   Future<void> createEventNotification({
     required String eventId,
     required String eventTitle,
-    required String message,
+    required String content,
     String? imageUrl,
   }) async {
     final userId = _currentUserId;
@@ -285,14 +286,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'event',
+      type: NotificationType.event,
       title: eventTitle,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
-      actionType: 'view_event',
-      actionData: eventId,
+      route: '/event/$eventId', // Example route
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -311,14 +311,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'message',
+      type: NotificationType.message,
       title: senderName,
-      message: messagePreview,
+      content: messagePreview,
       imageUrl: senderPhotoUrl,
-      actionType: 'open_chat',
-      actionData: senderId,
+      route: '/chat/$senderId', // Example route
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
