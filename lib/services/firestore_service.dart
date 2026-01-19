@@ -289,6 +289,43 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 獲取用戶通知設定
+  ///
+  /// [uid] 用戶 ID
+  Future<Map<String, dynamic>?> getNotificationSettings(String uid) async {
+    try {
+      final doc = await _usersCollection
+          .doc(uid)
+          .collection('settings')
+          .doc('notifications')
+          .get();
+
+      if (!doc.exists) return null;
+      return doc.data();
+    } catch (e) {
+      print('獲取通知設定失敗: $e');
+      // 失敗時返回 null，讓 UI 使用預設值
+      return null;
+    }
+  }
+
+  /// 更新用戶通知設定
+  ///
+  /// [uid] 用戶 ID
+  /// [settings] 設定資料
+  Future<void> updateNotificationSettings(
+      String uid, Map<String, dynamic> settings) async {
+    try {
+      await _usersCollection
+          .doc(uid)
+          .collection('settings')
+          .doc('notifications')
+          .set(settings, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('更新通知設定失敗: $e');
+    }
+  }
 }
 
 
