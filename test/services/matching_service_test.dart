@@ -2,6 +2,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -59,6 +60,7 @@ void main() {
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      userBlockService: UserBlockService(firestore: fakeFirestore),
     );
   });
 
@@ -115,6 +117,24 @@ void main() {
         city: anyNamed('city'),
         limit: anyNamed('limit'),
       )).thenAnswer((_) async => [oldCandidate]);
+
+      // Act
+      final results = await matchingService.getMatches(currentUser);
+
+      // Assert
+      expect(results, isEmpty);
+    });
+
+    test('should filter out blocked users', () async {
+      // Arrange
+      // Add a block record
+      await UserBlockService(firestore: fakeFirestore)
+          .blockUser(currentUser.uid, candidateUser.uid);
+
+      when(mockFirestoreService.queryMatchingUsers(
+        city: anyNamed('city'),
+        limit: anyNamed('limit'),
+      )).thenAnswer((_) async => [candidateUser]);
 
       // Act
       final results = await matchingService.getMatches(currentUser);
