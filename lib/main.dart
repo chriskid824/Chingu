@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -31,11 +32,34 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 初始化 FCM 服務
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  // 檢查初始通知 (Terminated -> Open)
+  Map<String, dynamic>? initialRouteInfo;
+  try {
+    final fcmData = await notificationService.getInitialFCMData();
+    if (fcmData != null) {
+      initialRouteInfo = fcmData;
+    } else {
+      final localData =
+          await RichNotificationService().getInitialNotificationData();
+      if (localData != null) {
+        initialRouteInfo = localData;
+      }
+    }
+  } catch (e) {
+    debugPrint('Error getting initial notification data: $e');
+  }
+
+  runApp(ChinguApp(initialRouteInfo: initialRouteInfo));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final Map<String, dynamic>? initialRouteInfo;
+
+  const ChinguApp({super.key, this.initialRouteInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +79,18 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
-            onGenerateRoute: AppRouter.generateRoute,
+            initialRoute:
+                initialRouteInfo?['route'] ?? AppRoutes.mainNavigation,
+            onGenerateRoute: (settings) {
+              if (initialRouteInfo != null &&
+                  settings.name == initialRouteInfo!['route']) {
+                return AppRouter.generateRoute(RouteSettings(
+                    name: settings.name,
+                    arguments:
+                        initialRouteInfo!['arguments'] ?? settings.arguments));
+              }
+              return AppRouter.generateRoute(settings);
+            },
           );
         },
       ),
