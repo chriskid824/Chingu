@@ -1,19 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 
-/// 通知儲存服務
-/// 負責 Firestore 中通知的 CRUD 操作
+/// NotificationStorageService
+///
+/// This service handles the persistence of notifications in Firestore.
+/// It supports creating, reading (querying), updating (marking as read),
+/// and deleting notifications.
+///
+/// It interacts with the `users/{userId}/notifications` collection.
 class NotificationStorageService {
-  // Singleton pattern
+  // Singleton instance
   static final NotificationStorageService _instance =
       NotificationStorageService._internal();
 
+  /// Factory constructor to return the singleton instance.
   factory NotificationStorageService() => _instance;
 
   NotificationStorageService._internal();
 
-  // Lazy initialization for testability
+  // Lazy initialization for testability.
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
 
@@ -21,10 +28,22 @@ class NotificationStorageService {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
 
-  /// 獲取當前用戶 ID
+  /// Sets mock instances for Firestore and FirebaseAuth.
+  /// This method should only be used in tests.
+  @visibleForTesting
+  void setMockInstances({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
+
+  /// Gets the current authenticated user's ID.
+  /// Returns null if no user is logged in.
   String? get _currentUserId => _auth.currentUser?.uid;
 
-  /// 獲取用戶通知集合引用
+  /// Returns a reference to the notifications collection for a specific user.
   CollectionReference<Map<String, dynamic>> _notificationsRef(String userId) {
     return _firestore
         .collection('users')
@@ -32,31 +51,54 @@ class NotificationStorageService {
         .collection('notifications');
   }
 
-  /// 儲存新通知
+  /// Saves a single notification to Firestore.
+  ///
+  /// Returns the document ID of the saved notification.
+  /// Throws an exception if the user is not authenticated.
   Future<String> saveNotification(NotificationModel notification) async {
     final userId = _currentUserId;
     if (userId == null) {
       throw Exception('User not authenticated');
     }
 
+    // Convert the model to a map and add it to the collection
     final docRef = await _notificationsRef(userId).add(notification.toMap());
     return docRef.id;
   }
 
-  /// 批量儲存通知 (用於同步)
+  /// Saves multiple notifications in a batch operation.
+  ///
+  /// Useful for syncing or bulk updates.
+  /// Handles batch limits (500 ops) and empty IDs.
   Future<void> saveNotifications(List<NotificationModel> notifications) async {
     final userId = _currentUserId;
     if (userId == null) return;
+    if (notifications.isEmpty) return;
 
-    final batch = _firestore.batch();
-    for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
-      batch.set(docRef, notification.toMap());
+    // Process in chunks of 500 to respect Firestore batch limits
+    for (var i = 0; i < notifications.length; i += 500) {
+      final end = (i + 500 < notifications.length) ? i + 500 : notifications.length;
+      final chunk = notifications.sublist(i, end);
+      final batch = _firestore.batch();
+
+      for (final notification in chunk) {
+        DocumentReference docRef;
+        if (notification.id.isNotEmpty) {
+          docRef = _notificationsRef(userId).doc(notification.id);
+        } else {
+          // If ID is empty, generate a new document reference
+          docRef = _notificationsRef(userId).doc();
+        }
+        batch.set(docRef, notification.toMap());
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
-  /// 獲取所有通知 (分頁)
+  /// Retrieves notifications for the current user with pagination.
+  ///
+  /// [limit] defaults to 20.
+  /// [startAfter] can be used for pagination.
   Future<List<NotificationModel>> getNotifications({
     int limit = 20,
     DocumentSnapshot? startAfter,
@@ -78,7 +120,7 @@ class NotificationStorageService {
         .toList();
   }
 
-  /// 獲取未讀通知
+  /// Retrieves all unread notifications.
   Future<List<NotificationModel>> getUnreadNotifications() async {
     final userId = _currentUserId;
     if (userId == null) return [];
@@ -93,7 +135,7 @@ class NotificationStorageService {
         .toList();
   }
 
-  /// 獲取未讀通知數量
+  /// Gets the count of unread notifications.
   Future<int> getUnreadCount() async {
     final userId = _currentUserId;
     if (userId == null) return 0;
@@ -106,7 +148,7 @@ class NotificationStorageService {
     return snapshot.count ?? 0;
   }
 
-  /// 標記單個通知為已讀
+  /// Marks a specific notification as read.
   Future<void> markAsRead(String notificationId) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -116,7 +158,9 @@ class NotificationStorageService {
     });
   }
 
-  /// 標記所有通知為已讀
+  /// Marks all unread notifications as read.
+  ///
+  /// Handles batch limits (500 ops).
   Future<void> markAllAsRead() async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -127,14 +171,21 @@ class NotificationStorageService {
 
     if (unread.docs.isEmpty) return;
 
-    final batch = _firestore.batch();
-    for (final doc in unread.docs) {
-      batch.update(doc.reference, {'isRead': true});
+    // Process in chunks of 500
+    final docs = unread.docs;
+    for (var i = 0; i < docs.length; i += 500) {
+      final end = (i + 500 < docs.length) ? i + 500 : docs.length;
+      final chunk = docs.sublist(i, end);
+      final batch = _firestore.batch();
+
+      for (final doc in chunk) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
-  /// 刪除單個通知
+  /// Deletes a specific notification.
   Future<void> deleteNotification(String notificationId) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -142,7 +193,9 @@ class NotificationStorageService {
     await _notificationsRef(userId).doc(notificationId).delete();
   }
 
-  /// 刪除所有通知
+  /// Deletes all notifications for the current user.
+  ///
+  /// Use with caution. Handles batch limits.
   Future<void> deleteAllNotifications() async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -150,14 +203,23 @@ class NotificationStorageService {
     final snapshot = await _notificationsRef(userId).get();
     if (snapshot.docs.isEmpty) return;
 
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
+    final docs = snapshot.docs;
+    for (var i = 0; i < docs.length; i += 500) {
+      final end = (i + 500 < docs.length) ? i + 500 : docs.length;
+      final chunk = docs.sublist(i, end);
+      final batch = _firestore.batch();
+
+      for (final doc in chunk) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
-  /// 刪除舊通知 (超過指定天數)
+  /// Deletes notifications older than a specified number of days.
+  ///
+  /// Default is 30 days. Returns the number of deleted notifications.
+  /// Handles batch limits.
   Future<int> deleteOldNotifications({int olderThanDays = 30}) async {
     final userId = _currentUserId;
     if (userId == null) return 0;
@@ -171,16 +233,22 @@ class NotificationStorageService {
 
     if (snapshot.docs.isEmpty) return 0;
 
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
-    }
-    await batch.commit();
+    final docs = snapshot.docs;
+    for (var i = 0; i < docs.length; i += 500) {
+      final end = (i + 500 < docs.length) ? i + 500 : docs.length;
+      final chunk = docs.sublist(i, end);
+      final batch = _firestore.batch();
 
-    return snapshot.docs.length;
+      for (final doc in chunk) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+
+    return docs.length;
   }
 
-  /// 監聽通知變化 (實時更新)
+  /// Returns a stream of notifications for real-time updates.
   Stream<List<NotificationModel>> watchNotifications({int limit = 50}) {
     final userId = _currentUserId;
     if (userId == null) return Stream.value([]);
@@ -194,7 +262,7 @@ class NotificationStorageService {
             .toList());
   }
 
-  /// 監聽未讀通知數量
+  /// Returns a stream of the unread notification count.
   Stream<int> watchUnreadCount() {
     final userId = _currentUserId;
     if (userId == null) return Stream.value(0);
@@ -205,7 +273,7 @@ class NotificationStorageService {
         .map((snapshot) => snapshot.docs.length);
   }
 
-  /// 按類型獲取通知
+  /// Retrieves notifications filtered by type.
   Future<List<NotificationModel>> getNotificationsByType(String type) async {
     final userId = _currentUserId;
     if (userId == null) return [];
@@ -220,7 +288,9 @@ class NotificationStorageService {
         .toList();
   }
 
-  /// 創建系統通知
+  // --- Helper methods to create specific notification types ---
+
+  /// Creates a system notification.
   Future<void> createSystemNotification({
     required String title,
     required String message,
@@ -232,7 +302,7 @@ class NotificationStorageService {
     if (userId == null) return;
 
     final notification = NotificationModel(
-      id: '', // Will be set by Firestore
+      id: '', // Firestore will generate the ID
       userId: userId,
       type: 'system',
       title: title,
@@ -247,7 +317,7 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
-  /// 創建配對通知
+  /// Creates a match notification.
   Future<void> createMatchNotification({
     required String matchedUserName,
     required String matchedUserId,
@@ -272,7 +342,7 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
-  /// 創建活動通知
+  /// Creates an event notification.
   Future<void> createEventNotification({
     required String eventId,
     required String eventTitle,
@@ -298,7 +368,7 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
-  /// 創建消息通知
+  /// Creates a message notification.
   Future<void> createMessageNotification({
     required String senderName,
     required String senderId,
