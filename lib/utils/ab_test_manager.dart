@@ -89,6 +89,10 @@ class ABTestManager {
 
   /// 分配變體(基於權重)
   String _assignVariant(ABTestConfig config) {
+    if (config.variants.isEmpty) {
+      return 'control';
+    }
+
     final random = DateTime.now().microsecondsSinceEpoch % 100;
     var cumulative = 0.0;
 
