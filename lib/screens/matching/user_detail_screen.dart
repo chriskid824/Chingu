@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chingu/utils/image_cache_manager.dart';
 
 class UserDetailScreen extends StatelessWidget {
   const UserDetailScreen({super.key});
@@ -8,6 +11,18 @@ class UserDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // 獲取傳入的參數
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final UserModel? user = args is UserModel ? args : null;
+
+    // 使用傳入的用戶資料或預設資料
+    final String name = user?.name ?? '陳大明';
+    final int age = user?.age ?? 30;
+    final String job = user?.jobTitle ?? '軟體工程師';
+    final String location = user != null ? '${user.city}, ${user.district}' : '台北市, 信義區';
+    final String bio = user?.bio ?? '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。';
+    final String avatarUrl = user?.avatarUrl ?? '';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -42,56 +57,71 @@ class UserDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: chinguTheme?.primaryGradient,
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.person,
-                        size: 140,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  // 配對度標籤
-                  Positioned(
-                    top: 60,
-                    right: 20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: chinguTheme?.successGradient,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (chinguTheme?.success ?? Colors.green).withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                  user != null && avatarUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: avatarUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: theme.colorScheme.surfaceVariant,
+                            child: const Center(child: CircularProgressIndicator()),
                           ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.favorite,
-                            size: 16,
-                            color: Colors.white,
+                          errorWidget: (context, url, error) => Container(
+                            color: theme.colorScheme.surfaceVariant,
+                            child: const Icon(Icons.error),
                           ),
-                          SizedBox(width: 6),
-                          Text(
-                            '95% 配對',
-                            style: TextStyle(
+                          cacheManager: ImageCacheManager().manager,
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: chinguTheme?.primaryGradient,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 140,
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
                             ),
                           ),
-                        ],
+                        ),
+                  // 配對度標籤 (僅在演示模式或有計算邏輯時顯示)
+                  if (user == null)
+                    Positioned(
+                      top: 60,
+                      right: 20,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: chinguTheme?.successGradient,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (chinguTheme?.success ?? Colors.green).withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.favorite,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              '95% 配對',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -112,7 +142,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '$name, $age',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -132,7 +162,7 @@ class UserDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '軟體工程師',
+                              job,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -162,15 +192,16 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.location_on_rounded,
                     '位置',
-                    '台北市, 信義區',
+                    location,
                     theme.colorScheme.primary,
                     theme,
                   ),
                   const SizedBox(height: 12),
+                  // 如果有預算資訊，這裡可以使用
                   _buildInfoCard(
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800',
+                    user != null ? _getBudgetRangeText(user.budgetRange) : 'NT\$ 500-800',
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
@@ -178,7 +209,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.favorite_rounded,
                     '配對類型',
-                    '異性配對',
+                    user != null ? (user.gender == 'male' ? '男性' : '女性') : '異性配對',
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -213,7 +244,7 @@ class UserDetailScreen extends StatelessWidget {
                       border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                     ),
                     child: Text(
-                      '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
+                      bio,
                       style: TextStyle(
                         fontSize: 15,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -247,13 +278,15 @@ class UserDetailScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
-                      _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
-                      _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
-                      _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
-                      _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
-                    ],
+                    children: user != null
+                      ? user.interests.map((i) => _buildInterestChip(i, Icons.star, theme.colorScheme.primary)).toList()
+                      : [
+                        _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
+                        _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
+                        _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
+                        _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
+                        _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
+                      ],
                   ),
                   
                   const SizedBox(height: 32),
@@ -345,6 +378,16 @@ class UserDetailScreen extends StatelessWidget {
     );
   }
   
+  String _getBudgetRangeText(int range) {
+    switch (range) {
+      case 0: return 'NT\$ 300-500';
+      case 1: return 'NT\$ 500-800';
+      case 2: return 'NT\$ 800-1200';
+      case 3: return 'NT\$ 1200+';
+      default: return '不限';
+    }
+  }
+
   Widget _buildInfoCard(IconData icon, String label, String value, Color color, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
