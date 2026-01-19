@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import '../services/rich_notification_service.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +28,11 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+
+    // 檢查是否由通知啟動應用
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RichNotificationService().checkInitialLaunch();
+    });
   }
 
   final List<Widget> _screens = [
