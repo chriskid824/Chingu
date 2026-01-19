@@ -1,7 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -43,6 +45,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         targetCities = [],
         targetUserIds = [],
         imageUrl,
+        notificationType = 'system', // 'marketing', 'newsletter', 'appUpdates', 'system'
     } = data;
 
     // Validate required fields
@@ -58,6 +61,18 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
 
         if (targetAll) {
             // Send to all users - use topic subscription
+            // If notificationType is specific (e.g. marketing), send to that topic instead of all_users
+            let topic = "all_users";
+            // Check if it's one of the topic-based categories
+            if (['marketing', 'newsletter', 'appUpdates', 'app_updates'].includes(notificationType)) {
+                 // Map camelCase to snake_case for topics
+                 if (notificationType === 'appUpdates' || notificationType === 'app_updates') {
+                     topic = 'app_updates';
+                 } else {
+                     topic = notificationType;
+                 }
+            }
+
             const message = {
                 notification: {
                     title: title,
@@ -65,23 +80,24 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                     ...(imageUrl && { imageUrl }),
                 },
                 data: customData || {},
-                topic: "all_users",
+                topic: topic,
             };
 
             const response = await admin.messaging().send(message);
-            console.log("Successfully sent broadcast to all users:", response);
+            console.log(`Successfully sent broadcast to topic ${topic}:`, response);
 
             // Log the broadcast
             await admin.firestore().collection("broadcast_logs").add({
                 title,
                 body,
                 targetType: "all",
+                targetTopic: topic,
                 sentBy: context.auth.uid,
                 sentAt: admin.firestore.FieldValue.serverTimestamp(),
                 messageId: response,
             });
 
-            return { success: true, messageId: response, recipients: "all" };
+            return { success: true, messageId: response, recipients: "topic:" + topic };
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
             const usersSnapshot = await admin.firestore()
@@ -89,9 +105,20 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
                 .get();
 
+            // Filter users based on preferences
             targetTokens = usersSnapshot.docs
+                .filter(doc => {
+                    const userData = doc.data();
+                    // If preference exists and is false, exclude. Default true.
+                    if (userData.notificationPreferences &&
+                        userData.notificationPreferences[notificationType] === false) {
+                        return false;
+                    }
+                    return true;
+                })
                 .map((doc) => doc.data().fcmToken)
                 .filter((token) => token); // Remove null/undefined tokens
+
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
@@ -100,7 +127,16 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .where("city", "in", citiesLower)
                 .get();
 
+            // Filter users based on preferences
             targetTokens = usersSnapshot.docs
+                .filter(doc => {
+                    const userData = doc.data();
+                    if (userData.notificationPreferences &&
+                        userData.notificationPreferences[notificationType] === false) {
+                        return false;
+                    }
+                    return true;
+                })
                 .map((doc) => doc.data().fcmToken)
                 .filter((token) => token);
         } else {

@@ -38,6 +38,9 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final Map<String, bool> notificationPreferences;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +69,16 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notificationPreferences = const {
+      'newMatch': true,
+      'matchSuccess': true,
+      'newMessage': true,
+      'eventReminder': true,
+      'eventChange': true,
+      'marketing': false,
+      'newsletter': false,
+      'appUpdates': true,
+    },
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +117,18 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationPreferences: map['notificationPreferences'] != null
+          ? Map<String, bool>.from(map['notificationPreferences'])
+          : const {
+              'newMatch': true,
+              'matchSuccess': true,
+              'newMessage': true,
+              'eventReminder': true,
+              'eventChange': true,
+              'marketing': false,
+              'newsletter': false,
+              'appUpdates': true,
+            },
     );
   }
 
@@ -136,6 +161,7 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationPreferences': notificationPreferences,
     };
   }
 
@@ -166,6 +192,7 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    Map<String, bool>? notificationPreferences,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +222,8 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationPreferences:
+          notificationPreferences ?? this.notificationPreferences,
     );
   }
 
