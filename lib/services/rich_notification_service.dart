@@ -32,9 +32,9 @@ class RichNotificationService {
     // iOS 初始化設定
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
+      requestSoundPermission: false,
+      requestBadgePermission: false,
+      requestAlertPermission: false,
     );
 
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -47,16 +47,38 @@ class RichNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // 請求 Android 13+ 通知權限
+    _isInitialized = true;
+  }
+
+  /// 請求通知權限
+  Future<bool> requestPermissions() async {
+    bool? androidGranted = false;
+    bool? iosGranted = false;
+
+    // Android 13+
     final androidImplementation = _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidImplementation != null) {
-      await androidImplementation.requestNotificationsPermission();
+      androidGranted =
+          await androidImplementation.requestNotificationsPermission();
     }
 
-    _isInitialized = true;
+    // iOS
+    final iosImplementation = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+
+    if (iosImplementation != null) {
+      iosGranted = await iosImplementation.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
+    return (androidGranted ?? false) || (iosGranted ?? false);
   }
 
   /// 處理通知點擊事件
