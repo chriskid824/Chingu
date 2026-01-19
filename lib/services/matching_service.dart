@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -122,6 +123,32 @@ class MatchingService {
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
           
+          // 發送配對通知 (如果對方開啟了通知)
+          if ((partner.notificationSettings['pushNotifications'] ?? true) &&
+              (partner.notificationSettings['matchSuccess'] ?? true)) {
+            try {
+              // 需要獲取當前用戶名稱
+              final myDoc = await _firestore.collection('users').doc(userId).get();
+              if (myDoc.exists) {
+                final me = UserModel.fromMap(myDoc.data()!, userId);
+
+                await FirebaseFunctions.instance.httpsCallable('sendNotification').call({
+                  'targetUserId': targetUserId,
+                  'title': '配對成功！',
+                  'body': '您和 ${me.name} 配對成功了！快來聊天吧！',
+                  'type': 'match',
+                  'data': {
+                    'partnerId': userId,
+                    'chatRoomId': chatRoomId,
+                  }
+                });
+              }
+            } catch (e) {
+              print('發送配對通知失敗: $e');
+              // 不影響流程
+            }
+          }
+
           return {
             'isMatch': true,
             'chatRoomId': chatRoomId,
