@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
+import 'package:chingu/core/routes/app_router.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +30,53 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkTwoFactor();
+    });
+  }
+
+  void _checkTwoFactor() {
+    // Add listener to handle async auth state updates (e.g. auto-login)
+    context.read<AuthProvider>().addListener(_authListener);
+    // Check current state immediately
+    _authListener();
+  }
+
+  void _authListener() {
+    if (!mounted) return;
+    final authProvider = context.read<AuthProvider>();
+
+    if (authProvider.isAuthenticated) {
+      final user = authProvider.userModel;
+      if (user != null && user.isTwoFactorEnabled && !authProvider.isTwoFactorVerified) {
+        // Prevent repeated triggers
+        authProvider.removeListener(_authListener);
+        _sendCodeAndNavigate(user.email, user.phoneNumber, user.twoFactorMethod);
+      }
+    }
+  }
+
+  Future<void> _sendCodeAndNavigate(String email, String? phone, String method) async {
+    final target = (method == 'sms' && (phone?.isNotEmpty ?? false)) ? phone! : email;
+
+    try {
+      final twoFactorService = TwoFactorAuthService();
+      await twoFactorService.sendVerificationCode(target: target, method: method);
+    } catch (e) {
+      debugPrint('Failed to send 2FA code: $e');
+    }
+
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+          context, AppRoutes.twoFactorVerification, (route) => false,
+          arguments: {'target': target});
+    }
+  }
+
+  @override
+  void dispose() {
+    context.read<AuthProvider>().removeListener(_authListener);
+    super.dispose();
   }
 
   final List<Widget> _screens = [
