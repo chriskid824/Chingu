@@ -171,7 +171,9 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        final user = args != null ? args['user'] as UserModel? : null;
+        return MaterialPageRoute(builder: (_) => UserDetailScreen(user: user));
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
