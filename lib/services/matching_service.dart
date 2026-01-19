@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final NotificationService _notificationService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    NotificationService? notificationService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _notificationService = notificationService ?? NotificationService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -180,7 +184,37 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 獲取用戶資料以發送通知
+    try {
+      final user1Doc = await _firestore.collection('users').doc(user1Id).get();
+      final user2Doc = await _firestore.collection('users').doc(user2Id).get();
+
+      if (user1Doc.exists && user2Doc.exists) {
+        final user1 = UserModel.fromMap(user1Doc.data()!, user1Id);
+        final user2 = UserModel.fromMap(user2Doc.data()!, user2Id);
+
+        // 通知用戶 1 (你與 User 2 配對成功)
+        await _notificationService.sendMatchNotification(
+          userId: user1Id,
+          partnerName: user2.name,
+          chatRoomId: chatRoomId,
+        );
+
+        // 通知用戶 2 (你與 User 1 配對成功)
+        await _notificationService.sendMatchNotification(
+          userId: user2Id,
+          partnerName: user1.name,
+          chatRoomId: chatRoomId,
+        );
+      }
+    } catch (e) {
+      print('發送配對通知時發生錯誤: $e');
+      // 不中斷配對流程
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表
