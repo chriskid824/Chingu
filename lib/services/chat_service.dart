@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -108,14 +109,66 @@ class ChatService {
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知 (不等待結果)
+      _sendPushNotification(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: senderName,
+        message: message,
+        type: type,
+      );
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
+    }
+  }
+
+  /// 發送推送通知（內部方法）
+  Future<void> _sendPushNotification({
+    required String chatRoomId,
+    required String senderId,
+    required String senderName,
+    required String message,
+    required String type,
+  }) async {
+    try {
+      final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+      if (chatRoomDoc.exists) {
+        final data = chatRoomDoc.data() as Map<String, dynamic>;
+        final participants = List<String>.from(data['participantIds'] ?? []);
+
+        final recipientId = participants.firstWhere(
+          (id) => id != senderId,
+          orElse: () => '',
+        );
+
+        if (recipientId.isNotEmpty) {
+          final userDoc = await _firestore.collection('users').doc(recipientId).get();
+          if (userDoc.exists) {
+            final userData = userDoc.data() as Map<String, dynamic>;
+            final fcmToken = userData['fcmToken'] as String?;
+
+            if (fcmToken != null && fcmToken.isNotEmpty) {
+              await FirebaseFunctions.instance
+                  .httpsCallable('sendNotification')
+                  .call({
+                'token': fcmToken,
+                'title': senderName,
+                'body': type == 'text' ? message : (type == 'image' ? '傳送了一張圖片' : '傳送了一則訊息'),
+                'data': {
+                  'type': 'chat',
+                  'chatRoomId': chatRoomId,
+                  'senderId': senderId,
+                  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                },
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('發送通知失敗: $e');
     }
   }
 }
