@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -15,6 +16,12 @@ class ABTestManager {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
+
+  @visibleForTesting
+  set firestore(FirebaseFirestore instance) => _firestoreInstance = instance;
+
+  @visibleForTesting
+  set auth(FirebaseAuth instance) => _authInstance = instance;
 
   // 本地緩存的測試配置
   Map<String, ABTestConfig> _cachedTests = {};
