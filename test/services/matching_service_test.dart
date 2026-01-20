@@ -2,19 +2,21 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([FirestoreService, ChatService, NotificationService])
 import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockNotificationService mockNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -53,12 +55,14 @@ void main() {
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockNotificationService = MockNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: mockNotificationService,
     );
   });
 
@@ -78,12 +82,12 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Location: same city, same district = 30
+      // Age: abs(25-24)=1 <=2 => 10
+      // Budget: same (2==2) => 10
+      // Total: 12.5 + 30 + 10 + 10 = 62.5 -> round to 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -160,6 +164,9 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      when(mockNotificationService.sendMatchNotification(any, any))
+          .thenAnswer((_) async {});
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -174,6 +181,9 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      verify(mockNotificationService.sendMatchNotification(currentUser.uid, candidateUser.uid)).called(1);
     });
   });
 }
