@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chingu/models/notification_settings_model.dart';
 
 /// 用戶資料模型
 class UserModel {
@@ -33,6 +34,9 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 通知設置
+  final NotificationSettings notificationSettings;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,10 +67,11 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    NotificationSettings? notificationSettings,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
-  });
+  }) : notificationSettings = notificationSettings ?? NotificationSettings();
 
   /// 從 Firestore 文檔創建 UserModel
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -101,6 +106,9 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      notificationSettings: map['notificationSettings'] != null
+          ? NotificationSettings.fromMap(map['notificationSettings'])
+          : NotificationSettings(),
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +141,7 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'notificationSettings': notificationSettings.toMap(),
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +172,7 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    NotificationSettings? notificationSettings,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +202,7 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
