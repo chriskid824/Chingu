@@ -289,6 +289,36 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 匯出用戶資料
+  ///
+  /// [uid] 用戶 ID
+  Future<Map<String, dynamic>> exportUserData(String uid) async {
+    try {
+      final userData = <String, dynamic>{};
+
+      // 1. User Profile
+      final userDoc = await _usersCollection.doc(uid).get();
+      if (userDoc.exists && userDoc.data() != null) {
+        userData['profile'] = userDoc.data();
+      }
+
+      // 2. Moments (Posts)
+      final momentsSnapshot = await _firestore
+          .collection('moments')
+          .where('userId', isEqualTo: uid)
+          .get();
+
+      if (momentsSnapshot.docs.isNotEmpty) {
+        userData['moments'] =
+            momentsSnapshot.docs.map((doc) => doc.data()).toList();
+      }
+
+      return userData;
+    } catch (e) {
+      throw Exception('匯出資料失敗: $e');
+    }
+  }
 }
 
 

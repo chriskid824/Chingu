@@ -13,8 +13,8 @@ enum AuthStatus {
 
 /// 認證 Provider - 管理用戶認證狀態
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final AuthService _authService;
+  final FirestoreService _firestoreService;
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -31,7 +31,9 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   String? get uid => _firebaseUser?.uid;
 
-  AuthProvider() {
+  AuthProvider({AuthService? authService, FirestoreService? firestoreService})
+      : _authService = authService ?? AuthService(),
+        _firestoreService = firestoreService ?? FirestoreService() {
     // 監聽認證狀態變化
     _authService.authStateChanges.listen(_onAuthStateChanged);
   }
@@ -278,6 +280,58 @@ class AuthProvider with ChangeNotifier {
     if (_firebaseUser != null) {
       await _loadUserData(_firebaseUser!.uid);
       notifyListeners();
+    }
+  }
+
+  /// 匯出用戶資料
+  Future<Map<String, dynamic>> exportUserData() async {
+    try {
+      if (_firebaseUser == null) return {};
+      _setLoading(true);
+      final data = await _firestoreService.exportUserData(_firebaseUser!.uid);
+      _setLoading(false);
+      return data;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return {};
+    }
+  }
+
+  /// 刪除帳號
+  Future<bool> deleteAccount() async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      if (_firebaseUser == null) {
+        throw Exception('用戶未登入');
+      }
+
+      // 1. 刪除 Firestore 資料
+      await _firestoreService.deleteUser(_firebaseUser!.uid);
+
+      // 2. 刪除 Firebase Auth 帳號
+      await _authService.deleteAccount();
+
+      // 3. 清理本地狀態
+      _status = AuthStatus.uninitialized;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      // 如果是需要重新登入的錯誤，重新拋出以便 UI 處理
+      if (e.toString().contains('requires-recent-login') ||
+          e.toString().contains('需要最近登入')) {
+        rethrow;
+      }
+      return false;
     }
   }
 
