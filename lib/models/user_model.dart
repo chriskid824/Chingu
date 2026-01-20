@@ -33,6 +33,9 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 收藏列表
+  final List<String> favorites;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,6 +66,7 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.favorites = const [],
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +105,7 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      favorites: List<String>.from(map['favorites'] ?? []),
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +138,7 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'favorites': favorites,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +169,7 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    List<String>? favorites,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +199,7 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      favorites: favorites ?? this.favorites,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
