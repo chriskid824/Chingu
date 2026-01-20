@@ -4,6 +4,8 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/chat_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -22,6 +24,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -30,9 +33,43 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
-        _otherUser = args['otherUser'];
+        if (args['otherUser'] != null) {
+          _otherUser = args['otherUser'];
+        } else if (args['otherUserId'] != null) {
+          _fetchOtherUser(args['otherUserId'], fetchRoom: _chatRoomId == null);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String userId, {bool fetchRoom = false}) async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await FirestoreService().getUser(userId);
+
+      String? roomId = _chatRoomId;
+      if (fetchRoom) {
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.uid.isNotEmpty) {
+           roomId = await ChatService().createChatRoom(authProvider.uid, userId);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _otherUser = user;
+          if (roomId != null) {
+            _chatRoomId = roomId;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user or chat room: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -128,6 +165,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
     if (_chatRoomId == null || _otherUser == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -153,7 +197,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
               child: Center(
                 child: Text(
-                  _otherUser!.name[0].toUpperCase(),
+                  _otherUser!.name.isNotEmpty ? _otherUser!.name[0].toUpperCase() : '?',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

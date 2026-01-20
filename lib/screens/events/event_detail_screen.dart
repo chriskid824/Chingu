@@ -1,14 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:intl/intl.dart';
 
-class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key});
-  
+class EventDetailScreen extends StatefulWidget {
+  final String? eventId;
+
+  const EventDetailScreen({super.key, this.eventId});
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  DinnerEventModel? _event;
+  bool _isLoading = true;
+  final DinnerEventService _dinnerEventService = DinnerEventService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvent();
+  }
+
+  Future<void> _loadEvent() async {
+    if (widget.eventId == null) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final event = await _dinnerEventService.getEvent(widget.eventId!);
+      if (mounted) {
+        setState(() {
+          _event = event;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading event: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    if (_isLoading && widget.eventId != null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
+    // Default values or loaded values
+    final String title = '6人晚餐聚會'; // Generic title
+    final String dateTimeStr = _event != null
+        ? DateFormat('yyyy年MM月dd日 (E)\nHH:mm', 'zh_TW').format(_event!.dateTime)
+        : '2025年10月15日 (星期三)\n19:00';
+    final String budgetStr = _event != null
+        ? 'NT\$ ${_event!.budgetRange * 500}-${_event!.budgetRange * 500 + 300} / 人' // Approximate logic
+        : 'NT\$ 500-800 / 人';
+    final String locationStr = _event != null
+        ? '${_event!.city} ${_event!.district}'
+        : '台北市信義區信義路五段7號';
+    final int currentParticipants = _event?.participantIds.length ?? 4;
+    final int maxParticipants = 6;
+    final String participantsStr = '6 人（固定）\n目前已報名：$currentParticipants 人';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -117,7 +185,7 @@ class EventDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '6人晚餐聚會',
+                          title,
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -157,7 +225,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    dateTimeStr,
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +233,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    budgetStr,
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +241,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    locationStr,
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,7 +249,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    participantsStr,
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
