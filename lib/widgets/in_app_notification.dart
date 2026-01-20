@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
@@ -14,6 +15,36 @@ class InAppNotification extends StatelessWidget {
     this.onDismiss,
     this.onTap,
   });
+
+  static OverlayEntry? _currentEntry;
+
+  /// Shows an in-app notification banner at the top of the screen.
+  ///
+  /// Replaces any currently displayed notification.
+  static void show(BuildContext context, NotificationModel notification, {VoidCallback? onTap}) {
+    // Remove existing notification immediately if any
+    _currentEntry?.remove();
+    _currentEntry = null;
+
+    final overlayState = Overlay.of(context);
+
+    late OverlayEntry overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationContainer(
+        notification: notification,
+        onDismiss: () {
+          if (_currentEntry == overlayEntry) {
+            _currentEntry?.remove();
+            _currentEntry = null;
+          }
+        },
+        onTap: onTap,
+      ),
+    );
+
+    _currentEntry = overlayEntry;
+    overlayState.insert(overlayEntry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +187,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -178,7 +209,94 @@ class InAppNotification extends StatelessWidget {
         return chinguTheme.warning;
       case 'system':
       default:
-        return chinguTheme.success; // Or primary
+        return chinguTheme.success;
     }
+  }
+}
+
+class _InAppNotificationContainer extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback onDismiss;
+  final VoidCallback? onTap;
+
+  const _InAppNotificationContainer({
+    required this.notification,
+    required this.onDismiss,
+    this.onTap,
+  });
+
+  @override
+  State<_InAppNotificationContainer> createState() => _InAppNotificationContainerState();
+}
+
+class _InAppNotificationContainerState extends State<_InAppNotificationContainer> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _autoDismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeIn,
+    ));
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed) {
+        widget.onDismiss();
+      }
+    });
+
+    // Start animation
+    _controller.forward();
+
+    // Setup auto dismiss
+    _autoDismissTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        _controller.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoDismissTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleDismiss() {
+    _autoDismissTimer?.cancel();
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: InAppNotification(
+          notification: widget.notification,
+          onDismiss: _handleDismiss,
+          onTap: () {
+            widget.onTap?.call();
+            _handleDismiss();
+          },
+        ),
+      ),
+    );
   }
 }
