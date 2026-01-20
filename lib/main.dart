@@ -31,11 +31,35 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 檢查是否從通知啟動
+  final launchDetails = await RichNotificationService().checkInitialLaunch();
+
+  runApp(ChinguApp(initialLaunchDetails: launchDetails));
 }
 
-class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+class ChinguApp extends StatefulWidget {
+  final NotificationLaunchDetails? initialLaunchDetails;
+
+  const ChinguApp({super.key, this.initialLaunchDetails});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    // 如果有通知啟動資料，在第一幀後進行導航
+    if (widget.initialLaunchDetails != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppRouter.navigatorKey.currentState?.pushNamed(
+          widget.initialLaunchDetails!.route,
+          arguments: widget.initialLaunchDetails!.arguments,
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
