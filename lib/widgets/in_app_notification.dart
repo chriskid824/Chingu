@@ -74,7 +74,7 @@ class InAppNotification extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          notification.message,
+                          notification.content,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.7),
                           ),
