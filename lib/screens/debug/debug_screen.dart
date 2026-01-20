@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -168,6 +169,41 @@ class _DebugScreenState extends State<DebugScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('Crashlytics 測試', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    // 拋出一個測試異常
+                    throw Exception('Debug Screen Test Crash');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('測試崩潰'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    CrashReportingService().recordError(
+                      Exception('Test Non-Fatal Error'),
+                      StackTrace.current,
+                      reason: 'Debug Screen Manual Test',
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已發送測試錯誤日誌')),
+                    );
+                  },
+                  child: const Text('記錄錯誤'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),

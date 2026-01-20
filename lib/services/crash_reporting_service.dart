@@ -18,6 +18,21 @@ class CrashReportingService {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
+
+    if (kDebugMode) {
+      // Force disable Crashlytics collection while doing every day development.
+      // Temporarily toggle this to true if you want to test crash reporting in your app.
+      // await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+
+      // For now, we keep it enabled or default to verify integration.
+      // To disable in debug:
+      // await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    }
+  }
+
+  /// Enable or disable Crashlytics collection
+  Future<void> setCollectionEnabled(bool enabled) async {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(enabled);
   }
 
   /// Log a message to Crashlytics
