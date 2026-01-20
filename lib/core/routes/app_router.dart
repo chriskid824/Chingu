@@ -38,6 +38,7 @@ import '../../screens/chat/sticker_manager_screen.dart';
 // 設定模組
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
+import '../../screens/settings/delete_account_screen.dart';
 import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String deleteAccount = '/delete-account';
 }
 
 /// 應用程式路由配置
@@ -229,6 +231,9 @@ class AppRouter {
 
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.deleteAccount:
+        return MaterialPageRoute(builder: (_) => const DeleteAccountScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
