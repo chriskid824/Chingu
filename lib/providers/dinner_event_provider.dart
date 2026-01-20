@@ -26,6 +26,8 @@ class DinnerEventProvider with ChangeNotifier {
     required String city,
     required String district,
     String? notes,
+    int maxParticipants = 6,
+    DateTime? registrationDeadline,
   }) async {
     try {
       _setLoading(true);
@@ -38,6 +40,8 @@ class DinnerEventProvider with ChangeNotifier {
         city: city,
         district: district,
         notes: notes,
+        maxParticipants: maxParticipants,
+        registrationDeadline: registrationDeadline,
       );
 
       // 創建成功後刷新我的活動列表
@@ -127,33 +131,43 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
+  /// 取消活動
+  Future<bool> cancelEvent(String eventId, String userId) async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      await _dinnerEventService.cancelEvent(eventId);
+
+      // 刷新列表
+      await fetchMyEvents(userId);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 獲取本週四和下週四的日期
   List<DateTime> getThursdayDates() {
     return _dinnerEventService.getThursdayDates();
   }
 
   /// 獲取可預約的日期
-  /// 過濾規則：
-  /// 1. 如果已經是週一（含）以後，不能預約本週四
-  /// 2. 如果已經參加了該日期的活動，不能重複預約
   List<DateTime> getBookableDates() {
     final dates = _dinnerEventService.getThursdayDates();
     final now = DateTime.now();
     
     return dates.where((date) {
-      // 1. 檢查截止時間
-      // 計算該日期所在週的週一
-      // date.weekday: 4 (Thursday)
-      // Monday is date - 3 days
       final monday = DateTime(date.year, date.month, date.day).subtract(const Duration(days: 3));
-      
-      // 如果現在已經過了週一 00:00，則該日期不可預約
       if (now.isAfter(monday)) {
         return false;
       }
 
-      // 2. 檢查是否已參加
-      // 檢查 myEvents 中是否有同日期的活動
       final isJoined = _myEvents.any((event) {
         final eventDate = event.dateTime;
         return eventDate.year == date.year && 
@@ -169,7 +183,6 @@ class DinnerEventProvider with ChangeNotifier {
     }).toList();
   }
 
-  /// 是否還有可預約的場次
   bool get canBookMore => getBookableDates().isNotEmpty;
 
   /// 預約活動
@@ -213,6 +226,3 @@ class DinnerEventProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
