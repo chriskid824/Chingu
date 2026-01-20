@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -9,18 +10,23 @@ enum AuthStatus {
   uninitialized, // 未初始化
   authenticated, // 已認證
   unauthenticated, // 未認證
+  requiresTwoFactor, // 需要雙重驗證
 }
 
 /// 認證 Provider - 管理用戶認證狀態
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final TwoFactorAuthService _twoFactorService = TwoFactorAuthService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
   UserModel? _userModel;
   String? _errorMessage;
   bool _isLoading = false;
+
+  // 2FA 狀態
+  bool _isTwoFactorVerified = false;
 
   // Getters
   AuthStatus get status => _status;
@@ -43,11 +49,18 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      _isTwoFactorVerified = false;
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
-      _status = AuthStatus.authenticated;
+
+      // 檢查是否需要 2FA
+      if (_userModel?.isTwoFactorEnabled == true && !_isTwoFactorVerified) {
+        _status = AuthStatus.requiresTwoFactor;
+      } else {
+        _status = AuthStatus.authenticated;
+      }
     }
     notifyListeners();
   }
@@ -149,7 +162,19 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
 
+      // 確保用戶資料已載入
+      if (_firebaseUser != null) {
+        await _loadUserData(_firebaseUser!.uid);
+
+        if (_userModel?.isTwoFactorEnabled == true) {
+          _status = AuthStatus.requiresTwoFactor;
+        } else {
+          _status = AuthStatus.authenticated;
+        }
+      }
+
       _setLoading(false);
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -195,7 +220,17 @@ class AuthProvider with ChangeNotifier {
         await _firestoreService.createUser(userModel);
       }
 
+      // 確保用戶資料已載入
+      await _loadUserData(firebaseUser.uid);
+
+      if (_userModel?.isTwoFactorEnabled == true) {
+        _status = AuthStatus.requiresTwoFactor;
+      } else {
+        _status = AuthStatus.authenticated;
+      }
+
       _setLoading(false);
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -210,11 +245,101 @@ class AuthProvider with ChangeNotifier {
     try {
       _setLoading(true);
       await _authService.signOut();
+      _isTwoFactorVerified = false;
       _setLoading(false);
     } catch (e) {
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
+    }
+  }
+
+  // ---------------- 2FA 方法 ----------------
+
+  /// 發送 2FA 驗證碼
+  Future<void> sendTwoFactorCode() async {
+    if (_userModel == null) return;
+
+    try {
+      _setLoading(true);
+
+      final method = _userModel!.twoFactorMethod;
+      final contact = method == 'email'
+          ? _userModel!.email
+          : (_userModel!.phoneNumber ?? '');
+
+      if (contact.isEmpty) {
+        throw Exception('無法發送驗證碼：找不到聯絡方式');
+      }
+
+      await _twoFactorService.sendVerificationCode(
+        userId: _userModel!.uid,
+        method: method,
+        contact: contact,
+      );
+
+      _setLoading(false);
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// 驗證 2FA 代碼
+  Future<bool> verifyTwoFactorCode(String code) async {
+    if (_userModel == null) return false;
+
+    try {
+      _setLoading(true);
+
+      final isValid = await _twoFactorService.verifyCode(
+        userId: _userModel!.uid,
+        code: code,
+      );
+
+      if (isValid) {
+        _isTwoFactorVerified = true;
+        _status = AuthStatus.authenticated;
+      } else {
+        _errorMessage = '驗證碼錯誤';
+      }
+
+      _setLoading(false);
+      notifyListeners();
+      return isValid;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 切換 2FA 設定
+  Future<bool> toggleTwoFactor(bool enabled, {String? method, String? phoneNumber}) async {
+    if (_userModel == null) return false;
+
+    try {
+      _setLoading(true);
+
+      final data = <String, dynamic>{
+        'isTwoFactorEnabled': enabled,
+      };
+
+      if (method != null) data['twoFactorMethod'] = method;
+      if (phoneNumber != null) data['phoneNumber'] = phoneNumber;
+
+      await updateUserData(data);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
     }
   }
 
@@ -292,7 +417,15 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 獲取遮蔽後的聯絡資訊
+  String get maskedContact {
+    if (_userModel == null) return '';
+    return _twoFactorService.maskContact(
+      _userModel!.twoFactorMethod == 'email'
+          ? _userModel!.email
+          : (_userModel!.phoneNumber ?? ''),
+      _userModel!.twoFactorMethod
+    );
+  }
 }
-
-
-

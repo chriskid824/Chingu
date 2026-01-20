@@ -5,6 +5,7 @@ import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/email_verification_screen.dart';
+import '../../screens/auth/two_factor_verification_screen.dart';
 // 主導航
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
@@ -55,6 +56,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String emailVerification = '/email-verification';
+  static const String twoFactorVerification = '/two-factor-verification';
   
   // 主導航
   static const String mainNavigation = '/main';
@@ -126,6 +128,9 @@ class AppRouter {
       case AppRoutes.emailVerification:
         return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
       
+      case AppRoutes.twoFactorVerification:
+        return MaterialPageRoute(builder: (_) => const TwoFactorVerificationScreen());
+
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
         final args = settings.arguments;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
@@ -8,6 +10,8 @@ class PrivacySettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.userModel;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -63,14 +67,24 @@ class PrivacySettingsScreen extends StatelessWidget {
             leading: Icon(Icons.lock_outline, color: theme.colorScheme.onSurface.withOpacity(0.7)),
             title: const Text('變更密碼'),
             trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
-            onTap: () {},
+            onTap: () {
+              // TODO: Navigate to change password screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('請使用忘記密碼功能重設')),
+              );
+            },
           ),
           ListTile(
             leading: Icon(Icons.phone_android, color: theme.colorScheme.onSurface.withOpacity(0.7)),
             title: const Text('雙重驗證'),
-            subtitle: Text('已啟用', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            subtitle: Text(
+              user?.isTwoFactorEnabled == true
+                  ? '已啟用 (${user?.twoFactorMethod == 'sms' ? '簡訊' : 'Email'})'
+                  : '未啟用',
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+            ),
             trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
-            onTap: () {},
+            onTap: () => _showTwoFactorSettings(context),
           ),
           const Divider(),
           _buildSectionTitle(context, '資料管理'),
@@ -153,9 +167,157 @@ class PrivacySettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showTwoFactorSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const TwoFactorSettingsSheet(),
+    );
+  }
 }
 
+class TwoFactorSettingsSheet extends StatefulWidget {
+  const TwoFactorSettingsSheet({super.key});
 
+  @override
+  State<TwoFactorSettingsSheet> createState() => _TwoFactorSettingsSheetState();
+}
 
+class _TwoFactorSettingsSheetState extends State<TwoFactorSettingsSheet> {
+  bool _isEnabled = false;
+  String _method = 'email';
+  final _phoneController = TextEditingController();
+  bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<AuthProvider>().userModel;
+    if (user != null) {
+      _isEnabled = user.isTwoFactorEnabled;
+      _method = user.twoFactorMethod;
+      _phoneController.text = user.phoneNumber ?? '';
+    }
+  }
 
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_method == 'sms' && _phoneController.text.isEmpty && _isEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請輸入手機號碼')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await context.read<AuthProvider>().toggleTwoFactor(
+        _isEnabled,
+        method: _method,
+        phoneNumber: _phoneController.text.isEmpty ? null : _phoneController.text,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('設定失敗: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '雙重驗證設定',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SwitchListTile(
+            title: const Text('啟用雙重驗證'),
+            value: _isEnabled,
+            onChanged: (v) => setState(() => _isEnabled = v),
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (_isEnabled) ...[
+            const SizedBox(height: 16),
+            const Text('驗證方式'),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'email', label: Text('Email')),
+                ButtonSegment(value: 'sms', label: Text('簡訊')),
+              ],
+              selected: {_method},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() {
+                  _method = newSelection.first;
+                });
+              },
+            ),
+            if (_method == 'sms') ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: '手機號碼',
+                  hintText: '0912345678',
+                  prefixIcon: Icon(Icons.phone),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ],
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _isLoading ? null : _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : const Text('儲存設定'),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
