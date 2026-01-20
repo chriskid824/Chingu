@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +29,19 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+
+    // 初始化通知服務
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService().initialize();
+
+      // 更新 FCM Token
+      if (mounted) {
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.uid.isNotEmpty) {
+          await NotificationService().updateUserToken(authProvider.uid);
+        }
+      }
+    });
   }
 
   final List<Widget> _screens = [

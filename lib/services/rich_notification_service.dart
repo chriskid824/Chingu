@@ -70,15 +70,15 @@ class RichNotificationService {
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
     }
   }
 
-  /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  /// 處理導航邏輯 (公開方法，供 NotificationService 調用)
+  void handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -91,32 +91,42 @@ class RichNotificationService {
     // 處理一般通知點擊
     if (actionType != null) {
       _performAction(actionType, actionData, navigator);
+    } else {
+      // 預設導航到通知頁面
+      navigator.pushNamed(AppRoutes.notifications);
     }
   }
 
   void _performAction(String action, String? data, NavigatorState navigator) {
     switch (action) {
       case 'open_chat':
+      case 'chat':
+      case 'message':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          // 假設 data 是 otherUserId
+          navigator.pushNamed(AppRoutes.chatDetail, arguments: {'otherUserId': data});
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
+      case 'event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: {'eventId': data});
+        } else {
+          navigator.pushNamed(AppRoutes.eventsList);
+        }
+        break;
+      case 'view_match':
+      case 'match':
+        if (data != null) {
+           navigator.pushNamed(AppRoutes.userDetail, arguments: {'userId': data});
+        } else {
+           navigator.pushNamed(AppRoutes.matchesList);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
@@ -153,13 +163,13 @@ class RichNotificationService {
 
     // 定義操作按鈕
     List<AndroidNotificationAction> actions = [];
-    if (notification.actionType == 'open_chat') {
+    if (notification.actionType == 'open_chat' || notification.actionType == 'chat' || notification.actionType == 'message') {
       actions.add(const AndroidNotificationAction(
         'open_chat',
         '回覆',
         showsUserInterface: true,
       ));
-    } else if (notification.actionType == 'view_event') {
+    } else if (notification.actionType == 'view_event' || notification.actionType == 'event') {
       actions.add(const AndroidNotificationAction(
         'view_event',
         '查看詳情',

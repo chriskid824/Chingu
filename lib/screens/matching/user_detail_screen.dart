@@ -1,13 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/models/user_model.dart';
 
-class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
-  
+class UserDetailScreen extends StatefulWidget {
+  final String? userId;
+
+  const UserDetailScreen({
+    super.key,
+    this.userId,
+  });
+
+  @override
+  State<UserDetailScreen> createState() => _UserDetailScreenState();
+}
+
+class _UserDetailScreenState extends State<UserDetailScreen> {
+  UserModel? _user;
+  bool _isLoading = true;
+  final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    if (widget.userId == null) {
+      setState(() {
+        _isLoading = false;
+        // Keep _user null to show fallback or dummy
+      });
+      return;
+    }
+
+    try {
+      final user = await _firestoreService.getUser(widget.userId!);
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // Fallback/Dummy Data if user is not loaded
+    // In a real scenario we might want to show an error or a skeleton
+    // For now, if no userId and no user loaded, we show the hardcoded view (or partial)
+    // But to make it work with the existing hardcoded design, we can map fields.
+
+    // If we are loading and have a userId, show loader
+    if (_isLoading && widget.userId != null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
+    // Use loaded user or fallback values
+    final String name = _user?.name ?? '陳大明';
+    final int age = _user?.age ?? 30;
+    final String occupation = _user?.occupation ?? '軟體工程師';
+    final String city = _user?.city ?? '台北市';
+    final String district = _user?.district ?? '信義區';
+    final String aboutMe = _user?.aboutMe ?? '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。';
+    final List<String> interests = _user?.interests ?? ['科技', '美食', '運動', '旅遊', '攝影'];
+    final String gender = _user?.gender == 'male' ? '男性' : (_user?.gender == 'female' ? '女性' : '其他');
+
+    // Budget mapping if possible, else hardcoded
+    final String budget = 'NT\$ 500-800';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -46,13 +121,21 @@ class UserDetailScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: chinguTheme?.primaryGradient,
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.person,
-                        size: 140,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _user?.profileImages != null && _user!.profileImages.isNotEmpty
+                        ? Image.network(
+                            _user!.profileImages.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Center(
+                              child: Icon(Icons.person, size: 140, color: Colors.white),
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 140,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                   // 配對度標籤
                   Positioned(
@@ -112,7 +195,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '$name, $age',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -132,7 +215,7 @@ class UserDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '軟體工程師',
+                              occupation,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -162,7 +245,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.location_on_rounded,
                     '位置',
-                    '台北市, 信義區',
+                    '$city, $district',
                     theme.colorScheme.primary,
                     theme,
                   ),
@@ -170,15 +253,15 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800',
+                    budget,
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
                     Icons.favorite_rounded,
-                    '配對類型',
-                    '異性配對',
+                    '性別',
+                    gender,
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -213,7 +296,7 @@ class UserDetailScreen extends StatelessWidget {
                       border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                     ),
                     child: Text(
-                      '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
+                      aboutMe,
                       style: TextStyle(
                         fontSize: 15,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -247,13 +330,19 @@ class UserDetailScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
-                      _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
-                      _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
-                      _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
-                      _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
-                    ],
+                    children: interests.map((interest) {
+                      // Cycle colors based on interest hash or index?
+                      // For now just pick random or cycle from predefined.
+                      final color = [
+                        theme.colorScheme.primary,
+                        chinguTheme?.error ?? Colors.red,
+                        chinguTheme?.success ?? Colors.green,
+                        chinguTheme?.warning ?? Colors.amber,
+                        chinguTheme?.secondary ?? Colors.purple
+                      ][interest.hashCode % 5];
+
+                      return _buildInterestChip(interest, Icons.star_rounded, color);
+                    }).toList(),
                   ),
                   
                   const SizedBox(height: 32),
