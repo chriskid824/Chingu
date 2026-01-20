@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -34,9 +35,11 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Registration Auth Error');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Registration Error');
       throw Exception('註冊過程發生錯誤: $e');
     }
   }
@@ -63,9 +66,11 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SignIn Auth Error');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SignIn Error');
       throw Exception('登入過程發生錯誤: $e');
     }
   }
@@ -101,7 +106,8 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Google SignIn Error');
       throw Exception('Google 登入失敗: $e');
     }
   }
@@ -113,7 +119,8 @@ class AuthService {
         _auth.signOut(),
         _googleSignIn.signOut(),
       ]);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'SignOut Error');
       throw Exception('登出失敗: $e');
     }
   }
