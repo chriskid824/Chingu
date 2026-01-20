@@ -65,17 +65,33 @@ class NotificationModel {
 
   /// 複製並標記為已讀
   NotificationModel markAsRead() {
+    return copyWith(isRead: true);
+  }
+
+  /// 複製並更新部分欄位
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? message,
+    String? imageUrl,
+    String? actionType,
+    String? actionData,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
     return NotificationModel(
-      id: id,
-      userId: userId,
-      type: type,
-      title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
-      isRead: true,
-      createdAt: createdAt,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
+      actionType: actionType ?? this.actionType,
+      actionData: actionData ?? this.actionData,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 

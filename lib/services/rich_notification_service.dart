@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -57,6 +58,61 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+  }
+
+  /// 設定 Firebase Messaging 監聽
+  /// [shouldShowNotification] 決定是否顯示通知的回調
+  /// [transformNotification] 轉換通知內容的回調 (例如：隱藏預覽)
+  void setupFirebaseMessaging({
+    required Future<bool> Function(String type, Map<String, dynamic> data) shouldShowNotification,
+    NotificationModel Function(NotificationModel model)? transformNotification,
+  }) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      final data = message.data;
+      final type = data['type'] as String? ?? 'system';
+
+      // 檢查是否應該顯示通知
+      if (await shouldShowNotification(type, data)) {
+        NotificationModel? model;
+
+        // 如果 notification 屬性不為空，顯示內容
+        final notification = message.notification;
+        if (notification != null) {
+          // 轉換 RemoteMessage 到 NotificationModel (簡單轉換)
+          model = NotificationModel(
+            id: message.messageId ?? DateTime.now().toString(),
+            userId: '', // 當前用戶 ID 不在此處獲取
+            type: type,
+            title: notification.title ?? '',
+            message: notification.body ?? '',
+            imageUrl: notification.android?.imageUrl ?? notification.apple?.imageUrl,
+            actionType: data['actionType'],
+            actionData: data['actionData'],
+            createdAt: DateTime.now(),
+          );
+        } else if (data['title'] != null && data['message'] != null) {
+           // 處理 data-only 通知
+           model = NotificationModel(
+            id: message.messageId ?? DateTime.now().toString(),
+            userId: '',
+            type: type,
+            title: data['title'],
+            message: data['message'], // 兼容舊版 key
+            imageUrl: data['imageUrl'],
+            actionType: data['actionType'],
+            actionData: data['actionData'],
+            createdAt: DateTime.now(),
+          );
+        }
+
+        if (model != null) {
+          if (transformNotification != null) {
+            model = transformNotification(model);
+          }
+          await showNotification(model);
+        }
+      }
+    });
   }
 
   /// 處理通知點擊事件
