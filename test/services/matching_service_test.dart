@@ -31,7 +31,8 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -47,7 +48,8 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
@@ -78,12 +80,12 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Location: same city, same district = 30
+      // Age: abs(25-24) = 1 <= 2 -> 10
+      // Budget: same = 10
+      // Total: 12.5 + 30 + 10 + 10 = 62.5 -> round to 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -115,6 +117,38 @@ void main() {
         city: anyNamed('city'),
         limit: anyNamed('limit'),
       )).thenAnswer((_) async => [oldCandidate]);
+
+      // Act
+      final results = await matchingService.getMatches(currentUser);
+
+      // Assert
+      expect(results, isEmpty);
+    });
+
+    test('should filter out blocked users', () async {
+      // Arrange
+      final currentUserWithBlock = currentUser.copyWith(blockedUsers: [candidateUser.uid]);
+
+      when(mockFirestoreService.queryMatchingUsers(
+        city: anyNamed('city'),
+        limit: anyNamed('limit'),
+      )).thenAnswer((_) async => [candidateUser]);
+
+      // Act
+      final results = await matchingService.getMatches(currentUserWithBlock);
+
+      // Assert
+      expect(results, isEmpty);
+    });
+
+    test('should filter out users who blocked me', () async {
+      // Arrange
+      final candidateWhoBlockedMe = candidateUser.copyWith(blockedUsers: [currentUser.uid]);
+
+      when(mockFirestoreService.queryMatchingUsers(
+        city: anyNamed('city'),
+        limit: anyNamed('limit'),
+      )).thenAnswer((_) async => [candidateWhoBlockedMe]);
 
       // Act
       final results = await matchingService.getMatches(currentUser);
