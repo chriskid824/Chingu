@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/chat_service.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +30,31 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+    _setupFcm();
+  }
+
+  Future<void> _setupFcm() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      // Request permission
+      final settings = await messaging.requestPermission();
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        final token = await messaging.getToken();
+        if (token != null) {
+          // Use addPostFrameCallback to safely access provider
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final authProvider = context.read<AuthProvider>();
+            final userId = authProvider.uid;
+            if (userId != null) {
+              ChatService().saveUserFcmToken(userId, token);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error setting up FCM: $e');
+    }
   }
 
   final List<Widget> _screens = [
