@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import '../../models/notification_model.dart';
+import '../../services/in_app_notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,6 +106,22 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  void _testInAppNotification() {
+    final notification = NotificationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: 'test_user',
+      type: 'match',
+      title: '配對成功！',
+      message: '你和 Alice 互相喜歡了對方，快去聊天吧！',
+      createdAt: DateTime.now(),
+      actionType: 'open_chat',
+    );
+    InAppNotificationService().show(notification);
+    setState(() {
+      _status = '🔔 通知已發送';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,6 +175,17 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _testInAppNotification,
+                icon: const Icon(Icons.notifications_active_rounded),
+                label: const Text('測試 In-App 通知'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
