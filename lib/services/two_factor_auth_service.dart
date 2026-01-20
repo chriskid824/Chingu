@@ -1,168 +1,140 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:chingu/services/firestore_service.dart';
 import 'package:flutter/foundation.dart';
 
-/// 雙因素認證服務
 class TwoFactorAuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
 
-  // 集合名稱
-  static const String _collection = 'two_factor_codes';
+  // Singleton instance
+  static final TwoFactorAuthService _instance = TwoFactorAuthService._internal();
+  factory TwoFactorAuthService() => _instance;
+  TwoFactorAuthService._internal();
 
   /// 發送驗證碼
   ///
-  /// [target] 發送目標 (Email 或 Phone Number)
-  /// [method] 發送方式 ('email' 或 'sms')
-  /// [uid] 用戶 ID (如果已知)
+  /// [userId] 用戶ID
+  /// [method] 驗證方式 ('email' 或 'sms')
+  /// [contact] 聯絡方式 (Email 或 電話號碼)
   Future<void> sendVerificationCode({
-    required String target,
+    required String userId,
     required String method,
-    String? uid,
+    required String contact,
   }) async {
     try {
       // 1. 生成 6 位數驗證碼
       final code = _generateCode();
+      final expiresAt = DateTime.now().add(const Duration(minutes: 5));
 
-      // 2. 設定過期時間 (10分鐘)
-      final expiresAt = DateTime.now().add(const Duration(minutes: 10));
-
-      // 3. 儲存到 Firestore
-      // 如果有 uid，我們也可以用 uid 作為 key，但驗證時通常是用 target (如 email) 查找
-      // 這裡我們用 target 作為文檔 ID，確保一個 target 同一時間只有一個有效 code
-      await _firestore.collection(_collection).doc(target).set({
-        // TODO: In production, do NOT store the plain text code in a client-readable document.
-        // This should be handled by a Cloud Function that stores a hash or handles verification.
-        // For this demo/MVP, we assume strict Firestore Security Rules prevent client read access.
+      // 2. 儲存到 Firestore
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('verification_codes')
+          .doc('current')
+          .set({
         'code': code,
         'method': method,
+        'contact': contact,
         'expiresAt': Timestamp.fromDate(expiresAt),
+        'attempts': 0,
         'createdAt': FieldValue.serverTimestamp(),
-        'uid': uid, // 可選，用於關聯
-        'attempts': 0, // 重試次數
       });
 
-      // 4. 發送代碼 (模擬)
-      _mockSendCode(target, code, method);
+      // 3. 模擬發送 (實際應用中應呼叫 Cloud Function)
+      if (kDebugMode) {
+        print('==========================================');
+        print('2FA 驗證碼 (${method.toUpperCase()}): $code');
+        print('發送至: $contact');
+        print('==========================================');
+      }
+
+      // 在真實環境中，這裡會觸發 Cloud Function 發送郵件或簡訊
+      // await _functions.httpsCallable('sendTwoFactorCode').call({...});
 
     } catch (e) {
       debugPrint('發送驗證碼失敗: $e');
-      throw Exception('發送驗證碼失敗: $e');
+      throw Exception('發送驗證碼失敗，請稍後再試');
     }
   }
 
   /// 驗證代碼
   ///
-  /// [target] 發送目標 (Email 或 Phone Number)
-  /// [code] 用戶輸入的驗證碼
+  /// [userId] 用戶ID
+  /// [code] 用戶輸入的代碼
+  ///
   /// 返回是否驗證成功
-  Future<bool> verifyCode(String target, String code) async {
+  Future<bool> verifyCode({
+    required String userId,
+    required String code,
+  }) async {
     try {
-      // 模擬 Cloud Function 的行為
-      // TODO: Migrate to Cloud Functions for secure verification.
-      // Current implementation relies on client-side logic which is insecure if Firestore rules are open.
-      final docRef = _firestore.collection(_collection).doc(target);
+      final docRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('verification_codes')
+          .doc('current');
+
       final doc = await docRef.get();
 
       if (!doc.exists) {
-        throw Exception('驗證碼不存在或已過期');
+        throw Exception('驗證碼已過期或不存在');
       }
 
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data()!;
       final expiresAt = (data['expiresAt'] as Timestamp).toDate();
-      final savedCode = data['code'] as String;
-      final attempts = data['attempts'] as int? ?? 0;
+      final storedCode = data['code'] as String;
+      final attempts = data['attempts'] as int;
 
       // 檢查是否過期
       if (DateTime.now().isAfter(expiresAt)) {
-        throw Exception('驗證碼已過期');
+        throw Exception('驗證碼已過期，請重新發送');
       }
 
       // 檢查嘗試次數 (防止暴力破解)
-      if (attempts >= 5) {
-        throw Exception('嘗試次數過多，請重新發送');
+      if (attempts >= 3) {
+        await docRef.delete(); // 刪除以重置
+        throw Exception('嘗試次數過多，請重新發送驗證碼');
       }
 
-      // 檢查代碼是否匹配
-      if (savedCode == code) {
+      // 驗證代碼
+      if (storedCode == code) {
         // 驗證成功，刪除代碼
         await docRef.delete();
         return true;
       } else {
         // 驗證失敗，增加嘗試次數
-        await docRef.update({
-          'attempts': FieldValue.increment(1),
-        });
+        await docRef.update({'attempts': FieldValue.increment(1)});
         return false;
       }
     } catch (e) {
-      debugPrint('驗證代碼失敗: $e');
-      // 如果是我們拋出的異常，直接重拋
-      if (e.toString().contains('Exception:')) {
-        rethrow;
-      }
+      if (e is Exception) rethrow;
       throw Exception('驗證失敗: $e');
     }
   }
 
-  /// 啟用 2FA
-  ///
-  /// [uid] 用戶 ID
-  /// [method] 驗證方式 ('email' 或 'sms')
-  /// [phoneNumber] 電話號碼 (如果 method 是 sms)
-  Future<void> enableTwoFactor(String uid, String method, {String? phoneNumber}) async {
-    try {
-      if (method == 'sms' && (phoneNumber == null || phoneNumber.isEmpty)) {
-        throw Exception('啟用 SMS 驗證需要電話號碼');
-      }
-
-      final updates = {
-        'isTwoFactorEnabled': true,
-        'twoFactorMethod': method,
-      };
-
-      if (phoneNumber != null) {
-        updates['phoneNumber'] = phoneNumber;
-      }
-
-      await _firestoreService.updateUser(uid, updates);
-    } catch (e) {
-      debugPrint('啟用 2FA 失敗: $e');
-      throw Exception('啟用 2FA 失敗: $e');
-    }
-  }
-
-  /// 停用 2FA
-  ///
-  /// [uid] 用戶 ID
-  Future<void> disableTwoFactor(String uid) async {
-    try {
-      await _firestoreService.updateUser(uid, {
-        'isTwoFactorEnabled': false,
-      });
-    } catch (e) {
-      debugPrint('停用 2FA 失敗: $e');
-      throw Exception('停用 2FA 失敗: $e');
-    }
-  }
-
-  /// 生成 6 位數隨機代碼
+  /// 生成 6 位數隨機碼
   String _generateCode() {
     final random = Random();
     final code = random.nextInt(900000) + 100000;
     return code.toString();
   }
 
-  /// 模擬發送代碼
-  void _mockSendCode(String target, String code, String method) {
-    // 這裡實際上會調用 SMS 網關 (如 Twilio) 或 Email 服務 (如 SendGrid)
-    // 但在演示環境中，我們只打印到控制台
-    debugPrint('==========================================');
-    debugPrint('MOCK SENDING 2FA CODE');
-    debugPrint('To: $target');
-    debugPrint('Method: $method');
-    debugPrint('Code: $code');
-    debugPrint('==========================================');
+  /// 遮蔽 Email 或電話號碼
+  String maskContact(String contact, String method) {
+    if (method == 'email') {
+      final parts = contact.split('@');
+      if (parts.length != 2) return contact;
+      final name = parts[0];
+      final domain = parts[1];
+
+      if (name.length <= 2) {
+        return '${name}***@$domain';
+      }
+      return '${name.substring(0, 2)}***${name.substring(name.length - 1)}@$domain';
+    } else {
+      // SMS
+      if (contact.length < 4) return contact;
+      return '${contact.substring(0, 4)}****${contact.substring(contact.length - 2)}';
+    }
   }
 }
