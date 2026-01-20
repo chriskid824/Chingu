@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -84,6 +85,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId, // Optional, can be resolved if not provided
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -95,6 +97,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Add 'text' field for compatibility with ChatProvider/UI
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -114,6 +117,36 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推播通知
+      // 如果沒有提供 recipientId，嘗試從聊天室獲取
+      String? targetRecipientId = recipientId;
+      if (targetRecipientId == null) {
+        final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+          final data = chatRoomDoc.data() as Map<String, dynamic>;
+          final participantIds = List<String>.from(data['participantIds'] ?? []);
+          targetRecipientId = participantIds.firstWhere(
+            (id) => id != senderId,
+            orElse: () => '',
+          );
+        }
+      }
+
+      if (targetRecipientId != null && targetRecipientId.isNotEmpty) {
+        // 使用 Cloud Function 發送通知
+        try {
+          await FirebaseFunctions.instance.httpsCallable('sendChatNotification').call({
+            'recipientId': targetRecipientId,
+            'senderName': senderName,
+            'messageContent': type == 'text' ? message : '[圖片]',
+            'chatRoomId': chatRoomId,
+          });
+        } catch (e) {
+          print('發送推播通知失敗: $e');
+          // 不拋出異常，以免影響訊息發送流程
+        }
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
