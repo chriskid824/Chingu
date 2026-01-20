@@ -1,6 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// 晚餐活動模型（固定6人）
+/// 用戶報名狀態
+enum EventRegistrationStatus {
+  registered,
+  waitlist,
+  cancelled,
+  unknown
+}
+
+/// 晚餐活動模型
 class DinnerEventModel {
   final String id;
   final String creatorId;
@@ -10,9 +18,13 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者
+  final int maxParticipants;
+  final int currentParticipants;
   final List<String> participantIds; // 用戶 UID 列表
+  final List<String> waitingList; // 候補名單 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final DateTime? registrationDeadline;
   
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
@@ -41,8 +53,12 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
+    this.currentParticipants = 1,
     required this.participantIds,
+    this.waitingList = const [],
     required this.participantStatus,
+    this.registrationDeadline,
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -72,8 +88,14 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
+      currentParticipants: map['currentParticipants'] ?? (map['participantIds'] as List?)?.length ?? 1,
       participantIds: List<String>.from(map['participantIds'] ?? []),
+      waitingList: List<String>.from(map['waitingList'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      registrationDeadline: map['registrationDeadline'] != null
+          ? (map['registrationDeadline'] as Timestamp).toDate()
+          : null,
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -105,8 +127,12 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
+      'currentParticipants': currentParticipants,
       'participantIds': participantIds,
+      'waitingList': waitingList,
       'participantStatus': participantStatus,
+      'registrationDeadline': registrationDeadline != null ? Timestamp.fromDate(registrationDeadline!) : null,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -128,8 +154,12 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
+    int? currentParticipants,
     List<String>? participantIds,
+    List<String>? waitingList,
     Map<String, String>? participantStatus,
+    DateTime? registrationDeadline,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -149,8 +179,12 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
+      currentParticipants: currentParticipants ?? this.currentParticipants,
       participantIds: participantIds ?? this.participantIds,
+      waitingList: waitingList ?? this.waitingList,
       participantStatus: participantStatus ?? this.participantStatus,
+      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -197,8 +231,8 @@ class DinnerEventModel {
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  /// 檢查是否已滿
+  bool get isFull => currentParticipants >= maxParticipants;
 
   /// 獲取已確認人數
   int get confirmedCount {
@@ -219,7 +253,3 @@ class DinnerEventModel {
     return sum / ratings!.length;
   }
 }
-
-
-
-
