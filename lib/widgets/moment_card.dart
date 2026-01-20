@@ -38,6 +38,9 @@ class _MomentCardState extends State<MomentCard> {
   void didUpdateWidget(MomentCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.moment != oldWidget.moment) {
+      // If the parent updates the moment, we sync our local state
+      // This might override optimistic updates if the API call hasn't finished yet
+      // but it's necessary to keep data consistent.
       _isLiked = widget.moment.isLiked;
       _likeCount = widget.moment.likeCount;
       _commentCount = widget.moment.commentCount;
@@ -157,16 +160,29 @@ class _MomentCardState extends State<MomentCard> {
           Row(
             children: [
               _ActionButton(
-                icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                  child: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    key: ValueKey(_isLiked),
+                    size: 20,
+                    color: _isLiked ? (chinguTheme?.error ?? Colors.red) : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
                 label: '$_likeCount',
-                color: _isLiked ? (chinguTheme?.error ?? Colors.red) : theme.colorScheme.onSurfaceVariant,
+                textColor: _isLiked ? (chinguTheme?.error ?? Colors.red) : theme.colorScheme.onSurfaceVariant,
                 onTap: _toggleLike,
               ),
               const SizedBox(width: 24),
               _ActionButton(
-                icon: Icons.chat_bubble_outline,
+                icon: Icon(
+                  Icons.chat_bubble_outline,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
                 label: '$_commentCount',
-                color: theme.colorScheme.onSurfaceVariant,
+                textColor: theme.colorScheme.onSurfaceVariant,
                 onTap: widget.onCommentTap,
               ),
             ],
@@ -178,15 +194,15 @@ class _MomentCardState extends State<MomentCard> {
 }
 
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
+  final Widget icon;
   final String label;
-  final Color color;
+  final Color textColor;
   final VoidCallback? onTap;
 
   const _ActionButton({
     required this.icon,
     required this.label,
-    required this.color,
+    required this.textColor,
     this.onTap,
   });
 
@@ -199,12 +215,12 @@ class _ActionButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: color),
+            icon,
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: color,
+                color: textColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
