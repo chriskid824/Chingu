@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 class DinnerEventProvider with ChangeNotifier {
   final DinnerEventService _dinnerEventService;
@@ -39,6 +40,12 @@ class DinnerEventProvider with ChangeNotifier {
         district: district,
         notes: notes,
       );
+
+      AnalyticsService().logEvent(name: 'create_event', parameters: {
+        'city': city,
+        'district': district,
+        'budget_range': budgetRange,
+      });
 
       // 創建成功後刷新我的活動列表
       await fetchMyEvents(creatorId);
@@ -92,6 +99,8 @@ class DinnerEventProvider with ChangeNotifier {
       _errorMessage = null;
 
       await _dinnerEventService.joinEvent(eventId, userId);
+
+      AnalyticsService().logJoinEvent(eventId: eventId);
       
       // 刷新列表
       await fetchMyEvents(userId);
@@ -189,6 +198,12 @@ class DinnerEventProvider with ChangeNotifier {
         city: city,
         district: district,
       );
+
+      AnalyticsService().logEvent(name: 'book_event', parameters: {
+        'city': city,
+        'district': district,
+        'date': date.toIso8601String(),
+      });
       
       // 刷新列表
       await fetchMyEvents(userId);
