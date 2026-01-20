@@ -12,6 +12,8 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -22,6 +24,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 設定背景訊息處理器
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
@@ -31,11 +36,39 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 初始化通知服務
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  // 檢查是否有初始通知 (Terminated 狀態)
+  final initialNotificationAction = await notificationService.getInitialNotificationAction();
+
+  runApp(ChinguApp(initialNotificationAction: initialNotificationAction));
 }
 
-class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+class ChinguApp extends StatefulWidget {
+  final Map<String, String?>? initialNotificationAction;
+
+  const ChinguApp({super.key, this.initialNotificationAction});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialNotificationAction != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        RichNotificationService().handleNavigation(
+          widget.initialNotificationAction!['actionType'],
+          widget.initialNotificationAction!['actionData'],
+          null,
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
