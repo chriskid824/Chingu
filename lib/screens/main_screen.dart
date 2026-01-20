@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_settings_model.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +30,54 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+
+    // 初始化通知監聽並設定過濾邏輯
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RichNotificationService().setupFirebaseMessaging(
+        shouldShowNotification: (type, data) async {
+          if (!mounted) return false;
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final settings = authProvider.userModel?.notificationSettings;
+
+          if (settings == null) return true; // 預設顯示
+          if (!settings.enablePushNotifications) return false; // 總開關
+
+          switch (type) {
+            case 'match':
+            case 'match_success':
+              return settings.notifyMatchSuccess || settings.notifyNewMatch;
+            case 'message':
+            case 'new_message':
+              return settings.notifyNewMessage;
+            case 'event':
+            case 'event_reminder':
+              return settings.notifyAppointmentReminder;
+            case 'event_change':
+              return settings.notifyAppointmentChange;
+            case 'promotion':
+            case 'marketing':
+              return settings.notifyPromotions;
+            case 'newsletter':
+              return settings.notifyNewsletter;
+            case 'system':
+            default:
+              return true;
+          }
+        },
+        transformNotification: (model) {
+          if (!mounted) return model;
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final settings = authProvider.userModel?.notificationSettings;
+
+          if (settings != null && !settings.showMessagePreview) {
+             if (model.type == 'message' || model.type == 'new_message') {
+               return model.copyWith(message: '您有一則新訊息');
+             }
+          }
+          return model;
+        },
+      );
+    });
   }
 
   final List<Widget> _screens = [
