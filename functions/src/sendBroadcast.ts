@@ -1,7 +1,10 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+// Prevent multiple initializations
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
