@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
+import 'package:chingu/core/routes/app_router.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 
@@ -135,6 +136,19 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.momentTest);
+                },
+                icon: const Icon(Icons.style_rounded),
+                label: const Text('動態卡片測試 (Moment Card)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.indigo,
+                  side: const BorderSide(color: Colors.indigo),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),

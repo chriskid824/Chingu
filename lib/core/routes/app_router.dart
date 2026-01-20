@@ -44,6 +44,7 @@ import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
+import '../../screens/debug/moment_test_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
 /// 路由名稱常量
@@ -51,6 +52,7 @@ class AppRoutes {
   // 認證路由
   static const String splash = '/';
   static const String debug = '/debug';
+  static const String momentTest = '/moment-test';
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
@@ -113,6 +115,9 @@ class AppRouter {
 
       case AppRoutes.debug:
         return MaterialPageRoute(builder: (_) => const DebugScreen());
+
+      case AppRoutes.momentTest:
+        return MaterialPageRoute(builder: (_) => const MomentTestScreen());
       
       case AppRoutes.login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
