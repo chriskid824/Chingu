@@ -291,6 +291,8 @@ class DinnerEventService {
 
   /// 加入或創建活動（智慧配對）
   /// 
+  /// 報名成功後，系統將透過 Cloud Scheduler 在活動前 24 小時發送提醒通知。
+  ///
   /// [userId] 用戶 ID
   /// [date] 日期
   /// [city] 城市
