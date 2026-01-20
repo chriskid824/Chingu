@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:chingu/services/notification_ab_service.dart';
 
 void main() {
   late NotificationABService service;
+  late FakeFirebaseFirestore fakeFirestore;
 
   setUp(() {
-    service = NotificationABService();
+    fakeFirestore = FakeFirebaseFirestore();
+    service = NotificationABService(firestore: fakeFirestore);
   });
 
   group('NotificationABService Group Assignment', () {
