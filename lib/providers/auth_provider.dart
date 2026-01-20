@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/notification_service.dart';
+import 'package:chingu/models/notification_settings_model.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -60,6 +62,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 同步通知訂閱
+        await NotificationService.instance.syncSubscriptions(null, _userModel!.notificationSettings);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -209,6 +213,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     try {
       _setLoading(true);
+      await NotificationService.instance.reset(); // 清除通知訂閱
       await _authService.signOut();
       _setLoading(false);
     } catch (e) {
@@ -262,6 +267,39 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 更新通知設定
+  Future<bool> updateNotificationSettings(NotificationSettings newSettings) async {
+    if (_userModel == null) return false;
+
+    NotificationSettings? oldSettings;
+    try {
+      oldSettings = _userModel!.notificationSettings;
+
+      // 本地樂觀更新
+      final updatedUser = _userModel!.copyWith(notificationSettings: newSettings);
+      _userModel = updatedUser;
+      notifyListeners();
+
+      // 更新 Firestore
+      await _firestoreService.updateUser(_userModel!.uid, {
+        'notificationSettings': newSettings.toMap(),
+      });
+
+      // 同步 FCM 訂閱
+      await NotificationService.instance.syncSubscriptions(oldSettings, newSettings);
+
+      return true;
+    } catch (e) {
+      debugPrint('Update notification settings failed: $e');
+      // 發生錯誤，還原設定
+      if (oldSettings != null) {
+        _userModel = _userModel!.copyWith(notificationSettings: oldSettings);
+        notifyListeners();
+      }
+      return false;
+    }
+  }
+
   /// 檢查用戶是否完成 Onboarding
   bool hasCompletedOnboarding() {
     if (_userModel == null) return false;
@@ -293,6 +331,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
