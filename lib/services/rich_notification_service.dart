@@ -21,7 +21,7 @@ class RichNotificationService {
   bool _isInitialized = false;
 
   /// 初始化通知服務
-  Future<void> initialize() async {
+  Future<void> initialize({bool requestPermission = true}) async {
     if (_isInitialized) return;
 
     // Android 初始化設定
@@ -30,11 +30,11 @@ class RichNotificationService {
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     // iOS 初始化設定
-    const DarwinInitializationSettings initializationSettingsDarwin =
+    final DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
+      requestSoundPermission: requestPermission,
+      requestBadgePermission: requestPermission,
+      requestAlertPermission: requestPermission,
     );
 
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -47,16 +47,52 @@ class RichNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // 請求 Android 13+ 通知權限
+    // 如果指定在初始化時請求權限，則執行請求
+    if (requestPermission) {
+      await requestPermissions();
+    }
+
+    _isInitialized = true;
+  }
+
+  /// 請求通知權限
+  Future<bool?> requestPermissions() async {
+    // Android
     final androidImplementation = _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidImplementation != null) {
-      await androidImplementation.requestNotificationsPermission();
+      return await androidImplementation.requestNotificationsPermission();
     }
 
-    _isInitialized = true;
+    // iOS
+    final iOSImplementation = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+
+    if (iOSImplementation != null) {
+      return await iOSImplementation.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
+    // macOS (使用 MacOSFlutterLocalNotificationsPlugin 若有需要，這裡暫時與 iOS 類似處理或忽略)
+    final macImplementation = _flutterLocalNotificationsPlugin
+         .resolvePlatformSpecificImplementation<
+             MacOSFlutterLocalNotificationsPlugin>();
+
+    if (macImplementation != null) {
+       return await macImplementation.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
+    return false;
   }
 
   /// 處理通知點擊事件
