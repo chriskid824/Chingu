@@ -161,6 +161,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   hintText: '請描述具體情況，幫助我們更快處理...',
                   border: OutlineInputBorder(
