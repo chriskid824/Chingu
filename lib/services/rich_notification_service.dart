@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -122,6 +123,42 @@ class RichNotificationService {
         // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
         break;
+    }
+  }
+
+  /// 訂閱主題
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await FirebaseMessaging.instance.subscribeToTopic(topic);
+      debugPrint('Subscribed to topic: $topic');
+    } catch (e) {
+      debugPrint('Error subscribing to topic $topic: $e');
+    }
+  }
+
+  /// 取消訂閱主題
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+      debugPrint('Unsubscribed from topic: $topic');
+    } catch (e) {
+      debugPrint('Error unsubscribing from topic $topic: $e');
+    }
+  }
+
+  /// 更新訂閱列表
+  Future<void> updateSubscriptions(List<String> newTopics, List<String> oldTopics) async {
+    // 找出新增的訂閱
+    final topicsToSubscribe = newTopics.where((t) => !oldTopics.contains(t)).toList();
+    // 找出移除的訂閱
+    final topicsToUnsubscribe = oldTopics.where((t) => !newTopics.contains(t)).toList();
+
+    for (final topic in topicsToSubscribe) {
+      await subscribeToTopic(topic);
+    }
+
+    for (final topic in topicsToUnsubscribe) {
+      await unsubscribeFromTopic(topic);
     }
   }
 
