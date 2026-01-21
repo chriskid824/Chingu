@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class MomentModel extends Equatable {
@@ -11,6 +12,7 @@ class MomentModel extends Equatable {
   final int likeCount;
   final int commentCount;
   final bool isLiked;
+  final List<String> likes;
 
   const MomentModel({
     required this.id,
@@ -23,6 +25,7 @@ class MomentModel extends Equatable {
     this.likeCount = 0,
     this.commentCount = 0,
     this.isLiked = false,
+    this.likes = const [],
   });
 
   MomentModel copyWith({
@@ -36,6 +39,7 @@ class MomentModel extends Equatable {
     int? likeCount,
     int? commentCount,
     bool? isLiked,
+    List<String>? likes,
   }) {
     return MomentModel(
       id: id ?? this.id,
@@ -48,6 +52,44 @@ class MomentModel extends Equatable {
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
       isLiked: isLiked ?? this.isLiked,
+      likes: likes ?? this.likes,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+      'likes': likes,
+    };
+  }
+
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id,
+      {String? currentUserId}) {
+    final List<String> likes =
+        List<String>.from(map['likes'] ?? []);
+    final bool isLiked =
+        currentUserId != null ? likes.contains(currentUserId) : false;
+
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? 'Unknown',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      likeCount: map['likeCount'] ?? 0,
+      commentCount: map['commentCount'] ?? 0,
+      isLiked: isLiked,
+      likes: likes,
     );
   }
 
@@ -63,5 +105,6 @@ class MomentModel extends Equatable {
         likeCount,
         commentCount,
         isLiked,
+        likes,
       ];
 }
