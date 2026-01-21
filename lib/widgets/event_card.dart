@@ -8,6 +8,8 @@ class EventCard extends StatefulWidget {
   final String budget;
   final String location;
   final bool isUpcoming;
+  final String? statusText;
+  final Color? statusColor;
   final VoidCallback? onTap;
 
   const EventCard({
@@ -18,6 +20,8 @@ class EventCard extends StatefulWidget {
     required this.budget,
     required this.location,
     required this.isUpcoming,
+    this.statusText,
+    this.statusColor,
     this.onTap,
   });
 
@@ -32,6 +36,11 @@ class _EventCardState extends State<EventCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    final badgeText = widget.statusText ?? (widget.isUpcoming ? '已確認' : '已完成');
+    final badgeColor = widget.statusColor ?? (widget.isUpcoming
+        ? (chinguTheme?.success ?? Colors.green)
+        : theme.colorScheme.onSurface.withOpacity(0.6));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -103,7 +112,7 @@ class _EventCardState extends State<EventCard> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '6 人',
+                                    '6 人', // TODO: Make dynamic if needed
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                                     ),
@@ -116,17 +125,13 @@ class _EventCardState extends State<EventCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: widget.isUpcoming
-                                ? (chinguTheme?.success ?? Colors.green).withOpacity(0.1)
-                                : theme.colorScheme.surfaceContainerHighest,
+                            color: badgeColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            widget.isUpcoming ? '已確認' : '已完成',
+                            badgeText,
                             style: TextStyle(
-                              color: widget.isUpcoming
-                                  ? (chinguTheme?.success ?? Colors.green)
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: badgeColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
