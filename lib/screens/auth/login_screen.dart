@@ -42,7 +42,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
+      if (authProvider.status == AuthStatus.requiresTwoFactor) {
+        Navigator.pushReplacementNamed(context, AppRoutes.twoFactorVerification);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -64,7 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
+      if (authProvider.status == AuthStatus.requiresTwoFactor) {
+        Navigator.pushReplacementNamed(context, AppRoutes.twoFactorVerification);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
