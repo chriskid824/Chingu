@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'analytics_service.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
@@ -113,6 +114,11 @@ class ChatService {
         // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
+      });
+
+      await AnalyticsService().logEvent('send_message', {
+        'type': type,
+        'chatRoomId': chatRoomId,
       });
     } catch (e) {
       throw Exception('發送訊息失敗: $e');

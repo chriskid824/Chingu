@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'analytics_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final AnalyticsService _analyticsService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    AnalyticsService? analyticsService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _analyticsService = analyticsService ?? AnalyticsService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -110,6 +114,11 @@ class MatchingService {
         'targetUserId': targetUserId,
         'isLike': isLike,
         'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      await _analyticsService.logEvent('swipe', {
+        'is_like': isLike ? 1 : 0,
+        'target_user_id': targetUserId,
       });
 
       // 如果是喜歡，檢查是否配對成功 (對方也喜歡我)
