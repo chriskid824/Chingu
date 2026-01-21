@@ -3,6 +3,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
@@ -90,7 +91,8 @@ class MatchingService {
       final result = scoredMatches.take(limit).toList();
       print('最終返回 ${result.length} 個候選人');
       return result;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Get Matches Failed');
       print('MatchingService.getMatches 錯誤: $e');
       throw Exception('獲取配對失敗: $e');
     }
@@ -135,7 +137,8 @@ class MatchingService {
         'chatRoomId': null,
         'partner': null,
       };
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Record Swipe Failed');
       throw Exception('記錄滑動失敗: $e');
     }
   }
@@ -162,7 +165,8 @@ class MatchingService {
         return true;
       }
       return false;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Check Mutual Match Failed');
       print('檢查配對失敗: $e');
       return false;
     }
@@ -277,9 +281,9 @@ class MatchingService {
       
       await batch.commit();
       print('已清除用戶 $userId 的 ${mySwipes.docs.length} 條滑動記錄');
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Clear Swipe History Failed');
       throw Exception('清除滑動記錄失敗: $e');
     }
   }
 }
-

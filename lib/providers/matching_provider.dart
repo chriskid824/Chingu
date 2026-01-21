@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 class MatchingProvider with ChangeNotifier {
   final MatchingService _matchingService = MatchingService();
@@ -51,7 +52,8 @@ class MatchingProvider with ChangeNotifier {
       }
 
       _setLoading(false);
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Load Candidates Failed');
       print('載入候選人錯誤: $e');
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _setLoading(false);
@@ -86,7 +88,8 @@ class MatchingProvider with ChangeNotifier {
       }
       
       return null;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Swipe Action Failed');
       // 如果失敗，可能需要提示用戶或回滾（這裡簡化處理）
       print('滑動操作失敗: $e');
       return null;
@@ -104,12 +107,10 @@ class MatchingProvider with ChangeNotifier {
       _setLoading(true);
       await _matchingService.clearSwipeHistory(currentUser.uid);
       await loadCandidates(currentUser);
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Reset History Failed');
       _errorMessage = '重置失敗: $e';
       _setLoading(false);
     }
   }
 }
-
-
-
