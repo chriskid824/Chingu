@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -246,6 +247,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
       child: ListTile(
+        onTap: () {
+          // 追蹤點擊
+          NotificationService().trackClick(
+            notification.id,
+            notification.userId,
+            notification.type,
+          );
+
+          // 標記為已讀 (本地 UI 更新)
+          if (!notification.isRead) {
+            setState(() {
+              final index = _notifications.indexWhere((n) => n.id == notification.id);
+              if (index != -1) {
+                _notifications[index] = notification.markAsRead();
+              }
+            });
+          }
+        },
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
