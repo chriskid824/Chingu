@@ -45,6 +45,8 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../screens/profile/user_moments_screen.dart';
+import '../../screens/profile/create_moment_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -99,6 +101,8 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String userMoments = '/user-moments';
+  static const String createMoment = '/create-moment';
 }
 
 /// 應用程式路由配置
@@ -245,6 +249,12 @@ class AppRouter {
             reportedUserName: args['reportedUserName'],
           ),
         );
+
+      case AppRoutes.userMoments:
+        return MaterialPageRoute(builder: (_) => const UserMomentsScreen());
+
+      case AppRoutes.createMoment:
+        return MaterialPageRoute(builder: (_) => const CreateMomentScreen());
       
       // ==================== 404 ====================
       default:
