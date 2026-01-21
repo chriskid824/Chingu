@@ -87,7 +87,7 @@
     - Event Card Animation
     - Parallax Header
   - **服務與邏輯**:
-    - Crash Reporting (`crash_reporting_service.dart`)
+    - Crash Reporting (`crash_reporting_service.dart`): 集成 Firebase Crashlytics 並應用於 Auth, DinnerEvent, Chat, Matching Providers 及 Services，自動收集錯誤日誌。
     - Matching Algorithm Optimization
     - Unit Tests for Dinner Event Provider & Matching Service
     - Profile Preview Mode

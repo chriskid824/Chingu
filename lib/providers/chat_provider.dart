@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -79,7 +80,8 @@ class ChatProvider with ChangeNotifier {
       print('成功載入 ${_chatRooms.length} 個聊天室');
 
       _setLoading(false);
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Load Chat Rooms Failed');
       print('載入聊天室錯誤: $e');
       _errorMessage = e.toString();
       _setLoading(false);
@@ -137,7 +139,8 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Send Message Failed');
       print('發送訊息失敗: $e');
       rethrow;
     }

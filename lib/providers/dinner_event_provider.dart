@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 class DinnerEventProvider with ChangeNotifier {
   final DinnerEventService _dinnerEventService;
@@ -45,7 +46,8 @@ class DinnerEventProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Create Event Failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -59,7 +61,8 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(true);
       _myEvents = await _dinnerEventService.getUserEvents(userId);
       _setLoading(false);
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Fetch My Events Failed');
       debugPrint('獲取我的活動失敗: $e');
       _setLoading(false);
     }
@@ -79,7 +82,8 @@ class DinnerEventProvider with ChangeNotifier {
         excludeEventIds: excludeEventIds,
       );
       _setLoading(false);
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Fetch Recommended Events Failed');
       debugPrint('獲取推薦活動失敗: $e');
       _setLoading(false);
     }
@@ -98,7 +102,8 @@ class DinnerEventProvider with ChangeNotifier {
       
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Join Event Failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -119,7 +124,8 @@ class DinnerEventProvider with ChangeNotifier {
       
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Leave Event Failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -195,7 +201,8 @@ class DinnerEventProvider with ChangeNotifier {
       
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Book Event Failed');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -213,6 +220,3 @@ class DinnerEventProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-

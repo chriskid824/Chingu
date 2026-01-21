@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
@@ -68,7 +69,8 @@ class ChatService {
       });
       
       return docRef.id;
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Create Chat Room Failed');
       throw Exception('創建聊天室失敗: $e');
     }
   }
@@ -114,7 +116,8 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
-    } catch (e) {
+    } catch (e, s) {
+      CrashReportingService().recordError(e, s, reason: 'Send Message Service Failed');
       throw Exception('發送訊息失敗: $e');
     }
   }
