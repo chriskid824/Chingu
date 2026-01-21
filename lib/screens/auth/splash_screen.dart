@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+// import 'package:chingu/services/notification_service.dart'; // No longer needed here
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
