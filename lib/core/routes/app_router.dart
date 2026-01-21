@@ -5,6 +5,7 @@ import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/email_verification_screen.dart';
+import '../../screens/auth/two_factor_verification_screen.dart';
 // 主導航
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
@@ -38,6 +39,7 @@ import '../../screens/chat/sticker_manager_screen.dart';
 // 設定模組
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
+import '../../screens/settings/security_settings_screen.dart';
 import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
@@ -55,6 +57,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String emailVerification = '/email-verification';
+  static const String twoFactorVerification = '/two-factor-verification';
   
   // 主導航
   static const String mainNavigation = '/main';
@@ -93,6 +96,7 @@ class AppRoutes {
   // 設定模組
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
+  static const String securitySettings = '/security-settings';
   static const String privacySettings = '/privacy-settings';
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
@@ -125,6 +129,9 @@ class AppRouter {
       
       case AppRoutes.emailVerification:
         return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
+
+      case AppRoutes.twoFactorVerification:
+        return MaterialPageRoute(builder: (_) => const TwoFactorVerificationScreen());
       
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
@@ -214,6 +221,9 @@ class AppRouter {
       
       case AppRoutes.editProfile:
         return MaterialPageRoute(builder: (_) => const EditProfileScreen());
+
+      case AppRoutes.securitySettings:
+        return MaterialPageRoute(builder: (_) => const SecuritySettingsScreen());
       
       case AppRoutes.privacySettings:
         return MaterialPageRoute(builder: (_) => const PrivacySettingsScreen());

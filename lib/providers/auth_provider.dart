@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -9,12 +10,14 @@ enum AuthStatus {
   uninitialized, // 未初始化
   authenticated, // 已認證
   unauthenticated, // 未認證
+  requiresTwoFactor, // 需要雙因素認證
 }
 
 /// 認證 Provider - 管理用戶認證狀態
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final TwoFactorAuthService _twoFactorAuthService = TwoFactorAuthService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -47,9 +50,82 @@ class AuthProvider with ChangeNotifier {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
-      _status = AuthStatus.authenticated;
+
+      if (_userModel?.isTwoFactorEnabled == true) {
+        _status = AuthStatus.requiresTwoFactor;
+      } else {
+        _status = AuthStatus.authenticated;
+      }
     }
     notifyListeners();
+  }
+
+  /// 驗證雙因素代碼
+  Future<bool> verifyTwoFactor(String code) async {
+    try {
+      if (_firebaseUser == null) return false;
+      _setLoading(true);
+
+      final verified = await _twoFactorAuthService.verifyVerificationCode(
+        _firebaseUser!.uid,
+        code
+      );
+
+      if (verified) {
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+      } else {
+        _errorMessage = '驗證碼錯誤';
+        notifyListeners();
+      }
+
+      _setLoading(false);
+      return verified;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 發送雙因素驗證碼
+  Future<void> sendTwoFactorCode() async {
+    if (_firebaseUser == null) return;
+
+    try {
+      await _twoFactorAuthService.sendVerificationCode(
+        _firebaseUser!.uid,
+        method: _userModel?.twoFactorMethod ?? 'email',
+      );
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// 切換雙因素認證狀態
+  Future<bool> toggleTwoFactor(bool enabled) async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      _setLoading(true);
+
+      await _firestoreService.updateUser(_firebaseUser!.uid, {
+        'isTwoFactorEnabled': enabled,
+      });
+
+      // 更新本地 User Model
+      await _loadUserData(_firebaseUser!.uid);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
   }
 
   /// 載入用戶資料

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'auth/two_factor_verification_screen.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -39,6 +41,12 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authStatus = context.select<AuthProvider, AuthStatus>((p) => p.status);
+
+    if (authStatus == AuthStatus.requiresTwoFactor) {
+      return const TwoFactorVerificationScreen();
+    }
+
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
