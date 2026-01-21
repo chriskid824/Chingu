@@ -2,9 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 
-class EventDetailScreen extends StatelessWidget {
+class EventDetailScreen extends StatefulWidget {
   const EventDetailScreen({super.key});
-  
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  String? _eventId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _eventId = args['eventId'];
+    } else if (args is String) {
+      _eventId = args;
+    }
+
+    // In a real implementation, we would fetch event details using _eventId
+    // For now, we keep the hardcoded data as requested/existing
+    if (_eventId != null) {
+      debugPrint('Opened EventDetailScreen with eventId: $_eventId');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
