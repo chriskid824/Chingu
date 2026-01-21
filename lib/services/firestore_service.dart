@@ -194,6 +194,34 @@ class FirestoreService {
     }
   }
 
+  /// 添加到收藏
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> addToFavorites(String currentUserId, String targetUserId) async {
+    try {
+      await _usersCollection.doc(currentUserId).update({
+        'favorites': FieldValue.arrayUnion([targetUserId]),
+      });
+    } catch (e) {
+      throw Exception('添加到收藏失敗: $e');
+    }
+  }
+
+  /// 從收藏移除
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> removeFromFavorites(String currentUserId, String targetUserId) async {
+    try {
+      await _usersCollection.doc(currentUserId).update({
+        'favorites': FieldValue.arrayRemove([targetUserId]),
+      });
+    } catch (e) {
+      throw Exception('移除收藏失敗: $e');
+    }
+  }
+
   /// 搜尋用戶（by 名稱）
   /// 
   /// [searchTerm] 搜尋詞
