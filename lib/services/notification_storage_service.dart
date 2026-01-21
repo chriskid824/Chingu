@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'firestore_service.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -220,6 +221,43 @@ class NotificationStorageService {
         .toList();
   }
 
+  /// 檢查用戶是否允許特定類型的通知
+  Future<bool> _shouldCreateNotification(String userId, String type, {String? subtype}) async {
+    try {
+      final user = await FirestoreService().getUser(userId);
+      if (user == null) return true;
+
+      final settings = user.notificationSettings;
+
+      switch (type) {
+        case 'match':
+             if (subtype == 'newMatch') {
+               return settings['newMatch'] ?? true;
+             }
+             return settings['matchSuccess'] ?? true;
+        case 'message':
+             return settings['newMessage'] ?? true;
+        case 'event':
+             if (subtype == 'reminder') {
+               return settings['dinnerReminder'] ?? true;
+             }
+             return settings['dinnerChange'] ?? true;
+        case 'system':
+             if (subtype == 'promotion') {
+               return settings['promotions'] ?? false;
+             } else if (subtype == 'newsletter') {
+               return settings['newsletter'] ?? false;
+             }
+             return true;
+        default:
+             return true;
+      }
+    } catch (e) {
+      // Ignore error and allow notification
+      return true;
+    }
+  }
+
   /// 創建系統通知
   Future<void> createSystemNotification({
     required String title,
@@ -230,6 +268,18 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    // Determine subtype based on content
+    String? subtype;
+    if (title.contains('優惠') || message.contains('優惠')) {
+      subtype = 'promotion';
+    } else if (title.contains('電子報') || message.contains('電子報')) {
+      subtype = 'newsletter';
+    }
+
+    if (!await _shouldCreateNotification(userId, 'system', subtype: subtype)) {
+      return;
+    }
 
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
@@ -255,6 +305,10 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    if (!await _shouldCreateNotification(userId, 'match', subtype: 'matchSuccess')) {
+      return;
+    }
 
     final notification = NotificationModel(
       id: '',
@@ -282,6 +336,15 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    String? subtype;
+    if (eventTitle.contains('提醒') || message.contains('提醒')) {
+      subtype = 'reminder';
+    }
+
+    if (!await _shouldCreateNotification(userId, 'event', subtype: subtype)) {
+      return;
+    }
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
@@ -307,6 +370,10 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    if (!await _shouldCreateNotification(userId, 'message')) {
+      return;
+    }
 
     final notification = NotificationModel(
       id: '',
