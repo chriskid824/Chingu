@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'analytics_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -58,6 +59,13 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      await AnalyticsService().logEvent('create_event', {
+        'city': city,
+        'district': district,
+        'budgetRange': budgetRange,
+      });
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -155,6 +163,10 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      await AnalyticsService().logEvent('join_event', {
+        'eventId': eventId,
+      });
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -204,6 +216,10 @@ class DinnerEventService {
         }
 
         transaction.update(docRef, updates);
+      });
+
+      await AnalyticsService().logEvent('leave_event', {
+        'eventId': eventId,
       });
     } catch (e) {
       throw Exception('退出活動失敗: $e');
