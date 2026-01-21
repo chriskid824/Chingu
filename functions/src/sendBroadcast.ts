@@ -1,8 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
-
 /**
  * Cloud Function for sending broadcast notifications
  * Can be called by admin to send global or targeted notifications
