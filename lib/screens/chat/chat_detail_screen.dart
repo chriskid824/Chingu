@@ -45,7 +45,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _chatRoomId == null) return;
+    if (text.isEmpty || _chatRoomId == null || _otherUser == null) return;
 
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.userModel;
@@ -56,10 +56,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     try {
       await context.read<ChatProvider>().sendMessage(
-        chatRoomId: _chatRoomId!,
-        senderId: currentUser.uid,
-        text: text,
-      );
+            chatRoomId: _chatRoomId!,
+            senderId: currentUser.uid,
+            text: text,
+            senderName: currentUser.name,
+            recipientId: _otherUser!.uid,
+          );
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -78,7 +80,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _sendGifMessage(String url) async {
-    if (_chatRoomId == null) return;
+    if (_chatRoomId == null || _otherUser == null) return;
 
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.userModel;
@@ -87,11 +89,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     try {
       await context.read<ChatProvider>().sendMessage(
-        chatRoomId: _chatRoomId!,
-        senderId: currentUser.uid,
-        text: url,
-        type: 'image',
-      );
+            chatRoomId: _chatRoomId!,
+            senderId: currentUser.uid,
+            text: url,
+            type: 'image',
+            senderName: currentUser.name,
+            recipientId: _otherUser!.uid,
+          );
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
