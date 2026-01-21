@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -84,6 +85,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -95,6 +97,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Add this for compatibility
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -108,12 +111,53 @@ class ChatService {
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      try {
+        String? targetUserId = recipientId;
+
+        // 如果沒有提供接收者 ID，則從聊天室資料中查找
+        if (targetUserId == null) {
+          final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+          if (chatRoomDoc.exists) {
+            final data = chatRoomDoc.data() as Map<String, dynamic>;
+            final participants =
+                List<String>.from(data['participantIds'] ?? []);
+            targetUserId = participants.firstWhere(
+              (id) => id != senderId,
+              orElse: () => '',
+            );
+          }
+        }
+
+        if (targetUserId != null && targetUserId.isNotEmpty) {
+          final userDoc =
+              await _firestore.collection('users').doc(targetUserId).get();
+          if (userDoc.exists) {
+            final userData = userDoc.data() as Map<String, dynamic>;
+            final fcmToken = userData['fcmToken'] as String?;
+
+            if (fcmToken != null) {
+              await FirebaseFunctions.instance
+                  .httpsCallable('sendChatNotification')
+                  .call({
+                'token': fcmToken,
+                'title': senderName,
+                'body': type == 'text' ? message : '傳送了一個附件',
+                'data': {
+                  'chatRoomId': chatRoomId,
+                  'senderId': senderId,
+                  'type': 'message',
+                },
+              });
+            }
+          }
+        }
+      } catch (e) {
+        print('發送通知失敗: $e');
+        // 不拋出異常，以免影響訊息發送流程
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
