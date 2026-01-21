@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firestore_service.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -127,6 +129,63 @@ class RichNotificationService {
 
   /// 顯示豐富通知
   Future<void> showNotification(NotificationModel notification) async {
+    // 檢查通知偏好
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final userModel = await FirestoreService().getUser(currentUser.uid);
+        if (userModel != null) {
+          final settings = userModel.notificationSettings;
+
+          // 1. 全局開關
+          if (settings['pushEnabled'] == false) {
+            debugPrint('Push notifications disabled by user.');
+            return;
+          }
+
+          // 2. 根據類型檢查
+          bool shouldShow = true;
+          switch (notification.type) {
+            case 'match':
+               // 根據內容判斷是新配對還是配對成功
+               if (notification.title.contains('配對成功') || notification.message.contains('配對成功')) {
+                  shouldShow = settings['matchSuccess'] ?? true;
+               } else {
+                  shouldShow = settings['newMatch'] ?? true;
+               }
+               break;
+            case 'message':
+               shouldShow = settings['newMessage'] ?? true;
+               break;
+            case 'event':
+               if (notification.title.contains('提醒') || notification.message.contains('提醒')) {
+                 shouldShow = settings['dinnerReminder'] ?? true;
+               } else {
+                 shouldShow = settings['dinnerChange'] ?? true;
+               }
+               break;
+            case 'system':
+               // 行銷通知通常是 system 類型
+               if (notification.title.contains('優惠') || notification.message.contains('優惠')) {
+                  shouldShow = settings['promotions'] ?? false;
+               } else if (notification.title.contains('電子報') || notification.message.contains('電子報')) {
+                  shouldShow = settings['newsletter'] ?? false;
+               }
+               break;
+          }
+
+          if (!shouldShow) {
+            debugPrint('Notification suppressed by user preference: ${notification.type}');
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking notification settings: $e');
+      // On error, we proceed to show notification to be safe (or return to fail safe?)
+      // Let's proceed as the user might miss important info otherwise.
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
