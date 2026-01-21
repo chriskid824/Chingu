@@ -41,6 +41,7 @@ dependencies:
   cloud_firestore: ^5.5.2
   firebase_storage: ^12.3.8
   firebase_messaging: ^15.1.6
+  firebase_remote_config: ^6.1.4
   firebase_crashlytics: ^4.3.0
   cloud_functions: ^5.2.0
   
