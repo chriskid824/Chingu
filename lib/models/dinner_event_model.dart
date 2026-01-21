@@ -28,6 +28,9 @@ class DinnerEventModel {
   
   // 破冰問題
   final List<String> icebreakerQuestions;
+
+  // 提醒狀態
+  final bool reminderSent;
   
   // 評價（活動結束後）
   final Map<String, double>? ratings; // uid -> rating (1-5)
@@ -52,6 +55,7 @@ class DinnerEventModel {
     this.confirmedAt,
     this.completedAt,
     this.icebreakerQuestions = const [],
+    this.reminderSent = false,
     this.ratings,
     this.reviews,
   });
@@ -87,6 +91,7 @@ class DinnerEventModel {
           ? (map['completedAt'] as Timestamp).toDate() 
           : null,
       icebreakerQuestions: List<String>.from(map['icebreakerQuestions'] ?? []),
+      reminderSent: map['reminderSent'] ?? false,
       ratings: map['ratings'] != null 
           ? Map<String, double>.from(map['ratings']) 
           : null,
@@ -116,6 +121,7 @@ class DinnerEventModel {
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'icebreakerQuestions': icebreakerQuestions,
+      'reminderSent': reminderSent,
       'ratings': ratings,
       'reviews': reviews,
     };
@@ -138,6 +144,7 @@ class DinnerEventModel {
     DateTime? confirmedAt,
     DateTime? completedAt,
     List<String>? icebreakerQuestions,
+    bool? reminderSent,
     Map<String, double>? ratings,
     Map<String, String>? reviews,
   }) {
@@ -160,6 +167,7 @@ class DinnerEventModel {
       confirmedAt: confirmedAt ?? this.confirmedAt,
       completedAt: completedAt ?? this.completedAt,
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
+      reminderSent: reminderSent ?? this.reminderSent,
       ratings: ratings ?? this.ratings,
       reviews: reviews ?? this.reviews,
     );
