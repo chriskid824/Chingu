@@ -28,6 +28,10 @@ class UserModel {
   final GeoPoint? locationGeo;
   final String subscription; // 'free' or 'premium'
   
+  // 隱私設定
+  final bool hideOnlineStatus;
+  final bool hideLastActiveTime;
+
   // 統計資料
   final int totalDinners;
   final int totalMatches;
@@ -60,6 +64,8 @@ class UserModel {
     required this.lastLogin,
     this.locationGeo,
     this.subscription = 'free',
+    this.hideOnlineStatus = false,
+    this.hideLastActiveTime = false,
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
@@ -98,6 +104,8 @@ class UserModel {
       lastLogin: (map['lastLogin'] as Timestamp).toDate(),
       locationGeo: map['locationGeo'] as GeoPoint?,
       subscription: map['subscription'] ?? 'free',
+      hideOnlineStatus: map['hideOnlineStatus'] ?? false,
+      hideLastActiveTime: map['hideLastActiveTime'] ?? false,
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
@@ -130,6 +138,8 @@ class UserModel {
       'lastLogin': Timestamp.fromDate(lastLogin),
       'locationGeo': locationGeo,
       'subscription': subscription,
+      'hideOnlineStatus': hideOnlineStatus,
+      'hideLastActiveTime': hideLastActiveTime,
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
@@ -160,6 +170,8 @@ class UserModel {
     DateTime? lastLogin,
     GeoPoint? locationGeo,
     String? subscription,
+    bool? hideOnlineStatus,
+    bool? hideLastActiveTime,
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
@@ -189,6 +201,8 @@ class UserModel {
       lastLogin: lastLogin ?? this.lastLogin,
       locationGeo: locationGeo ?? this.locationGeo,
       subscription: subscription ?? this.subscription,
+      hideOnlineStatus: hideOnlineStatus ?? this.hideOnlineStatus,
+      hideLastActiveTime: hideLastActiveTime ?? this.hideLastActiveTime,
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
