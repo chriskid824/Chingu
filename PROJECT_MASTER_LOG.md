@@ -112,6 +112,11 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **通知儲存服務 (Notification Storage Service)**:
+  - 創建 `NotificationStorageService` 支援 Firestore CRUD
+  - 實作儲存通知、查詢通知、標記已讀功能
+  - 新增單元測試 `notification_storage_service_test.dart`
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
