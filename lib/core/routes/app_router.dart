@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/user_model.dart';
 // 認證模組
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -16,6 +17,7 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/favorites_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -70,6 +72,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String favorites = '/favorites';
   
   // 配對模組
   static const String matching = '/matching';
@@ -166,11 +169,38 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
+        // 支持通過 arguments 傳遞 user 或 userId
+        // arguments 可以是 Map (為了靈活性) 或直接傳遞 UserModel/String
+        final args = settings.arguments;
+        // 注意：為了與現有代碼兼容，如果 arguments 為空，UserDetailScreen 內部會處理（顯示假資料或錯誤）
+
+        if (args is Map<String, dynamic>) {
+           // 嘗試解析 userId 或 user 對象
+           // 這裡假設 Map 中可能包含 userId (String) 或 user (UserModel)
+           // 實際使用時根據調用方傳遞的內容決定
+           return MaterialPageRoute(
+             builder: (_) => UserDetailScreen(
+               userId: args['userId'] as String?,
+               // 如果傳遞了 UserModel 對象，需要在這裡轉型
+               // 因為 Map<String, dynamic> 通常不包含 Dart 對象，除非是在內存中傳遞
+               // 這裡做個簡單的檢查
+               user: args['user'] is UserModel ? args['user'] : null,
+             )
+           );
+        } else if (args is String) {
+           return MaterialPageRoute(builder: (_) => UserDetailScreen(userId: args));
+        } else if (args is UserModel) { // 假設已經import了 UserModel，如果不方便import可以使用 dynamic
+           return MaterialPageRoute(builder: (_) => UserDetailScreen(user: args));
+        }
+
         return MaterialPageRoute(builder: (_) => const UserDetailScreen());
       
       case AppRoutes.matchesList:

@@ -1,13 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
-class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
-  
+class UserDetailScreen extends StatefulWidget {
+  final String? userId;
+  final UserModel? user;
+
+  const UserDetailScreen({
+    super.key,
+    this.userId,
+    this.user,
+  });
+
+  @override
+  State<UserDetailScreen> createState() => _UserDetailScreenState();
+}
+
+class _UserDetailScreenState extends State<UserDetailScreen> {
+  UserModel? _user;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    if (widget.user != null) {
+      if (mounted) {
+        setState(() {
+          _user = widget.user;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    if (widget.userId != null) {
+      try {
+        final user = await FirestoreService().getUser(widget.userId!);
+        if (mounted) {
+          setState(() {
+            _user = user;
+            if (user == null) _error = '找不到用戶';
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _error = e.toString();
+            _isLoading = false;
+          });
+        }
+      }
+      return;
+    }
+
+    // Dummy data fallback
+    if (mounted) {
+        setState(() {
+            _isLoading = false;
+             _user = UserModel(
+                uid: 'dummy',
+                name: '陳大明',
+                email: 'dummy@example.com',
+                age: 30,
+                gender: 'male',
+                job: '軟體工程師',
+                interests: ['科技', '美食', '運動', '旅遊', '攝影'],
+                country: '台灣',
+                city: '台北市',
+                district: '信義區',
+                bio: '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
+                preferredMatchType: 'opposite',
+                minAge: 25,
+                maxAge: 35,
+                budgetRange: 1,
+                createdAt: DateTime.now(),
+                lastLogin: DateTime.now(),
+             );
+        });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+      if (_user == null) return;
+
+      final authProvider = context.read<AuthProvider>();
+      final currentUser = authProvider.userModel;
+      if (currentUser == null) return;
+
+      final isFavorited = currentUser.favorites.contains(_user!.uid);
+      final firestoreService = FirestoreService();
+
+      try {
+          if (isFavorited) {
+              await firestoreService.removeFromFavorites(currentUser.uid, _user!.uid);
+              if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已取消收藏')),
+                  );
+              }
+          } else {
+              await firestoreService.addToFavorites(currentUser.uid, _user!.uid);
+               if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已加入收藏')),
+                  );
+              }
+          }
+          await authProvider.refreshUserData();
+      } catch (e) {
+           if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('操作失敗: $e')),
+              );
+          }
+      }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    if (_isLoading) {
+        return Scaffold(
+            appBar: AppBar(
+                backgroundColor: theme.scaffoldBackgroundColor,
+                elevation: 0,
+                iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+        );
+    }
+
+    if (_error != null) {
+        return Scaffold(
+            appBar: AppBar(),
+            body: Center(child: Text(_error!)),
+        );
+    }
+
+    final user = _user!;
+    final isFavorited = context.select<AuthProvider, bool>((p) =>
+        p.userModel?.favorites.contains(user.uid) ?? false
+    );
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -38,6 +183,30 @@ class UserDetailScreen extends StatelessWidget {
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+                 IconButton(
+                    icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                            BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            ),
+                        ],
+                        ),
+                        child: Icon(
+                        isFavorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        size: 20,
+                        color: isFavorited ? (chinguTheme?.error ?? Colors.red) : theme.colorScheme.onSurface,
+                        ),
+                    ),
+                    onPressed: _toggleFavorite,
+                 ),
+                 const SizedBox(width: 16),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -46,15 +215,33 @@ class UserDetailScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: chinguTheme?.primaryGradient,
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.person,
-                        size: 140,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: user.avatarUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: user.avatarUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(color: theme.colorScheme.surfaceVariant),
+                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                          )
+                        : const Center(
+                            child: Icon(
+                                Icons.person,
+                                size: 140,
+                                color: Colors.white,
+                            ),
+                        ),
                   ),
-                  // 配對度標籤
+                  Container(
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.3),
+                            ],
+                        ),
+                    ),
+                   ),
                   Positioned(
                     top: 60,
                     right: 20,
@@ -112,7 +299,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '${user.name}, ${user.age}',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -132,7 +319,7 @@ class UserDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '軟體工程師',
+                              user.job,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -162,7 +349,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.location_on_rounded,
                     '位置',
-                    '台北市, 信義區',
+                    '${user.city}, ${user.district}',
                     theme.colorScheme.primary,
                     theme,
                   ),
@@ -170,7 +357,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800',
+                    user.budgetRangeText,
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
@@ -178,7 +365,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.favorite_rounded,
                     '配對類型',
-                    '異性配對',
+                    user.preferredMatchTypeText,
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -213,7 +400,7 @@ class UserDetailScreen extends StatelessWidget {
                       border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                     ),
                     child: Text(
-                      '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
+                      user.bio ?? '這個人很懶，什麼都沒寫...',
                       style: TextStyle(
                         fontSize: 15,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -247,13 +434,9 @@ class UserDetailScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
-                      _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
-                      _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
-                      _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
-                      _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
-                    ],
+                    children: user.interests.map((interest) =>
+                        _buildInterestChip(interest, Icons.star, theme.colorScheme.primary)
+                    ).toList(),
                   ),
                   
                   const SizedBox(height: 32),
@@ -263,7 +446,7 @@ class UserDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.3)),
@@ -280,7 +463,7 @@ class UserDetailScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '略過',
+                                '關閉',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -306,7 +489,7 @@ class UserDetailScreen extends StatelessWidget {
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: _toggleFavorite,
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: Colors.transparent,
@@ -315,14 +498,17 @@ class UserDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.favorite, color: Colors.white),
-                                SizedBox(width: 8),
+                                Icon(
+                                    isFavorited ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                    color: Colors.white
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
-                                  '喜歡',
-                                  style: TextStyle(
+                                  isFavorited ? '已收藏' : '收藏',
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
