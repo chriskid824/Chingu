@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -84,6 +85,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -95,6 +97,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Added for compatibility with older clients/providers
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -114,6 +117,32 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推播通知
+      if (recipientId != null) {
+        try {
+          final functions = FirebaseFunctions.instance;
+          final callable = functions.httpsCallable('sendNotification');
+
+          final notificationBody = message.length > 20
+              ? '${message.substring(0, 20)}...'
+              : message;
+
+          await callable.call({
+            'targetUserId': recipientId,
+            'title': senderName,
+            'body': notificationBody,
+            'data': {
+              'type': 'open_chat',
+              'chatRoomId': chatRoomId,
+              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            },
+          });
+        } catch (e) {
+          print('發送推播通知失敗: $e');
+          // 不拋出異常，以免影響訊息發送流程
+        }
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
