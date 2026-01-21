@@ -22,6 +22,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = false;
+  String? _error;
 
   @override
   void didChangeDependencies() {
@@ -31,8 +33,65 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        // 如果只有 ID 沒有 User 對象，則需要獲取
+        if (_chatRoomId != null && _otherUser == null) {
+          _fetchChatDetails();
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchChatDetails() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.uid;
+
+      if (currentUserId == null) {
+        throw Exception('User not logged in');
+      }
+
+      final doc = await FirebaseFirestore.instance.collection('chat_rooms').doc(_chatRoomId).get();
+      if (!doc.exists) {
+        throw Exception('Chat room not found');
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final participantIds = List<String>.from(data['participantIds'] ?? []);
+
+      final otherUserId = participantIds.firstWhere(
+        (id) => id != currentUserId,
+        orElse: () => '',
+      );
+
+      if (otherUserId.isEmpty) {
+        throw Exception('Other user not found in chat room');
+      }
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+      if (!userDoc.exists) {
+        throw Exception('User profile not found');
+      }
+
+      if (mounted) {
+        setState(() {
+          _otherUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>, userDoc.id);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -128,6 +187,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(backgroundColor: theme.scaffoldBackgroundColor, elevation: 0),
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Text(_error!, style: theme.textTheme.bodyLarge),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_chatRoomId == null || _otherUser == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -153,7 +244,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
               child: Center(
                 child: Text(
-                  _otherUser!.name[0].toUpperCase(),
+                  _otherUser!.name.isNotEmpty ? _otherUser!.name[0].toUpperCase() : '?',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
