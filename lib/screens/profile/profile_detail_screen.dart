@@ -164,8 +164,32 @@ class ProfileDetailScreen extends StatelessWidget {
                             _buildStatItem(context, '評分', user.averageRating, isRating: true),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, AppRoutes.statsDashboard);
+                          },
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '查看詳細統計',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
                         // Debug Button
                         // Debug Button
                         Container(

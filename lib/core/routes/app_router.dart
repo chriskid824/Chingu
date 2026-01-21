@@ -16,6 +16,7 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/stats_dashboard_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String statsDashboard = '/stats-dashboard';
 }
 
 /// 應用程式路由配置
@@ -165,6 +167,9 @@ class AppRouter {
       
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+
+      case AppRoutes.statsDashboard:
+        return MaterialPageRoute(builder: (_) => const StatsDashboardScreen());
 
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
@@ -291,14 +296,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
