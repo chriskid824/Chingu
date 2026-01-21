@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'home_screen.dart';
 import '../matching/matching_screen.dart';
-import '../events/events_list_screen.dart';
+import '../events/event_history_screen.dart';
 import '../chat/chat_list_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -25,7 +25,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _pages = [
       const HomeScreen(),              // 0: 首頁
       const MatchingScreen(),          // 1: 配對
-      const EventsListScreen(),        // 2: 預約/活動
+      const EventHistoryScreen(),        // 2: 預約/活動
       const ChatListScreen(),          // 3: 訊息/聊天
       const SettingsScreen(),          // 4: 設定
     ];

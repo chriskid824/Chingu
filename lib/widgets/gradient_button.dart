@@ -3,7 +3,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 
 class GradientButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final LinearGradient? gradient;
   final double? width;
   final double height;
@@ -24,6 +24,8 @@ class GradientButton extends StatelessWidget {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
     
+    final isDisabled = onPressed == null || isLoading;
+
     final effectiveGradient = gradient ?? chinguTheme?.primaryGradient ?? 
         LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]);
 
@@ -31,9 +33,10 @@ class GradientButton extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        gradient: effectiveGradient,
+        gradient: isDisabled ? null : effectiveGradient,
+        color: isDisabled ? theme.disabledColor : null,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: isDisabled ? [] : [
           BoxShadow(
             color: effectiveGradient.colors.first.withOpacity(0.3),
             blurRadius: 12,
@@ -42,10 +45,12 @@ class GradientButton extends StatelessWidget {
         ],
       ),
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isDisabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          disabledForegroundColor: Colors.white.withOpacity(0.6),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -62,10 +67,10 @@ class GradientButton extends StatelessWidget {
               )
             : Text(
                 text,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: isDisabled ? Colors.white.withOpacity(0.6) : Colors.white,
                 ),
               ),
       ),
