@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +21,10 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+
+  // In-App Notification State
+  OverlayEntry? _overlayEntry;
+  Timer? _dismissTimer;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -122,6 +128,43 @@ class RichNotificationService {
         // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
         break;
+    }
+  }
+
+  /// 顯示應用內通知橫幅
+  void showInAppNotification(NotificationModel notification) {
+    // 移除現有的通知
+    _dismissInAppNotification();
+
+    final overlay = AppRouter.navigatorKey.currentState?.overlay;
+    if (overlay == null) return;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => AnimatedInAppNotification(
+        notification: notification,
+        onDismiss: () => _dismissInAppNotification(),
+        onTap: () {
+          _dismissInAppNotification();
+          _handleNavigation(notification.actionType, notification.actionData, null);
+        },
+      ),
+    );
+
+    overlay.insert(_overlayEntry!);
+
+    // 自動消失計時器
+    _dismissTimer = Timer(const Duration(seconds: 4), () {
+      _dismissInAppNotification();
+    });
+  }
+
+  void _dismissInAppNotification() {
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+
+    if (_overlayEntry != null) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
     }
   }
 

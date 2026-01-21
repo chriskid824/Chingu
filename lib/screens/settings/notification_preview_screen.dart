@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class NotificationPreviewScreen extends StatefulWidget {
   const NotificationPreviewScreen({super.key});
@@ -137,6 +139,27 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
           title: '從不顯示',
           subtitle: '僅顯示「新訊息」',
           index: 1,
+        ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ElevatedButton(
+            onPressed: () {
+              // 測試應用內通知
+              RichNotificationService().showInAppNotification(
+                NotificationModel(
+                  id: 'test_notification',
+                  title: '測試通知',
+                  message: '這是一個應用內通知測試',
+                  type: 'message',
+                  iconName: 'message',
+                  createdAt: DateTime.now(),
+                  isRead: false,
+                ),
+              );
+            },
+            child: const Text('測試應用內通知'),
+          ),
         ),
       ],
     );
