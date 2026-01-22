@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -25,17 +26,51 @@ void main() async {
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
+  // 嘗試獲取初始通知（當 App 從終止狀態被點擊開啟時）
+  RemoteMessage? initialMessage;
+  try {
+    initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  } catch (e) {
+    debugPrint('Error getting initial message: $e');
+  }
+
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
 
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  runApp(ChinguApp(initialMessage: initialMessage));
 }
 
-class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+class ChinguApp extends StatefulWidget {
+  final RemoteMessage? initialMessage;
+
+  const ChinguApp({
+    super.key,
+    this.initialMessage,
+  });
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    _handleInitialMessage();
+  }
+
+  void _handleInitialMessage() {
+    if (widget.initialMessage != null) {
+      // 使用 addPostFrameCallback 確保 Navigator 已掛載
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // 直接使用 RemoteMessage 的 data map
+        RichNotificationService().handleNotificationData(widget.initialMessage!.data);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

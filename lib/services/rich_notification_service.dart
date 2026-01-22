@@ -64,17 +64,24 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
-
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
-        final String? actionId = response.actionId;
-
-        _handleNavigation(actionType, actionData, actionId);
+        if (response.actionId != null) {
+          data['actionId'] = response.actionId;
+        }
+        handleNotificationData(data);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
     }
+  }
+
+  /// 公開方法處理通知數據（用於 App 啟動時的初始通知）
+  void handleNotificationData(Map<String, dynamic> data) {
+    final String? actionType = data['actionType'];
+    final String? actionData = data['actionData'];
+    final String? actionId = data['actionId'];
+
+    _handleNavigation(actionType, actionData, actionId);
   }
 
   /// 處理導航邏輯
