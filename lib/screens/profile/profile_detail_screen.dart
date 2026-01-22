@@ -236,6 +236,26 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
                       _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
                       
+                      const SizedBox(height: 32),
+
+                      // 用戶動態按鈕
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.pushNamed(context, AppRoutes.userMoments),
+                          icon: Icon(Icons.feed_outlined, color: theme.colorScheme.primary),
+                          label: Text('我的動態', style: TextStyle(color: theme.colorScheme.primary)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.primary,
+                            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
                       const SizedBox(height: 40),
                       
                       // 登出按鈕
