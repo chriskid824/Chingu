@@ -1,15 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// 通知類型枚舉
+enum NotificationType {
+  match,
+  event,
+  message,
+  rating,
+  system,
+  unknown,
+}
+
 /// 通知模型
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final NotificationType type; // 'match', 'event', 'message', 'rating', 'system'
   final String title;
-  final String message;
+  final String message; // Content
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
+  final String? deeplink; // Deep link for navigation
   final bool isRead;
   final DateTime createdAt;
 
@@ -22,6 +33,7 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.deeplink,
     this.isRead = false,
     required this.createdAt,
   });
@@ -37,12 +49,13 @@ class NotificationModel {
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
-      type: map['type'] ?? 'system',
+      type: _parseNotificationType(map['type']),
       title: map['title'] ?? '',
       message: map['message'] ?? '',
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      deeplink: map['deeplink'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -52,12 +65,13 @@ class NotificationModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'type': type,
+      'type': type.name,
       'title': title,
       'message': message,
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -74,49 +88,39 @@ class NotificationModel {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: true,
       createdAt: createdAt,
     );
   }
 
+  /// 輔助方法：解析通知類型
+  static NotificationType _parseNotificationType(String? type) {
+    if (type == null) return NotificationType.system;
+    try {
+      return NotificationType.values.firstWhere(
+        (e) => e.name == type,
+        orElse: () => NotificationType.unknown,
+      );
+    } catch (_) {
+      return NotificationType.unknown;
+    }
+  }
+
   /// 獲取通知圖標
   String get iconName {
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return 'favorite';
-      case 'event':
+      case NotificationType.event:
         return 'event';
-      case 'message':
+      case NotificationType.message:
         return 'message';
-      case 'rating':
+      case NotificationType.rating:
         return 'star';
-      case 'system':
+      case NotificationType.system:
       default:
         return 'notifications';
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

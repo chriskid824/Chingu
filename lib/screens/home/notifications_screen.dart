@@ -16,7 +16,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel(
       id: '1',
       userId: 'current_user',
-      type: 'match',
+      type: NotificationType.match,
       title: '王小華 喜歡了您的個人資料',
       message: '王小華 喜歡了您的個人資料',
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
@@ -25,7 +25,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel(
       id: '2',
       userId: 'current_user',
-      type: 'message',
+      type: NotificationType.message,
       title: '李小美 傳送了一則訊息給您',
       message: '李小美 傳送了一則訊息給您',
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -34,7 +34,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel(
       id: '3',
       userId: 'current_user',
-      type: 'event',
+      type: NotificationType.event,
       title: '您與 陳大明 的晚餐預約已確認',
       message: '您與 陳大明 的晚餐預約已確認',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
@@ -43,7 +43,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel(
       id: '4',
       userId: 'current_user',
-      type: 'rating',
+      type: NotificationType.rating,
       title: '恭喜！您獲得了新的成就徽章',
       message: '恭喜！您獲得了新的成就徽章',
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
@@ -55,7 +55,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel(
       id: '5',
       userId: 'current_user',
-      type: 'match',
+      type: NotificationType.match,
       title: '林小芳 想要與您配對',
       message: '林小芳 想要與您配對',
       createdAt: DateTime.now().subtract(const Duration(days: 3)),
@@ -64,7 +64,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel(
       id: '6',
       userId: 'current_user',
-      type: 'event',
+      type: NotificationType.event,
       title: '本週三晚餐報名即將截止',
       message: '本週三晚餐報名即將截止',
       createdAt: DateTime.now().subtract(const Duration(days: 4)),
@@ -75,7 +75,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -183,43 +182,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     // 簡單映射，實際專案應定義更多 type
     switch (notification.type) {
-      case 'match':
-        icon = Icons.favorite_rounded;
-        color = theme.colorScheme.error;
+      case NotificationType.match:
+        if (notification.title.contains('配對')) {
+             icon = Icons.person_add_rounded;
+             color = chinguTheme?.secondary ?? Colors.purple;
+        } else {
+            icon = Icons.favorite_rounded;
+            color = theme.colorScheme.error;
+        }
         break;
-      case 'match_request': // 假設新增此類型對應 "想要與您配對"
-        icon = Icons.person_add_rounded;
-        color = chinguTheme?.secondary ?? Colors.purple;
-        break;
-      case 'message':
+      case NotificationType.message:
         icon = Icons.chat_bubble_rounded;
         color = theme.colorScheme.primary;
         break;
-      case 'event':
-        icon = Icons.event_available_rounded;
-        color = chinguTheme?.success ?? Colors.green;
+      case NotificationType.event:
+        if (notification.title.contains('晚餐')) {
+            icon = Icons.restaurant_rounded;
+            color = theme.colorScheme.primary;
+        } else {
+             icon = Icons.event_available_rounded;
+             color = chinguTheme?.success ?? Colors.green;
+        }
         break;
-      case 'event_reminder': // 假設新增此類型對應 "晚餐報名截止"
-        icon = Icons.restaurant_rounded;
-        color = theme.colorScheme.primary;
-        break;
-      case 'rating':
+      case NotificationType.rating:
         icon = Icons.stars_rounded;
         color = chinguTheme?.warning ?? Colors.amber;
         break;
       default:
-        // 如果是 match 但 title 包含 "配對" (fallback for existing data)
-        if (notification.type == 'match' && notification.title.contains('配對')) {
-          icon = Icons.person_add_rounded;
-          color = chinguTheme?.secondary ?? Colors.purple;
-        } else if (notification.type == 'event' &&
-            notification.title.contains('晚餐')) {
-          icon = Icons.restaurant_rounded;
-          color = theme.colorScheme.primary;
-        } else {
-          icon = Icons.notifications_rounded;
-          color = theme.colorScheme.primary;
-        }
+        icon = Icons.notifications_rounded;
+        color = theme.colorScheme.primary;
     }
 
     // 格式化時間 (簡單模擬)
