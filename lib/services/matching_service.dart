@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -9,14 +10,17 @@ class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final FirebaseFunctions _functions;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    FirebaseFunctions? functions,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _functions = functions ?? FirebaseFunctions.instance;
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -157,8 +161,8 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
+        // 注意：這裡不調用 _handleMatchSuccess，改由 recordSwipe 調用
         return true;
       }
       return false;
@@ -180,7 +184,21 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送配對成功通知
+    try {
+      await _functions.httpsCallable('sendMatchNotification').call({
+        'user1Id': user1Id,
+        'user2Id': user2Id,
+        'chatRoomId': chatRoomId,
+      });
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+      // 不拋出異常，以免影響配對流程
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表
@@ -282,4 +300,3 @@ class MatchingService {
     }
   }
 }
-
