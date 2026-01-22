@@ -287,6 +287,51 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 刪除帳號
+  Future<void> deleteAccount() async {
+    if (_firebaseUser == null) return;
+
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      // 檢查上次登入時間，如果超過 5 分鐘，要求重新登入
+      // 這是為了防止刪除 Firestore 數據後 Auth 刪除失敗
+      final lastSignInTime = _firebaseUser!.metadata.lastSignInTime;
+      if (lastSignInTime != null) {
+        final difference = DateTime.now().difference(lastSignInTime);
+        if (difference.inMinutes > 5) {
+          throw firebase_auth.FirebaseAuthException(
+            code: 'requires-recent-login',
+            message: '為了安全起見，刪除帳號需要您最近有登入紀錄',
+          );
+        }
+      }
+
+      final uid = _firebaseUser!.uid;
+
+      // 1. 刪除 Firestore 資料
+      // 注意：這只是刪除主用戶文檔。理想情況下應使用 Cloud Functions 遞歸刪除所有相關數據
+      await _firestoreService.deleteUser(uid);
+
+      // 2. 刪除 Auth 帳號
+      await _authService.deleteAccount();
+
+      // 3. 清除本地狀態
+      _status = AuthStatus.uninitialized;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      rethrow; // 重新拋出異常以便 UI 處理
+    }
+  }
+
   /// 清除錯誤訊息
   void clearError() {
     _errorMessage = null;
