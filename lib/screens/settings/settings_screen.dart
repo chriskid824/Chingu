@@ -80,6 +80,9 @@ class SettingsScreen extends StatelessWidget {
           _buildListTile(context, Icons.lock_outline, '隱私設定', () {
             Navigator.of(context).pushNamed(AppRoutes.privacySettings);
           }),
+          _buildListTile(context, Icons.history, '登入記錄', () {
+            Navigator.of(context).pushNamed(AppRoutes.loginHistory);
+          }),
           _buildListTile(context, Icons.notifications_outlined, '通知設定', () {
             Navigator.of(context).pushNamed(AppRoutes.notificationSettings);
           }),
