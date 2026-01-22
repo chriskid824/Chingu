@@ -10,13 +10,23 @@ class CrashReportingService {
   CrashReportingService._internal();
 
   Future<void> initialize() async {
+    if (kDebugMode) {
+      // Force disable Crashlytics collection while doing every day development.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      // Handle Crashlytics enabled status when not in Debug.
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    }
+
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
     // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
+      // In debug mode, return false to allow the error to be printed to the console.
+      // In release mode, return true to indicate the error has been handled.
+      return !kDebugMode;
     };
   }
 
