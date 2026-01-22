@@ -9,11 +9,13 @@ import 'package:chingu/providers/auth_provider.dart';
 class ReportUserScreen extends StatefulWidget {
   final String reportedUserId;
   final String? reportedUserName;
+  final FirestoreService? firestoreService;
 
   const ReportUserScreen({
     Key? key,
     required this.reportedUserId,
     this.reportedUserName,
+    this.firestoreService,
   }) : super(key: key);
 
   @override
@@ -23,7 +25,13 @@ class ReportUserScreen extends StatefulWidget {
 class _ReportUserScreenState extends State<ReportUserScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
-  final FirestoreService _firestoreService = FirestoreService();
+  late final FirestoreService _firestoreService;
+
+  @override
+  void initState() {
+    super.initState();
+    _firestoreService = widget.firestoreService ?? FirestoreService();
+  }
 
   String? _selectedReason;
   bool _isSubmitting = false;
