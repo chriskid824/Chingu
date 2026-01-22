@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -178,9 +179,35 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert_rounded,
+                color: theme.colorScheme.onSurface),
+            onSelected: (value) {
+              if (value == 'report') {
+                if (_otherUser != null) {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.reportUser,
+                    arguments: {
+                      'reportedUserId': _otherUser!.uid,
+                      'reportedUserName': _otherUser!.name,
+                    },
+                  );
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('舉報用戶'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
