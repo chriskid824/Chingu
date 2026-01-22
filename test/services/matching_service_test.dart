@@ -2,19 +2,21 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([FirestoreService, ChatService, UserBlockService])
 import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockUserBlockService mockUserBlockService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -53,12 +55,18 @@ void main() {
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockUserBlockService = MockUserBlockService();
     fakeFirestore = FakeFirebaseFirestore();
+
+    // Default mock behavior
+    when(mockUserBlockService.getBlockedUserIds(any))
+        .thenAnswer((_) async => []);
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      userBlockService: mockUserBlockService,
     );
   });
 
@@ -115,6 +123,23 @@ void main() {
         city: anyNamed('city'),
         limit: anyNamed('limit'),
       )).thenAnswer((_) async => [oldCandidate]);
+
+      // Act
+      final results = await matchingService.getMatches(currentUser);
+
+      // Assert
+      expect(results, isEmpty);
+    });
+
+    test('should filter out blocked users', () async {
+      // Arrange
+      when(mockUserBlockService.getBlockedUserIds(currentUser.uid))
+          .thenAnswer((_) async => [candidateUser.uid]);
+
+      when(mockFirestoreService.queryMatchingUsers(
+        city: anyNamed('city'),
+        limit: anyNamed('limit'),
+      )).thenAnswer((_) async => [candidateUser]);
 
       // Act
       final results = await matchingService.getMatches(currentUser);
