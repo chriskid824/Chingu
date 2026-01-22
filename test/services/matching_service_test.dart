@@ -2,6 +2,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -11,10 +12,15 @@ import 'package:mockito/mockito.dart';
 @GenerateMocks([FirestoreService, ChatService])
 import 'matching_service_test.mocks.dart';
 
+class MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
+class MockHttpsCallable extends Mock implements HttpsCallable {}
+
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockFirebaseFunctions mockFunctions;
+  late MockHttpsCallable mockHttpsCallable;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -53,12 +59,19 @@ void main() {
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockFunctions = MockFirebaseFunctions();
+    mockHttpsCallable = MockHttpsCallable();
     fakeFirestore = FakeFirebaseFirestore();
+
+    // Setup HttpsCallable mock
+    when(mockFunctions.httpsCallable(any)).thenReturn(mockHttpsCallable);
+    when(mockHttpsCallable.call(any)).thenAnswer((_) async => HttpsCallableResult<dynamic>({'result': 'success'}));
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      functions: mockFunctions,
     );
   });
 
@@ -174,6 +187,14 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      verify(mockFunctions.httpsCallable('sendMatchNotification')).called(1);
+      verify(mockHttpsCallable.call({
+        'user1Id': currentUser.uid,
+        'user2Id': candidateUser.uid,
+        'chatRoomId': 'chat_room_id',
+      })).called(1);
     });
   });
 }

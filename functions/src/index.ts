@@ -6,6 +6,7 @@
 
 // Export all functions
 export { sendBroadcast } from "./sendBroadcast";
+export { sendMatchNotification } from "./sendMatchNotification";
 
 // Future exports will be added here:
 // export {createWeeklyEvents} from "./createWeeklyEvents";
