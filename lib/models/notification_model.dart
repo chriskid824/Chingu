@@ -1,15 +1,38 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// 通知類型枚舉
+enum NotificationType {
+  match,
+  message,
+  event,
+  rating,
+  system,
+  unknown;
+
+  String toShortString() {
+    return toString().split('.').last;
+  }
+
+  static NotificationType fromString(String type) {
+    return NotificationType.values.firstWhere(
+      (e) => e.toShortString() == type,
+      orElse: () => NotificationType.unknown,
+    );
+  }
+}
+
 /// 通知模型
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final NotificationType type; // match, message, event, rating, system
   final String title;
   final String message;
   final String? imageUrl;
-  final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
+  final String? actionType; // 'navigate', 'open_event', 'open_chat', etc. (Legacy/Specific actions)
   final String? actionData; // JSON string or ID
+  final String? route; // Deeplink route e.g., /event/123
+  final Map<String, dynamic>? trackingParams; // For A/B testing and analytics
   final bool isRead;
   final DateTime createdAt;
 
@@ -22,6 +45,8 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.route,
+    this.trackingParams,
     this.isRead = false,
     required this.createdAt,
   });
@@ -37,12 +62,14 @@ class NotificationModel {
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
-      type: map['type'] ?? 'system',
+      type: NotificationType.fromString(map['type'] ?? 'system'),
       title: map['title'] ?? '',
       message: map['message'] ?? '',
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      route: map['route'],
+      trackingParams: map['trackingParams'] as Map<String, dynamic>?,
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -52,12 +79,14 @@ class NotificationModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'type': type,
+      'type': type.toShortString(),
       'title': title,
       'message': message,
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'route': route,
+      'trackingParams': trackingParams,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -74,6 +103,8 @@ class NotificationModel {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      route: route,
+      trackingParams: trackingParams,
       isRead: true,
       createdAt: createdAt,
     );
@@ -82,41 +113,17 @@ class NotificationModel {
   /// 獲取通知圖標
   String get iconName {
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return 'favorite';
-      case 'event':
+      case NotificationType.event:
         return 'event';
-      case 'message':
+      case NotificationType.message:
         return 'message';
-      case 'rating':
+      case NotificationType.rating:
         return 'star';
-      case 'system':
+      case NotificationType.system:
       default:
         return 'notifications';
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

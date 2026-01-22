@@ -206,12 +206,12 @@ class NotificationStorageService {
   }
 
   /// 按類型獲取通知
-  Future<List<NotificationModel>> getNotificationsByType(String type) async {
+  Future<List<NotificationModel>> getNotificationsByType(NotificationType type) async {
     final userId = _currentUserId;
     if (userId == null) return [];
 
     final snapshot = await _notificationsRef(userId)
-        .where('type', isEqualTo: type)
+        .where('type', isEqualTo: type.toShortString())
         .orderBy('createdAt', descending: true)
         .get();
 
@@ -227,6 +227,7 @@ class NotificationStorageService {
     String? imageUrl,
     String? actionType,
     String? actionData,
+    String? route,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -234,12 +235,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
       userId: userId,
-      type: 'system',
+      type: NotificationType.system,
       title: title,
       message: message,
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      route: route,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -259,12 +261,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'match',
+      type: NotificationType.match,
       title: '新配對成功! 🎉',
       message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
+      route: '/chat/$matchedUserId', // Assuming route pattern
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -285,12 +288,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'event',
+      type: NotificationType.event,
       title: eventTitle,
       message: message,
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
+      route: '/event/$eventId', // Assuming route pattern
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -311,12 +315,13 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'message',
+      type: NotificationType.message,
       title: senderName,
       message: messagePreview,
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
+      route: '/chat/$senderId', // Assuming route pattern
       isRead: false,
       createdAt: DateTime.now(),
     );
