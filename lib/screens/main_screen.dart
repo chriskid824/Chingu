@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/core/routes/app_router.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
 import 'chat/chat_list_screen.dart';
 import 'profile/profile_detail_screen.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
 
 class MainScreen extends StatefulWidget {
   final int? initialIndex;
@@ -22,11 +25,72 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late int _currentIndex;
+  void Function()? _authListener;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuth();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_authListener != null) {
+      context.read<AuthProvider>().removeListener(_authListener!);
+    }
+    super.dispose();
+  }
+
+  void _checkAuth() {
+    final authProvider = context.read<AuthProvider>();
+
+    _authListener = () => _handleTwoFactorCheck(authProvider);
+    authProvider.addListener(_authListener!);
+
+    // Check immediately
+    _handleTwoFactorCheck(authProvider);
+  }
+
+  Future<void> _handleTwoFactorCheck(AuthProvider authProvider) async {
+    if (!mounted) return;
+
+    if (authProvider.isAuthenticated &&
+        authProvider.userModel != null &&
+        authProvider.userModel!.isTwoFactorEnabled &&
+        !authProvider.isTwoFactorVerified) {
+
+        final user = authProvider.userModel!;
+        final target = user.twoFactorMethod == 'sms' ? (user.phoneNumber ?? '') : user.email;
+
+        if (target.isNotEmpty) {
+           // 發送驗證碼
+           try {
+             await TwoFactorAuthService().sendVerificationCode(
+               target: target,
+               method: user.twoFactorMethod,
+               uid: user.uid,
+             );
+           } catch (e) {
+             debugPrint('Failed to send 2FA code: $e');
+           }
+
+           if (!mounted) return;
+
+           Navigator.of(context).pushNamedAndRemoveUntil(
+              AppRoutes.otpVerification,
+              (route) => false,
+              arguments: {
+                  'target': target,
+                  'method': user.twoFactorMethod,
+                  'uid': user.uid,
+              }
+           );
+        }
+    }
   }
 
   final List<Widget> _screens = [

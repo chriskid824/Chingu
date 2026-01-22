@@ -21,6 +21,9 @@ class TwoFactorAuthService {
     required String method,
     String? uid,
   }) async {
+    if (target.isEmpty) {
+      throw Exception('驗證目標不能為空');
+    }
     try {
       // 1. 生成 6 位數驗證碼
       final code = _generateCode();

@@ -45,6 +45,8 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../screens/settings/two_factor_settings_screen.dart';
+import '../../screens/auth/otp_verification_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -99,6 +101,8 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String twoFactorSettings = '/two-factor-settings';
+  static const String otpVerification = '/otp-verification';
 }
 
 /// 應用程式路由配置
@@ -243,6 +247,19 @@ class AppRouter {
           builder: (_) => ReportUserScreen(
             reportedUserId: args['reportedUserId'],
             reportedUserName: args['reportedUserName'],
+          ),
+        );
+
+      case AppRoutes.twoFactorSettings:
+        return MaterialPageRoute(builder: (_) => const TwoFactorSettingsScreen());
+
+      case AppRoutes.otpVerification:
+        final otpArgs = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => OtpVerificationScreen(
+            target: otpArgs['target'],
+            method: otpArgs['method'],
+            uid: otpArgs['uid'],
           ),
         );
       

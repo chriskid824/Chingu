@@ -4,6 +4,9 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import '../../core/routes/app_router.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,6 +45,52 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          final userDoc = await FirestoreService().getUser(user.uid);
+          if (userDoc != null && userDoc.isTwoFactorEnabled) {
+            final method = userDoc.twoFactorMethod;
+            final target = method == 'sms'
+                ? (userDoc.phoneNumber ?? '')
+                : userDoc.email;
+
+            if (target.isEmpty) {
+               throw Exception('開啟了雙因素認證但缺少聯絡資訊');
+            }
+
+            await TwoFactorAuthService().sendVerificationCode(
+              target: target,
+              method: method,
+              uid: user.uid,
+            );
+
+            if (!mounted) return;
+
+            Navigator.pushReplacementNamed(
+              context,
+              AppRoutes.otpVerification,
+              arguments: {
+                'target': target,
+                'method': method,
+                'uid': user.uid,
+              },
+            );
+            return;
+          }
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('驗證檢查失敗: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          // 登出以避免卡在已登入但未驗證的狀態
+          await authProvider.signOut();
+          return;
+        }
+      }
       Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
