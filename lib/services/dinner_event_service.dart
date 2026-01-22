@@ -2,6 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
+///
+/// 活動提醒機制：
+/// 使用 Cloud Scheduler 定期（每小時）觸發 Cloud Function (`sendEventReminders`)。
+/// 該函數會檢查活動時間前 24 小時的活動，並向已確認的參與者發送提醒通知。
+/// 為了避免重複發送，會在活動文檔中標記 `reminderSent: true`。
 class DinnerEventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
