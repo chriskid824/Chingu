@@ -72,6 +72,8 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **Notification Center**: Created `NotificationCenterScreen` with real-time Firestore integration, mark-as-read functionality, and deep linking support. Integrated with `HomeScreen` badge.
+
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
@@ -121,7 +123,7 @@
 - [ ] 郵件驗證頁面
 
 #### 首頁與導航 (Home & Nav)
-- [ ] 通知頁面
+- [x] 通知頁面
 - [ ] 搜尋頁面
 - [ ] 底部導航欄
 
