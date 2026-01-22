@@ -4,6 +4,9 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chingu/widgets/comments_bottom_sheet.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -25,6 +28,8 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  final MomentService _momentService = MomentService();
+  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   void initState() {
@@ -32,6 +37,23 @@ class _MomentCardState extends State<MomentCard> {
     _isLiked = widget.moment.isLiked;
     _likeCount = widget.moment.likeCount;
     _commentCount = widget.moment.commentCount;
+    _checkIfLiked();
+  }
+
+  Future<void> _checkIfLiked() async {
+    if (_currentUserId.isNotEmpty) {
+      try {
+        final liked = await _momentService.hasLiked(widget.moment.id, _currentUserId);
+        if (mounted && liked != _isLiked) {
+          setState(() {
+            _isLiked = liked;
+          });
+        }
+      } catch (e) {
+        // Handle error or ignore
+        debugPrint('Error checking if liked: $e');
+      }
+    }
   }
 
   @override
@@ -50,7 +72,38 @@ class _MomentCardState extends State<MomentCard> {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
+
+    if (_currentUserId.isNotEmpty) {
+      _momentService.toggleLike(widget.moment.id, _currentUserId, _isLiked).catchError((e) {
+        // Revert on error
+        if (mounted) {
+           setState(() {
+            _isLiked = !_isLiked;
+            _likeCount += _isLiked ? 1 : -1;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update like: $e')),
+          );
+        }
+      });
+    }
+
     widget.onLikeChanged?.call(_isLiked);
+  }
+
+  void _showComments() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CommentsBottomSheet(momentId: widget.moment.id),
+    ).then((_) {
+      // Refresh logic if needed when closing comments
+      // Typically the moment stream in parent would update the comment count
+      // But if we need to update local state immediately after returning (unlikely as it's a stream in bottom sheet):
+    });
+
+    widget.onCommentTap?.call();
   }
 
   @override
@@ -167,7 +220,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _showComments,
               ),
             ],
           ),

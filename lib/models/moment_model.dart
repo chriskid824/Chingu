@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class MomentModel extends Equatable {
@@ -49,6 +50,34 @@ class MomentModel extends Equatable {
       commentCount: commentCount ?? this.commentCount,
       isLiked: isLiked ?? this.isLiked,
     );
+  }
+
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id) {
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? '',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      likeCount: map['likeCount']?.toInt() ?? 0,
+      commentCount: map['commentCount']?.toInt() ?? 0,
+      isLiked: map['isLiked'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+    };
   }
 
   @override
