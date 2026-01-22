@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -60,6 +61,14 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+
+        // 同步訂閱主題
+        if (_userModel!.subscribedTopics.isNotEmpty) {
+           // 不等待同步完成，以免阻塞 UI
+           NotificationService().syncSubscriptions(_userModel!.subscribedTopics).catchError((e) {
+             debugPrint('同步訂閱失敗: $e');
+           });
+        }
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -71,6 +80,11 @@ class AuthProvider with ChangeNotifier {
       _userModel = null;
       notifyListeners();
     }
+  }
+
+  /// 載入用戶資料 (公開別名)
+  Future<void> loadUserData() async {
+    await refreshUserData();
   }
 
   /// 註冊新用戶

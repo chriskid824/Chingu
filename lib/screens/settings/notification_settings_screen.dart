@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'topic_subscription_screen.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
@@ -63,6 +64,23 @@ class NotificationSettingsScreen extends StatelessWidget {
             ),
             onTap: () {
               Navigator.pushNamed(context, AppRoutes.notificationPreview);
+            },
+          ),
+          const Divider(),
+          _buildSectionTitle(context, '主題訂閱'),
+          ListTile(
+            title: const Text('管理訂閱主題'),
+            subtitle: Text('設定感興趣的地區與主題', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TopicSubscriptionScreen()),
+              );
             },
           ),
           const Divider(),
