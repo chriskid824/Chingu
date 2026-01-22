@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -126,7 +128,17 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  /// [ignoreSettings] 如果為 true，則忽略用戶設定（例如預覽時）
+  Future<void> showNotification(NotificationModel notification, {bool ignoreSettings = false}) async {
+    // 檢查用戶偏好
+    if (!ignoreSettings) {
+      final shouldShow = await _checkNotificationPreference(notification);
+      if (!shouldShow) {
+        debugPrint('Notification suppressed by user settings: ${notification.type}');
+        return;
+      }
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -195,5 +207,46 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 檢查用戶偏好設定
+  Future<bool> _checkNotificationPreference(NotificationModel notification) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (!doc.exists) return true; // 如果找不到用戶，預設顯示
+
+      final data = doc.data();
+      if (data == null || !data.containsKey('notificationSettings')) return true;
+
+      final settings = Map<String, dynamic>.from(data['notificationSettings']);
+
+      // 全局開關
+      if (settings['push_enable'] == false) return false;
+
+      // 根據類型檢查
+      switch (notification.type) {
+        case 'match':
+          // 這裡簡單映射 match 到 new_match 或 match_success
+          // 實際情況可能需要更細分
+          return settings['new_match'] == true || settings['match_success'] == true;
+        case 'message':
+          return settings['new_message'] == true;
+        case 'event':
+          return settings['dinner_reminder'] == true || settings['dinner_update'] == true;
+        case 'rating':
+           // 這裡沒有對應的設定，預設顯示或視為系統
+           return true;
+        case 'system':
+          return true; // 系統通知通常不被過濾
+        default:
+          return true;
+      }
+    } catch (e) {
+      debugPrint('Error checking notification preference: $e');
+      return true; // 發生錯誤時預設顯示
+    }
   }
 }
