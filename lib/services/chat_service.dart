@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
@@ -114,8 +116,76 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      await _sendPushNotification(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: senderName,
+        message: message,
+        type: type,
+      );
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
+    }
+  }
+
+  /// 發送推送通知給聊天室的其他參與者
+  Future<void> _sendPushNotification({
+    required String chatRoomId,
+    required String senderId,
+    required String senderName,
+    required String message,
+    required String type,
+  }) async {
+    try {
+      // 獲取聊天室參與者
+      final chatRoom = await _chatRoomsCollection.doc(chatRoomId).get();
+      if (!chatRoom.exists) return;
+
+      final data = chatRoom.data() as Map<String, dynamic>;
+      final participants = List<String>.from(data['participantIds'] ?? []);
+
+      // 找出接收者 ID (非發送者的其他人)
+      final recipientIds = participants.where((id) => id != senderId).toList();
+
+      for (final recipientId in recipientIds) {
+        // 獲取接收者資料以取得 FCM Token
+        final userDoc = await _firestore.collection('users').doc(recipientId).get();
+        if (!userDoc.exists) continue;
+
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final fcmToken = userData['fcmToken'] as String?;
+
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          // 準備通知內容
+          // 截取訊息預覽 (前 20 字)
+          String preview = message;
+          if (type == 'image') {
+            preview = '[圖片]';
+          } else if (type == 'sticker') {
+            preview = '[貼圖]';
+          } else if (preview.length > 20) {
+            preview = '${preview.substring(0, 20)}...';
+          }
+
+          // 呼叫 Cloud Function 發送通知
+          await _functions.httpsCallable('sendNotification').call({
+            'token': fcmToken,
+            'title': senderName,
+            'body': preview,
+            'data': {
+              'actionType': 'open_chat',
+              'actionData': chatRoomId, // 或者 senderId，視 RichNotificationService 處理邏輯而定
+              'senderId': senderId,
+              'chatRoomId': chatRoomId,
+            },
+          });
+        }
+      }
+    } catch (e) {
+      // 記錄錯誤但不阻斷訊息發送
+      print('發送推送通知失敗: $e');
     }
   }
 }
