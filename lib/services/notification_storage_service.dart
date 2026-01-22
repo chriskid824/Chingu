@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -16,6 +17,12 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+
+  @visibleForTesting
+  set firestore(FirebaseFirestore fs) => _firestoreInstance = fs;
+
+  @visibleForTesting
+  set auth(FirebaseAuth auth) => _authInstance = auth;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
@@ -48,12 +55,21 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
-    final batch = _firestore.batch();
-    for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
-      batch.set(docRef, notification.toMap());
+    // Firestore batch limit is 500
+    const int batchSize = 500;
+    for (var i = 0; i < notifications.length; i += batchSize) {
+      final batch = _firestore.batch();
+      final end = (i + batchSize < notifications.length)
+          ? i + batchSize
+          : notifications.length;
+      final chunk = notifications.sublist(i, end);
+
+      for (final notification in chunk) {
+        final docRef = _notificationsRef(userId).doc(notification.id);
+        batch.set(docRef, notification.toMap());
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   /// 獲取所有通知 (分頁)
@@ -127,11 +143,20 @@ class NotificationStorageService {
 
     if (unread.docs.isEmpty) return;
 
-    final batch = _firestore.batch();
-    for (final doc in unread.docs) {
-      batch.update(doc.reference, {'isRead': true});
+    // Firestore batch limit is 500
+    const int batchSize = 500;
+    for (var i = 0; i < unread.docs.length; i += batchSize) {
+      final batch = _firestore.batch();
+      final end = (i + batchSize < unread.docs.length)
+          ? i + batchSize
+          : unread.docs.length;
+      final chunk = unread.docs.sublist(i, end);
+
+      for (final doc in chunk) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   /// 刪除單個通知
@@ -150,11 +175,20 @@ class NotificationStorageService {
     final snapshot = await _notificationsRef(userId).get();
     if (snapshot.docs.isEmpty) return;
 
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
+    // Firestore batch limit is 500
+    const int batchSize = 500;
+    for (var i = 0; i < snapshot.docs.length; i += batchSize) {
+      final batch = _firestore.batch();
+      final end = (i + batchSize < snapshot.docs.length)
+          ? i + batchSize
+          : snapshot.docs.length;
+      final chunk = snapshot.docs.sublist(i, end);
+
+      for (final doc in chunk) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   /// 刪除舊通知 (超過指定天數)
@@ -171,11 +205,20 @@ class NotificationStorageService {
 
     if (snapshot.docs.isEmpty) return 0;
 
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
+    // Firestore batch limit is 500
+    const int batchSize = 500;
+    for (var i = 0; i < snapshot.docs.length; i += batchSize) {
+      final batch = _firestore.batch();
+      final end = (i + batchSize < snapshot.docs.length)
+          ? i + batchSize
+          : snapshot.docs.length;
+      final chunk = snapshot.docs.sublist(i, end);
+
+      for (final doc in chunk) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
     }
-    await batch.commit();
 
     return snapshot.docs.length;
   }
