@@ -26,6 +26,10 @@ class DinnerEventModel {
   final DateTime? confirmedAt;
   final DateTime? completedAt;
   
+  // 提醒狀態
+  final bool reminder24hSent;
+  final bool reminder2hSent;
+
   // 破冰問題
   final List<String> icebreakerQuestions;
   
@@ -51,6 +55,8 @@ class DinnerEventModel {
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
+    this.reminder24hSent = false,
+    this.reminder2hSent = false,
     this.icebreakerQuestions = const [],
     this.ratings,
     this.reviews,
@@ -86,6 +92,8 @@ class DinnerEventModel {
       completedAt: map['completedAt'] != null 
           ? (map['completedAt'] as Timestamp).toDate() 
           : null,
+      reminder24hSent: map['reminder24hSent'] ?? false,
+      reminder2hSent: map['reminder2hSent'] ?? false,
       icebreakerQuestions: List<String>.from(map['icebreakerQuestions'] ?? []),
       ratings: map['ratings'] != null 
           ? Map<String, double>.from(map['ratings']) 
@@ -115,6 +123,8 @@ class DinnerEventModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'reminder24hSent': reminder24hSent,
+      'reminder2hSent': reminder2hSent,
       'icebreakerQuestions': icebreakerQuestions,
       'ratings': ratings,
       'reviews': reviews,
@@ -137,6 +147,8 @@ class DinnerEventModel {
     String? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
+    bool? reminder24hSent,
+    bool? reminder2hSent,
     List<String>? icebreakerQuestions,
     Map<String, double>? ratings,
     Map<String, String>? reviews,
@@ -159,6 +171,8 @@ class DinnerEventModel {
       createdAt: createdAt,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       completedAt: completedAt ?? this.completedAt,
+      reminder24hSent: reminder24hSent ?? this.reminder24hSent,
+      reminder2hSent: reminder2hSent ?? this.reminder2hSent,
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
       ratings: ratings ?? this.ratings,
       reviews: reviews ?? this.reviews,
