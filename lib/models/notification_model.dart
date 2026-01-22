@@ -10,6 +10,7 @@ class NotificationModel {
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
+  final Map<String, dynamic>? trackingParams; // 用於追蹤分析的參數 (如 A/B 測試組別)
   final bool isRead;
   final DateTime createdAt;
 
@@ -22,6 +23,7 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.trackingParams,
     this.isRead = false,
     required this.createdAt,
   });
@@ -43,6 +45,7 @@ class NotificationModel {
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      trackingParams: map['trackingParams'] as Map<String, dynamic>?,
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -58,6 +61,7 @@ class NotificationModel {
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'trackingParams': trackingParams,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -74,6 +78,7 @@ class NotificationModel {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      trackingParams: trackingParams,
       isRead: true,
       createdAt: createdAt,
     );
@@ -96,27 +101,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
