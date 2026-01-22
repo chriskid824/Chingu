@@ -1,5 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// 報名狀態枚舉
+enum EventRegistrationStatus {
+  registered,
+  waitlist,
+  cancelled,
+  none, // 未報名
+}
+
 /// 晚餐活動模型（固定6人）
 class DinnerEventModel {
   final String id;
@@ -10,9 +18,12 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者管理
+  final int maxParticipants;
+  final int currentParticipants; // 冗餘欄位，用於查詢優化
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final List<String> waitlist; // 等候清單 User IDs
   
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
@@ -26,6 +37,10 @@ class DinnerEventModel {
   final DateTime? confirmedAt;
   final DateTime? completedAt;
   
+  // 通知狀態
+  final bool reminder24hSent;
+  final bool reminder2hSent;
+
   // 破冰問題
   final List<String> icebreakerQuestions;
   
@@ -41,8 +56,11 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
+    this.currentParticipants = 1,
     required this.participantIds,
     required this.participantStatus,
+    this.waitlist = const [],
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -51,6 +69,8 @@ class DinnerEventModel {
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
+    this.reminder24hSent = false,
+    this.reminder2hSent = false,
     this.icebreakerQuestions = const [],
     this.ratings,
     this.reviews,
@@ -72,8 +92,11 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
+      currentParticipants: map['currentParticipants'] ?? (map['participantIds'] as List?)?.length ?? 1,
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitlist: List<String>.from(map['waitlist'] ?? []),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -86,6 +109,8 @@ class DinnerEventModel {
       completedAt: map['completedAt'] != null 
           ? (map['completedAt'] as Timestamp).toDate() 
           : null,
+      reminder24hSent: map['reminder24hSent'] ?? false,
+      reminder2hSent: map['reminder2hSent'] ?? false,
       icebreakerQuestions: List<String>.from(map['icebreakerQuestions'] ?? []),
       ratings: map['ratings'] != null 
           ? Map<String, double>.from(map['ratings']) 
@@ -105,8 +130,11 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
+      'currentParticipants': currentParticipants,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'waitlist': waitlist,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -115,6 +143,8 @@ class DinnerEventModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'reminder24hSent': reminder24hSent,
+      'reminder2hSent': reminder2hSent,
       'icebreakerQuestions': icebreakerQuestions,
       'ratings': ratings,
       'reviews': reviews,
@@ -128,8 +158,11 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
+    int? currentParticipants,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitlist,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -137,6 +170,8 @@ class DinnerEventModel {
     String? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
+    bool? reminder24hSent,
+    bool? reminder2hSent,
     List<String>? icebreakerQuestions,
     Map<String, double>? ratings,
     Map<String, String>? reviews,
@@ -149,8 +184,11 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
+      currentParticipants: currentParticipants ?? this.currentParticipants,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      waitlist: waitlist ?? this.waitlist,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -159,6 +197,8 @@ class DinnerEventModel {
       createdAt: createdAt,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       completedAt: completedAt ?? this.completedAt,
+      reminder24hSent: reminder24hSent ?? this.reminder24hSent,
+      reminder2hSent: reminder2hSent ?? this.reminder2hSent,
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
       ratings: ratings ?? this.ratings,
       reviews: reviews ?? this.reviews,
@@ -197,8 +237,8 @@ class DinnerEventModel {
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  /// 檢查是否已滿
+  bool get isFull => currentParticipants >= maxParticipants;
 
   /// 獲取已確認人數
   int get confirmedCount {
@@ -207,9 +247,23 @@ class DinnerEventModel {
         .length;
   }
 
+  /// 獲取等候清單人數
+  int get waitlistCount => waitlist.length;
+
+  /// 獲取取消截止時間 (活動前24小時)
+  DateTime get cancellationDeadline => dateTime.subtract(const Duration(hours: 24));
+
+  /// 是否可以取消 (當前時間 < 截止時間)
+  bool get canCancel => DateTime.now().isBefore(cancellationDeadline);
+
   /// 檢查用戶是否已確認
   bool isUserConfirmed(String userId) {
     return participantStatus[userId] == 'confirmed';
+  }
+
+  /// 檢查用戶是否在等候清單
+  bool isUserOnWaitlist(String userId) {
+    return waitlist.contains(userId);
   }
 
   /// 獲取平均評分
@@ -218,8 +272,15 @@ class DinnerEventModel {
     final sum = ratings!.values.reduce((a, b) => a + b);
     return sum / ratings!.length;
   }
+
+  /// 獲取用戶註冊狀態
+  EventRegistrationStatus getUserRegistrationStatus(String userId) {
+    if (participantIds.contains(userId)) {
+      return EventRegistrationStatus.registered;
+    } else if (waitlist.contains(userId)) {
+      return EventRegistrationStatus.waitlist;
+    } else {
+      return EventRegistrationStatus.none;
+    }
+  }
 }
-
-
-
-
