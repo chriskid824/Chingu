@@ -33,6 +33,9 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 通知設定
+  final Map<String, bool> notificationSettings;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,6 +66,11 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.notificationSettings = const {
+      'new_match': true,
+      'new_message': true,
+      'event_update': true,
+    },
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +109,11 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      notificationSettings: Map<String, bool>.from(map['notificationSettings'] ?? {
+        'new_match': true,
+        'new_message': true,
+        'event_update': true,
+      }),
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +146,7 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'notificationSettings': notificationSettings,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +177,7 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    Map<String, bool>? notificationSettings,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +207,7 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
