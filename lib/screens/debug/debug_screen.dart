@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import '../../services/rich_notification_service.dart';
+import '../../models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -157,6 +159,28 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                   final notification = NotificationModel(
+                     id: DateTime.now().millisecondsSinceEpoch.toString(),
+                     userId: 'test_user',
+                     type: 'message',
+                     title: '測試通知',
+                     message: '這是一條測試用的 In-App 通知消息，點擊可測試導航。',
+                     createdAt: DateTime.now(),
+                     actionType: 'open_chat',
+                   );
+                   RichNotificationService().showInAppNotification(notification);
+                },
+                icon: const Icon(Icons.notifications_active_rounded),
+                label: const Text('測試 In-App 通知'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),

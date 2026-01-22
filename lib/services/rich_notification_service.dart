@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +21,11 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+
+  // App 內通知相關
+  OverlayEntry? _overlayEntry;
+  Timer? _overlayTimer;
+  GlobalKey<_AnimatedNotificationOverlayState>? _overlayKey;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -194,6 +201,136 @@ class RichNotificationService {
       notification.message,
       platformChannelSpecifics,
       payload: json.encode(payload),
+    );
+  }
+
+  /// 顯示 App 內通知 Banner
+  void showInAppNotification(NotificationModel notification) {
+    // 如果已有通知顯示中，先移除
+    dismissInAppNotification(animate: false);
+
+    final overlayState = AppRouter.navigatorKey.currentState?.overlay;
+    if (overlayState == null) return;
+
+    _overlayKey = GlobalKey<_AnimatedNotificationOverlayState>();
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => _AnimatedNotificationOverlay(
+        key: _overlayKey,
+        onDismissComplete: _removeOverlayEntry,
+        child: InAppNotification(
+          notification: notification,
+          onDismiss: () => dismissInAppNotification(animate: true),
+          onTap: () {
+            // 點擊後先移除通知，再導航
+            dismissInAppNotification(animate: true);
+            _handleNavigation(
+              notification.actionType,
+              notification.actionData,
+              null
+            );
+          },
+        ),
+      ),
+    );
+
+    overlayState.insert(_overlayEntry!);
+
+    // 5秒後自動消失
+    _overlayTimer = Timer(const Duration(seconds: 5), () {
+      dismissInAppNotification(animate: true);
+    });
+  }
+
+  /// 移除 App 內通知
+  void dismissInAppNotification({bool animate = true}) {
+    _overlayTimer?.cancel();
+    _overlayTimer = null;
+
+    if (animate && _overlayKey?.currentState != null) {
+      _overlayKey!.currentState!.reverseAndDismiss();
+    } else {
+      _removeOverlayEntry();
+    }
+  }
+
+  void _removeOverlayEntry() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _overlayKey = null;
+  }
+}
+
+class _AnimatedNotificationOverlay extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onDismissComplete;
+
+  const _AnimatedNotificationOverlay({
+    super.key,
+    required this.child,
+    required this.onDismissComplete,
+  });
+
+  @override
+  State<_AnimatedNotificationOverlay> createState() => _AnimatedNotificationOverlayState();
+}
+
+class _AnimatedNotificationOverlayState extends State<_AnimatedNotificationOverlay> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> reverseAndDismiss() async {
+      await _controller.reverse();
+      widget.onDismissComplete();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _offsetAnimation,
+          child: Material(
+            color: Colors.transparent,
+            child: widget.child,
+          ),
+        ),
+      ),
     );
   }
 }
