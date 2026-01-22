@@ -3,7 +3,10 @@ import 'package:chingu/models/user_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -287,6 +290,65 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  // === Favorites ===
+
+  /// Add a user to favorites
+  Future<void> addFavorite(String userId, String targetUserId) async {
+    try {
+      await _usersCollection
+          .doc(userId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .set({
+        'addedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to add favorite: $e');
+    }
+  }
+
+  /// Remove a user from favorites
+  Future<void> removeFavorite(String userId, String targetUserId) async {
+    try {
+      await _usersCollection
+          .doc(userId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .delete();
+    } catch (e) {
+      throw Exception('Failed to remove favorite: $e');
+    }
+  }
+
+  /// Get all favorite user IDs
+  Future<List<String>> getFavorites(String userId) async {
+    try {
+      final snapshot = await _usersCollection
+          .doc(userId)
+          .collection('favorites')
+          .orderBy('addedAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      throw Exception('Failed to get favorites: $e');
+    }
+  }
+
+  /// Check if a user is a favorite
+  Future<bool> isFavorite(String userId, String targetUserId) async {
+    try {
+      final doc = await _usersCollection
+          .doc(userId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      throw Exception('Failed to check favorite status: $e');
     }
   }
 }
