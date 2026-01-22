@@ -32,11 +32,13 @@ class UserModel {
   final int totalDinners;
   final int totalMatches;
   final double averageRating;
+  final int noShowCount;
 
-  // 2FA
+  // 2FA & Verification
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
+  final bool isPhoneVerified;
 
   UserModel({
     required this.uid,
@@ -63,9 +65,11 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.noShowCount = 0,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.isPhoneVerified = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -101,9 +105,11 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      noShowCount: map['noShowCount'] ?? 0,
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      isPhoneVerified: map['isPhoneVerified'] ?? false,
     );
   }
 
@@ -133,9 +139,11 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'noShowCount': noShowCount,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'isPhoneVerified': isPhoneVerified,
     };
   }
 
@@ -163,9 +171,11 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    int? noShowCount,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? isPhoneVerified,
   }) {
     return UserModel(
       uid: uid,
@@ -192,9 +202,11 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      noShowCount: noShowCount ?? this.noShowCount,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
     );
   }
 

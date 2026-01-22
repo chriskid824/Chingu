@@ -7,6 +7,8 @@ import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
 import 'chat/chat_list_screen.dart';
 import 'profile/profile_detail_screen.dart';
+import 'events/calendar_screen.dart';
+import 'package:chingu/screens/auth/phone_verification_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final int? initialIndex;
@@ -32,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const MatchingScreen(),
-    const ExploreScreen(),
+    const CalendarScreen(), // Replaces Explore or adds to list? User said "add calendar tab".
     const ChatListScreen(),
     const ProfileDetailScreen(),
   ];
@@ -41,11 +43,51 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final user = Provider.of<AuthProvider>(context).userModel;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: Column(
+        children: [
+           if (user != null && !user.isPhoneVerified)
+             Container(
+               color: Colors.orangeAccent,
+               width: double.infinity,
+               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+               child: Row(
+                 children: [
+                   const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                   const SizedBox(width: 8),
+                   const Expanded(
+                     child: Text(
+                       '您的手機號碼尚未驗證，請驗證以確保帳戶安全。',
+                       style: TextStyle(color: Colors.white, fontSize: 13),
+                     ),
+                   ),
+                   TextButton(
+                     onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PhoneVerificationScreen()),
+                        );
+                     },
+                     style: TextButton.styleFrom(
+                       padding: EdgeInsets.zero,
+                       minimumSize: const Size(50, 30),
+                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                       foregroundColor: Colors.white,
+                     ),
+                     child: const Text('去驗證', style: TextStyle(fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                   ),
+                 ],
+               ),
+             ),
+           Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -90,9 +132,9 @@ class _MainScreenState extends State<MainScreen> {
               label: '配對',
             ),
             const BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore_rounded),
-              label: '探索',
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today),
+              label: '日曆',
             ),
             BottomNavigationBarItem(
               icon: Consumer<ChatProvider>(

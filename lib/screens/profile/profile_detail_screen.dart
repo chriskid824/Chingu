@@ -166,7 +166,32 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-                        // Debug Button
+
+                        // Action Buttons
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildActionButton(
+                                context,
+                                Icons.calendar_today_rounded,
+                                '我的活動',
+                                () => Navigator.pushNamed(context, AppRoutes.myEvents)
+                              ),
+                              const SizedBox(width: 16),
+                              _buildActionButton(
+                                context,
+                                Icons.settings_rounded,
+                                '設定',
+                                () => Navigator.pushNamed(context, AppRoutes.settings)
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
                         // Debug Button
                         Container(
                           decoration: BoxDecoration(
@@ -387,5 +412,32 @@ class ProfileDetailScreen extends StatelessWidget {
       width: 1,
       color: Colors.white.withOpacity(0.3),
     );
+  }
+
+  Widget _buildActionButton(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+     return Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
   }
 }

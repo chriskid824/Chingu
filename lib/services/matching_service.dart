@@ -3,20 +3,25 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/credit_service.dart';
+import 'package:chingu/models/user_credit_model.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final CreditService _creditService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    CreditService? creditService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _creditService = creditService ?? CreditService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -72,7 +77,22 @@ class MatchingService {
         }
 
         // 計算匹配分數
-        final score = _calculateMatchScore(currentUser, candidate);
+        int score = _calculateMatchScore(currentUser, candidate);
+
+        // 3.1 優先匹配高信用用戶
+        // 為了不讓 API 調用太多，我們可以在這裡優化。
+        // 但為了實現功能，我們對每個候選人檢查信用分數 (或將信用分數緩存在 User Model)
+        // 假設 User Model 尚未包含實時信用分數，這裡額外查詢
+        try {
+           final credit = await _creditService.getUserCredit(candidate.uid);
+           if (credit.level == CreditLevel.platinum) score += 20;
+           if (credit.level == CreditLevel.gold) score += 10;
+           if (credit.level == CreditLevel.silver) score += 5;
+           // 低於 0 分者降低優先級 (懲罰)
+           if (credit.balance < 0) score -= 30;
+        } catch (e) {
+           // Ignore credit fetch error
+        }
 
         print('加入候選人: ${candidate.name}, 分數: $score');
         scoredMatches.add({
