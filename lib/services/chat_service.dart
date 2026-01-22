@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
@@ -65,6 +67,10 @@ class ChatService {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'unreadCount': {
+          user1Id: 0,
+          user2Id: 0,
+        },
       });
       
       return docRef.id;
@@ -77,6 +83,7 @@ class ChatService {
   Future<void> sendMessage({
     required String chatRoomId,
     required String senderId,
+    required String recipientId,
     required String senderName,
     String? senderAvatarUrl,
     required String message,
@@ -94,26 +101,50 @@ class ChatService {
         'senderId': senderId,
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
-        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'message': message, // Standardized field
+        'text': message, // Backward compatibility
         'type': type,
         'timestamp': timestamp,
-        'readBy': [], // Empty list for readBy
+        'readBy': [],
         'isForwarded': isForwarded,
         'originalSenderId': originalSenderId,
         'originalSenderName': originalSenderName,
       });
 
-      // 2. 更新聊天室最後訊息
+      // 2. 更新聊天室最後訊息及未讀數
       await _chatRoomsCollection.doc(chatRoomId).update({
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
+        'unreadCount.$recipientId': FieldValue.increment(1),
       });
+
+      // 3. 發送推送通知
+      try {
+        // 獲取接收者的 FCM Token
+        final recipientDoc = await _firestore.collection('users').doc(recipientId).get();
+        if (recipientDoc.exists) {
+          final recipientData = recipientDoc.data() as Map<String, dynamic>;
+          final fcmToken = recipientData['fcmToken'] as String?;
+
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            // 調用 Cloud Function 發送通知
+            await _functions.httpsCallable('sendNotification').call({
+              'token': fcmToken,
+              'title': senderName,
+              'body': type == 'text' ? message : '傳送了一個附件',
+              'data': {
+                'actionType': 'open_chat',
+                'chatRoomId': chatRoomId,
+                'senderId': senderId,
+              },
+            });
+          }
+        }
+      } catch (e) {
+        print('發送通知失敗: $e');
+        // 通知失敗不應阻斷訊息發送流程，僅記錄錯誤
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
