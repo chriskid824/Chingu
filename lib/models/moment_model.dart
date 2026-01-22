@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+/// Model representing a user moment (dynamic post)
 class MomentModel extends Equatable {
   final String id;
   final String userId;

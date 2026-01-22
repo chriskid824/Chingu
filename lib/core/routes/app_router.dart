@@ -16,6 +16,7 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/user_moments_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String userMoments = '/user-moments';
 }
 
 /// 應用程式路由配置
@@ -245,6 +247,9 @@ class AppRouter {
             reportedUserName: args['reportedUserName'],
           ),
         );
+
+      case AppRoutes.userMoments:
+        return MaterialPageRoute(builder: (_) => const UserMomentsScreen());
       
       // ==================== 404 ====================
       default:
