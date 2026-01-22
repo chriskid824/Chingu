@@ -65,12 +65,13 @@ class RichNotificationService {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
+        final String? type = data['type'];
         final String? actionData = data['actionData'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        _handleNavigation(actionType ?? type, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -95,28 +96,53 @@ class RichNotificationService {
   }
 
   void _performAction(String action, String? data, NavigatorState navigator) {
+    Map<String, dynamic>? parsedData;
+    if (data != null && data.isNotEmpty) {
+      try {
+        // 嘗試解析 JSON，如果是純 ID 字串則會失敗或不適用
+        if (data.startsWith('{')) {
+          parsedData = json.decode(data);
+        }
+      } catch (e) {
+        // 不是 JSON，可能是純 ID
+      }
+    }
+
     switch (action) {
       case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+      case 'message':
+        if (parsedData != null) {
+          navigator.pushNamed(
+            AppRoutes.chatDetail,
+            arguments: parsedData,
+          );
+        } else if (data != null && data.isNotEmpty && !data.startsWith('{')) {
+           // 假設 data 是 chatRoomId
+           // 但 chatDetail 需要 otherUserId 來加載用戶。
+           // 如果我們只有 chatRoomId，我們可能無法直接跳轉到 chatDetail 除非後端改傳 payload。
+           // 這裡假設如果 data 是純字串，它是 chatRoomId。
+           // 我們需要其他方式獲取 otherUserId，或者導航到列表。
+           // 如果 payload 包含其他信息，我們應該在 data map 裡尋找。
+           // 但這裡 data 是 actionData string。
+
+           // 如果後端發送 payload 時，actionData 是 JSON string: {"chatRoomId": "...", "otherUserId": "..."}
+           // 那上面 parsedData 就會有值。
+
+           // 如果 data 只是 ID，我們轉到列表比較安全
+           navigator.pushNamed(AppRoutes.chatList);
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
+      case 'event':
+        // Event detail 不需要參數 (目前 hardcoded)
+        navigator.pushNamed(AppRoutes.eventDetail);
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+      case 'view_match':
+      case 'match':
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
@@ -153,13 +179,13 @@ class RichNotificationService {
 
     // 定義操作按鈕
     List<AndroidNotificationAction> actions = [];
-    if (notification.actionType == 'open_chat') {
+    if (notification.actionType == 'open_chat' || notification.type == 'message') {
       actions.add(const AndroidNotificationAction(
         'open_chat',
         '回覆',
         showsUserInterface: true,
       ));
-    } else if (notification.actionType == 'view_event') {
+    } else if (notification.actionType == 'view_event' || notification.type == 'event') {
       actions.add(const AndroidNotificationAction(
         'view_event',
         '查看詳情',
@@ -182,8 +208,10 @@ class RichNotificationService {
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
     // 構建 Payload
+    // 我們將 type 也放入 payload，以便 fallback
     final Map<String, dynamic> payload = {
       'actionType': notification.actionType,
+      'type': notification.type,
       'actionData': notification.actionData,
       'notificationId': notification.id,
     };

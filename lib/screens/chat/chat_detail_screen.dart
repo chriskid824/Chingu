@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -22,6 +23,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void didChangeDependencies() {
@@ -30,9 +33,39 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
-        _otherUser = args['otherUser'];
+        if (args['otherUser'] != null) {
+          _otherUser = args['otherUser'];
+        } else if (args['otherUserId'] != null) {
+          _fetchOtherUser(args['otherUserId']);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String userId) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await FirestoreService().getUser(userId);
+      if (mounted) {
+        setState(() {
+          _otherUser = user;
+          _isLoading = false;
+          if (user == null) {
+             _errorMessage = '找不到使用者';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = '載入使用者失敗: $e';
+        });
+      }
     }
   }
 
@@ -128,9 +161,47 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
+    if (_errorMessage != null) {
+       return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(child: Text(_errorMessage!, style: TextStyle(color: theme.colorScheme.error))),
+      );
+    }
+
     if (_chatRoomId == null || _otherUser == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
         body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
       );
     }
@@ -153,7 +224,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
               child: Center(
                 child: Text(
-                  _otherUser!.name[0].toUpperCase(),
+                  _otherUser!.name.isNotEmpty ? _otherUser!.name[0].toUpperCase() : '?',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
