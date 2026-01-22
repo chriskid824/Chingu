@@ -118,4 +118,19 @@ class ChatService {
       throw Exception('發送訊息失敗: $e');
     }
   }
+
+  /// 獲取用戶參與的聊天室數量
+  Future<int> getChatRoomCount(String userId) async {
+    try {
+      final aggregateQuery = await _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .count()
+          .get();
+
+      return aggregateQuery.count ?? 0;
+    } catch (e) {
+      print('獲取聊天室數量失敗: $e');
+      return 0;
+    }
+  }
 }
