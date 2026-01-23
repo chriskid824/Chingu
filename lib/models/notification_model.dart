@@ -5,6 +5,7 @@ class NotificationModel {
   final String id;
   final String userId;
   final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final String? subtype; // 'new_match', 'match_success', 'reminder', 'change', 'promotion', 'newsletter'
   final String title;
   final String message;
   final String? imageUrl;
@@ -17,6 +18,7 @@ class NotificationModel {
     required this.id,
     required this.userId,
     required this.type,
+    this.subtype,
     required this.title,
     required this.message,
     this.imageUrl,
@@ -38,6 +40,7 @@ class NotificationModel {
       id: id,
       userId: map['userId'] ?? '',
       type: map['type'] ?? 'system',
+      subtype: map['subtype'],
       title: map['title'] ?? '',
       message: map['message'] ?? '',
       imageUrl: map['imageUrl'],
@@ -53,6 +56,7 @@ class NotificationModel {
     return {
       'userId': userId,
       'type': type,
+      'subtype': subtype,
       'title': title,
       'message': message,
       'imageUrl': imageUrl,
@@ -69,6 +73,7 @@ class NotificationModel {
       id: id,
       userId: userId,
       type: type,
+      subtype: subtype,
       title: title,
       message: message,
       imageUrl: imageUrl,

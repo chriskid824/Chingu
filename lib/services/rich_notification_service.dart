@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../services/firestore_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -127,6 +129,66 @@ class RichNotificationService {
 
   /// 顯示豐富通知
   Future<void> showNotification(NotificationModel notification) async {
+    // 檢查用戶偏好設定
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && currentUser.uid == notification.userId) {
+        final user = await FirestoreService().getUser(currentUser.uid);
+        if (user != null) {
+          // 檢查總開關
+          if (!user.enablePushNotifications) {
+            debugPrint('Push notifications disabled by user.');
+            return;
+          }
+
+          // 檢查特定類型設定
+          bool shouldShow = true;
+          switch (notification.type) {
+            case 'match':
+              if (notification.subtype == 'new_match') {
+                shouldShow = user.newMatchNotification;
+              } else if (notification.subtype == 'match_success') {
+                shouldShow = user.matchSuccessNotification;
+              } else {
+                // 如果沒有 subtype，則檢查任一相關設定是否開啟
+                shouldShow = user.newMatchNotification || user.matchSuccessNotification;
+              }
+              break;
+            case 'message':
+              shouldShow = user.newMessageNotification;
+              break;
+            case 'event':
+              if (notification.subtype == 'reminder') {
+                shouldShow = user.appointmentReminderNotification;
+              } else if (notification.subtype == 'change') {
+                shouldShow = user.appointmentChangeNotification;
+              } else {
+                shouldShow = user.appointmentReminderNotification || user.appointmentChangeNotification;
+              }
+              break;
+            case 'system':
+              if (notification.subtype == 'promotion') {
+                shouldShow = user.promotionsNotification;
+              } else if (notification.subtype == 'newsletter') {
+                shouldShow = user.newsletterNotification;
+              } else {
+                // 一般系統通知預設顯示
+                shouldShow = true;
+              }
+              break;
+          }
+
+          if (!shouldShow) {
+            debugPrint('Notification type ${notification.type} disabled by user settings.');
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking notification preferences: $e');
+      // 發生錯誤時，預設顯示通知，避免遺漏重要訊息
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
