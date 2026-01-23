@@ -112,6 +112,13 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **動態點讚和評論功能 (Moment Dynamic Like and Comment)**
+  - 實作 `MomentModel` 的 Firestore 序列化 (`fromMap`, `toMap`)
+  - 建立 `MomentService` 處理 Firestore 操作 (獲取、點讚、評論)
+  - 建立 `MomentProvider` 管理狀態與業務邏輯
+  - 優化 `MomentCard` 支援動態更新與評論顯示
+  - 實作 `CommentBottomSheet` 留言板 UI
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
