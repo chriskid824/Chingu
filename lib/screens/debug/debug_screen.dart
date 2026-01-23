@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -14,6 +16,69 @@ class DebugScreen extends StatefulWidget {
 class _DebugScreenState extends State<DebugScreen> {
   bool _isLoading = false;
   String _status = '';
+  String _selectedNotificationType = 'system';
+  final List<String> _notificationTypes = ['match', 'event', 'message', 'rating', 'system'];
+
+  Future<void> _sendTestNotification() async {
+    setState(() {
+      _status = '正在發送測試通知...';
+    });
+
+    try {
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      String title = '測試通知';
+      String message = '這是一條測試通知內容';
+      String? actionType;
+
+      switch (_selectedNotificationType) {
+        case 'match':
+          title = '新配對成功！';
+          message = '恭喜！你與某人配對成功，快來看看吧！';
+          actionType = 'match_history';
+          break;
+        case 'event':
+          title = '活動提醒';
+          message = '您的晚餐活動即將開始，請準時出席。';
+          actionType = 'view_event';
+          break;
+        case 'message':
+          title = '新訊息';
+          message = '有人傳送了一則新訊息給您。';
+          actionType = 'open_chat';
+          break;
+        case 'rating':
+          title = '評價提醒';
+          message = '請為昨晚的活動進行評價。';
+          actionType = 'rating';
+          break;
+        case 'system':
+        default:
+          title = '系統通知';
+          message = '系統維護將於今晚進行。';
+          break;
+      }
+
+      final notification = NotificationModel(
+        id: id,
+        userId: FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
+        type: _selectedNotificationType,
+        title: title,
+        message: message,
+        createdAt: DateTime.now(),
+        actionType: actionType,
+      );
+
+      await RichNotificationService().showNotification(notification);
+
+      setState(() {
+        _status = '✅ 通知發送成功！';
+      });
+    } catch (e) {
+      setState(() {
+        _status = '❌ 發送失敗: $e';
+      });
+    }
+  }
 
   Future<void> _runSeeder() async {
     setState(() {
@@ -160,6 +225,40 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const SizedBox(height: 32),
+            const Text('通知測試工具', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: DropdownButton<String>(
+                value: _selectedNotificationType,
+                isExpanded: true,
+                items: _notificationTypes.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type.toUpperCase()),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedNotificationType = newValue;
+                    });
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _sendTestNotification,
+              icon: const Icon(Icons.notifications_active_rounded),
+              label: const Text('發送測試通知'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
