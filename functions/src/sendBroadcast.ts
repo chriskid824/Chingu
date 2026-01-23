@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+// Note: admin.initializeApp() is called in index.ts
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -9,7 +9,7 @@ admin.initializeApp();
  * 
  * Usage:
  * - Global broadcast: targetAll = true
- * - City-specific: targetCities = ["taipei", "taichung"]
+ * - City-specific: targetCities = ["Taipei", "Taichung"]
  * - User-specific: targetUserIds = ["uid1", "uid2"]
  */
 export const sendBroadcast = functions.https.onCall(async (data, context) => {
@@ -94,10 +94,10 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .filter((token) => token); // Remove null/undefined tokens
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
-            const citiesLower = targetCities.map((city: string) => city.toLowerCase());
+            // Note: Casing must match exactly what is stored in Firestore
             const usersSnapshot = await admin.firestore()
                 .collection("users")
-                .where("city", "in", citiesLower)
+                .where("city", "in", targetCities)
                 .get();
 
             targetTokens = usersSnapshot.docs
