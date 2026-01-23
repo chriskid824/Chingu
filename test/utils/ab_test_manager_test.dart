@@ -1,118 +1,128 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:chingu/utils/ab_test_manager.dart';
 
+// 使用 Fake 來代替 Mockito 生成的 Mock，避免 build_runner 問題
+class FakeRemoteConfig implements FirebaseRemoteConfig {
+  final Map<String, dynamic> _defaults = {};
+  final Map<String, dynamic> _values = {};
+
+  @override
+  Future<void> setConfigSettings(RemoteConfigSettings remoteConfigSettings) async {}
+
+  @override
+  Future<void> setDefaults(Map<String, dynamic> defaultParameters) async {
+    _defaults.addAll(defaultParameters);
+  }
+
+  @override
+  Future<bool> fetchAndActivate() async {
+    return true;
+  }
+
+  @override
+  bool getBool(String key) {
+    if (_values.containsKey(key)) return _values[key] as bool;
+    if (_defaults.containsKey(key)) return _defaults[key] as bool;
+    return false;
+  }
+
+  @override
+  String getString(String key) {
+    if (_values.containsKey(key)) return _values[key] as String;
+    if (_defaults.containsKey(key)) return _defaults[key] as String;
+    return '';
+  }
+
+  @override
+  double getDouble(String key) {
+    if (_values.containsKey(key)) return _values[key] as double;
+    if (_defaults.containsKey(key)) return _defaults[key] as double;
+    return 0.0;
+  }
+
+  @override
+  int getInt(String key) {
+    if (_values.containsKey(key)) return _values[key] as int;
+    if (_defaults.containsKey(key)) return _defaults[key] as int;
+    return 0;
+  }
+
+  @override
+  Map<String, RemoteConfigValue> getAll() {
+    return {};
+  }
+
+  // 用於測試設置值的輔助方法
+  void setTestValue(String key, dynamic value) {
+    _values[key] = value;
+  }
+
+  // 其他未使用的接口方法需要實現(Stub)
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  DateTime get lastFetchTime => DateTime.now();
+
+  @override
+  RemoteConfigFetchStatus get lastFetchStatus => RemoteConfigFetchStatus.success;
+
+  @override
+  RemoteConfigSettings get settings => RemoteConfigSettings(
+    fetchTimeout: const Duration(minutes: 1),
+    minimumFetchInterval: const Duration(hours: 1),
+  );
+
+  @override
+  Future<void> ensureInitialized() async {}
+
+  @override
+  Future<bool> activate() async => true;
+
+  @override
+  Future<void> fetch() async {}
+
+  @override
+  RemoteConfigValue getValue(String key) {
+     throw UnimplementedError();
+  }
+
+  @override
+  Set<String> getKeys(String keyPrefix) => {};
+
+  @override
+  Map<String, RemoteConfigValue> get pluginConstants => {};
+}
+
 void main() {
-  group('ABTestVariant', () {
-    test('should create variant from map', () {
-      final map = {
-        'name': 'variant_a',
-        'weight': 30.0,
-        'config': {'color': 'blue'},
-      };
+  late FakeRemoteConfig fakeRemoteConfig;
+  late ABTestManager abTestManager;
 
-      final variant = ABTestVariant.fromMap(map);
-      expect(variant.name, 'variant_a');
-      expect(variant.weight, 30.0);
-      expect(variant.config['color'], 'blue');
-    });
-
-    test('should convert variant to map', () {
-      final variant = ABTestVariant(
-        name: 'variant_b',
-        weight: 70.0,
-        config: {'size': 'large'},
-      );
-
-      final map = variant.toMap();
-      expect(map['name'], 'variant_b');
-      expect(map['weight'], 70.0);
-      expect(map['config']['size'], 'large');
-    });
-
-    test('should handle default values', () {
-      final variant = ABTestVariant.fromMap({});
-      expect(variant.name, '');
-      expect(variant.weight, 50.0);
-      expect(variant.config, isEmpty);
-    });
+  setUp(() {
+    fakeRemoteConfig = FakeRemoteConfig();
+    abTestManager = ABTestManager();
+    // Inject fake
+    abTestManager.remoteConfig = fakeRemoteConfig;
   });
 
-  group('ABTestConfig', () {
-    test('should create config and convert to map', () {
-      final config = ABTestConfig(
-        testId: 'test_1',
-        name: 'Test Experiment',
-        description: 'Test Description',
-        isActive: true,
-        variants: [
-          ABTestVariant(name: 'control', weight: 50.0),
-          ABTestVariant(name: 'variant_a', weight: 50.0),
-        ],
-      );
+  test('initialize sets defaults and fetches', () async {
+    await abTestManager.initialize(defaults: {'test_key': true});
 
-      final result = config.toMap();
-      expect(result['name'], 'Test Experiment');
-      expect(result['description'], 'Test Description');
-      expect(result['isActive'], true);
-      expect(result['variants'], hasLength(2));
-    });
-
-    test('should handle optional dates', () {
-      final now = DateTime.now();
-      final config = ABTestConfig(
-        testId: 'test_2',
-        name: 'Dated Test',
-        description: 'With dates',
-        isActive: true,
-        variants: [ABTestVariant(name: 'control', weight: 100.0)],
-        startDate: now,
-        endDate: now.add(const Duration(days: 7)),
-      );
-
-      final map = config.toMap();
-      expect(map.containsKey('startDate'), true);
-      expect(map.containsKey('endDate'), true);
-    });
+    // 驗證 default 值生效
+    expect(fakeRemoteConfig.getBool('test_key'), true);
   });
 
-  group('FeatureConfig', () {
-    test('should create config with default values', () {
-      final config = FeatureConfig(
-        key: 'new_feature',
-        enabled: true,
-      );
+  test('isFeatureEnabled returns correct value', () {
+    fakeRemoteConfig.setTestValue('feature_x', true);
+    expect(abTestManager.isFeatureEnabled('feature_x'), true);
 
-      expect(config.key, 'new_feature');
-      expect(config.enabled, true);
-      expect(config.config, isEmpty);
-    });
+    fakeRemoteConfig.setTestValue('feature_y', false);
+    expect(abTestManager.isFeatureEnabled('feature_y'), false);
+  });
 
-    test('should convert to map correctly', () {
-      final config = FeatureConfig(
-        key: 'feature_1',
-        enabled: false,
-        config: const {'timeout': 5000},
-      );
-
-      final map = config.toMap();
-      expect(map['enabled'], false);
-      expect(map['config']['timeout'], 5000);
-    });
-
-    test('should handle custom config', () {
-      final config = FeatureConfig(
-        key: 'advanced_feature',
-        enabled: true,
-        config: const {
-          'maxUsers': 100,
-          'theme': 'dark',
-          'features': ['chat', 'video']
-        },
-      );
-
-      expect(config.config['maxUsers'], 100);
-      expect(config.config['theme'], 'dark');
-      expect(config.config['features'], hasLength(2));
-    });
+  test('getVariant returns correct string', () {
+    fakeRemoteConfig.setTestValue('variant_test', 'group_a');
+    expect(abTestManager.getVariant('variant_test'), 'group_a');
   });
 }
