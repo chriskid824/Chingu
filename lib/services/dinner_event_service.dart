@@ -3,13 +3,16 @@ import 'package:chingu/models/dinner_event_model.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  DinnerEventService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
 
-  // 每桌最大人數
-  static const int MAX_PARTICIPANTS = 6;
+  // 每桌最大人數預設值
+  static const int DEFAULT_MAX_PARTICIPANTS = 6;
 
   /// 創建新的晚餐活動
   /// 
@@ -19,6 +22,8 @@ class DinnerEventService {
   /// [city] 城市
   /// [district] 地區
   /// [notes] 備註（可選）
+  /// [maxParticipants] 最大參與人數
+  /// [registrationDeadline] 報名截止時間
   Future<String> createEvent({
     required String creatorId,
     required DateTime dateTime,
@@ -26,6 +31,8 @@ class DinnerEventService {
     required String city,
     required String district,
     String? notes,
+    int maxParticipants = DEFAULT_MAX_PARTICIPANTS,
+    DateTime? registrationDeadline,
   }) async {
     try {
       // 創建新的文檔引用以獲取 ID
@@ -35,6 +42,9 @@ class DinnerEventService {
       final participantIds = [creatorId];
       final participantStatus = {creatorId: 'confirmed'};
       
+      // 預設截止時間：活動前 24 小時
+      final deadline = registrationDeadline ?? dateTime.subtract(const Duration(hours: 24));
+
       // 預設破冰問題（之後可以從題庫隨機選取）
       final icebreakerQuestions = [
         '如果可以和世界上任何人共進晚餐，你會選誰？',
@@ -50,8 +60,11 @@ class DinnerEventService {
         city: city,
         district: district,
         notes: notes,
+        maxParticipants: maxParticipants,
         participantIds: participantIds,
         participantStatus: participantStatus,
+        waitlist: [],
+        registrationDeadline: deadline,
         status: 'pending', // 等待配對
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
@@ -109,7 +122,7 @@ class DinnerEventService {
     }
   }
 
-  /// 加入活動
+  /// 加入活動 (或候補)
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
@@ -125,32 +138,43 @@ class DinnerEventService {
         }
 
         final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        // 使用 Model 解析部分數據以利用 Helper (雖然這會解析整個物件，但在 Transaction 內是安全的)
+        final event = DinnerEventModel.fromMap(data, eventId);
         
-        if (participantIds.contains(userId)) {
-          throw Exception('您已加入此活動');
+        // 1. 檢查截止時間
+        if (event.isRegistrationClosed) {
+           throw Exception('報名已截止');
         }
 
-        if (participantIds.length >= 6) {
-          throw Exception('活動人數已滿');
+        // 2. 檢查是否已在名單中
+        if (event.participantIds.contains(userId)) {
+          throw Exception('您已參加此活動');
+        }
+        if (event.waitlist.contains(userId)) {
+           throw Exception('您已在候補名單中');
         }
 
-        // 更新參與者列表
-        participantIds.add(userId);
-        
-        // 更新參與者狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
+        final updates = <String, dynamic>{};
 
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
+        // 3. 檢查人數是否已滿
+        if (event.participantIds.length < event.maxParticipants) {
+          // 未滿，直接加入
+          final newParticipantIds = List<String>.from(event.participantIds)..add(userId);
+          final newParticipantStatus = Map<String, String>.from(event.participantStatus);
+          newParticipantStatus[userId] = 'confirmed';
 
-        // 如果人數達到 6 人，自動確認活動
-        if (participantIds.length == 6) {
-          updates['status'] = 'confirmed';
-          updates['confirmedAt'] = FieldValue.serverTimestamp();
+          updates['participantIds'] = newParticipantIds;
+          updates['participantStatus'] = newParticipantStatus;
+
+           // 如果人數達到上限，更新狀態為 confirmed (如果還是 pending)
+          if (newParticipantIds.length == event.maxParticipants && event.status == 'pending') {
+            updates['status'] = 'confirmed';
+            updates['confirmedAt'] = FieldValue.serverTimestamp();
+          }
+        } else {
+          // 已滿，加入候補
+          final newWaitlist = List<String>.from(event.waitlist)..add(userId);
+          updates['waitlist'] = newWaitlist;
         }
 
         transaction.update(docRef, updates);
@@ -160,7 +184,7 @@ class DinnerEventService {
     }
   }
 
-  /// 退出活動
+  /// 退出活動 (或候補)
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
@@ -175,38 +199,63 @@ class DinnerEventService {
         }
 
         final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final event = DinnerEventModel.fromMap(data, eventId);
         
-        if (!participantIds.contains(userId)) {
+        final updates = <String, dynamic>{};
+
+        if (event.participantIds.contains(userId)) {
+          // 從參與者中移除
+          final newParticipantIds = List<String>.from(event.participantIds)..remove(userId);
+          final newParticipantStatus = Map<String, String>.from(event.participantStatus)..remove(userId);
+
+          // 候補遞補邏輯
+          if (event.waitlist.isNotEmpty) {
+            final nextUserId = event.waitlist.first;
+            final newWaitlist = List<String>.from(event.waitlist)..removeAt(0);
+
+            newParticipantIds.add(nextUserId);
+            newParticipantStatus[nextUserId] = 'confirmed'; // 自動確認遞補者
+
+            updates['waitlist'] = newWaitlist;
+          }
+
+          updates['participantIds'] = newParticipantIds;
+          updates['participantStatus'] = newParticipantStatus;
+
+          // 如果活動人數少於最大人數且狀態為已確認，變回 pending (除非有候補補上)
+          // 注意：如果上面有候補補上，newParticipantIds.length 可能仍然等於 maxParticipants
+          if (newParticipantIds.length < event.maxParticipants && event.status == 'confirmed') {
+            updates['status'] = 'pending';
+          }
+
+          // 如果沒有參與者了，標記為取消
+          if (newParticipantIds.isEmpty) {
+            updates['status'] = 'cancelled';
+          }
+
+        } else if (event.waitlist.contains(userId)) {
+          // 從候補中移除
+          final newWaitlist = List<String>.from(event.waitlist)..remove(userId);
+          updates['waitlist'] = newWaitlist;
+        } else {
           throw Exception('您未加入此活動');
-        }
-
-        // 移除參與者
-        participantIds.remove(userId);
-        
-        // 移除狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus.remove(userId);
-
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
-
-        // 如果活動人數少於 6 人且狀態為已確認，可能需要處理（暫時簡單處理：變回 pending）
-        if (data['status'] == 'confirmed' && participantIds.length < 6) {
-          updates['status'] = 'pending';
-        }
-
-        // 如果沒有參與者了，可以考慮刪除活動或標記為取消
-        if (participantIds.isEmpty) {
-          updates['status'] = 'cancelled';
         }
 
         transaction.update(docRef, updates);
       });
     } catch (e) {
       throw Exception('退出活動失敗: $e');
+    }
+  }
+
+  /// 取消活動 (僅限發起人或管理員，此處未做權限檢查，假設 UI 層或 Security Rules 處理)
+  Future<void> cancelEvent(String eventId) async {
+    try {
+       await _eventsCollection.doc(eventId).update({
+         'status': 'cancelled',
+       });
+    } catch (e) {
+      throw Exception('取消活動失敗: $e');
     }
   }
 
@@ -340,9 +389,13 @@ class DinnerEventService {
           return doc.id;
         }
         
-        // 找到一個未滿的活動 (人數 < MAX_PARTICIPANTS)
+        // 找到一個未滿的活動 (人數 < maxParticipants)
+        // 注意：這裡假設所有活動的 maxParticipants 都是 DEFAULT_MAX_PARTICIPANTS (6)
+        // 如果未來有不同人數的活動，這裡需要讀取該文檔的 maxParticipants
+        int maxParticipants = data['maxParticipants'] ?? DEFAULT_MAX_PARTICIPANTS;
+
         // 目前邏輯：循序填滿。找到第一個有空位的桌子就加入。
-        if (participantIds.length < MAX_PARTICIPANTS) {
+        if (participantIds.length < maxParticipants) {
           targetEventId = doc.id;
           break; // 找到一個就夠了
         }
