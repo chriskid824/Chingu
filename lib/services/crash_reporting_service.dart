@@ -10,6 +10,9 @@ class CrashReportingService {
   CrashReportingService._internal();
 
   Future<void> initialize() async {
+    // Enable Crashlytics collection only in non-debug mode to avoid polluting production data
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
