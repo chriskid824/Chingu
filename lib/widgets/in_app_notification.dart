@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
+import '../core/routes/app_router.dart';
 
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
@@ -14,6 +15,34 @@ class InAppNotification extends StatelessWidget {
     this.onDismiss,
     this.onTap,
   });
+
+  /// 顯示應用內通知橫幅
+  static void show({
+    required NotificationModel notification,
+    VoidCallback? onTap,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    final context = AppRouter.navigatorKey.currentState?.overlay?.context;
+    if (context == null) return;
+
+    final overlayState = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationOverlay(
+        notification: notification,
+        onTap: onTap,
+        onRemoveEntry: () {
+          if (overlayEntry.mounted) {
+            overlayEntry.remove();
+          }
+        },
+        duration: duration,
+      ),
+    );
+
+    overlayState.insert(overlayEntry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +185,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -180,5 +209,88 @@ class InAppNotification extends StatelessWidget {
       default:
         return chinguTheme.success; // Or primary
     }
+  }
+}
+
+class _InAppNotificationOverlay extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback? onTap;
+  final VoidCallback onRemoveEntry;
+  final Duration duration;
+
+  const _InAppNotificationOverlay({
+    required this.notification,
+    this.onTap,
+    required this.onRemoveEntry,
+    required this.duration,
+  });
+
+  @override
+  State<_InAppNotificationOverlay> createState() => _InAppNotificationOverlayState();
+}
+
+class _InAppNotificationOverlayState extends State<_InAppNotificationOverlay> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+  bool _isDismissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _animation = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _controller.forward();
+
+    // Auto dismiss
+    Future.delayed(widget.duration, () {
+      if (mounted && !_isDismissing) {
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() async {
+    if (_isDismissing) return;
+    _isDismissing = true;
+    await _controller.reverse();
+    widget.onRemoveEntry();
+  }
+
+  void _handleTap() async {
+    if (_isDismissing) return;
+    _isDismissing = true;
+    widget.onTap?.call();
+    await _controller.reverse();
+    widget.onRemoveEntry();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _animation,
+        child: InAppNotification(
+          notification: widget.notification,
+          onTap: _handleTap,
+          onDismiss: _dismiss,
+        ),
+      ),
+    );
   }
 }
