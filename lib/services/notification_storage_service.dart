@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -20,6 +21,12 @@ class NotificationStorageService {
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+
+  @visibleForTesting
+  void setMockInstances({FirebaseFirestore? firestore, FirebaseAuth? auth}) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
 
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
@@ -50,7 +57,12 @@ class NotificationStorageService {
 
     final batch = _firestore.batch();
     for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
+      DocumentReference docRef;
+      if (notification.id.isEmpty) {
+        docRef = _notificationsRef(userId).doc();
+      } else {
+        docRef = _notificationsRef(userId).doc(notification.id);
+      }
       batch.set(docRef, notification.toMap());
     }
     await batch.commit();
