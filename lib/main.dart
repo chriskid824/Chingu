@@ -23,7 +23,11 @@ void main() async {
   );
 
   // 初始化 Crashlytics
-  await CrashReportingService().initialize();
+  try {
+    await CrashReportingService().initialize();
+  } catch (e) {
+    debugPrint('Failed to initialize Crashlytics: $e');
+  }
 
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
