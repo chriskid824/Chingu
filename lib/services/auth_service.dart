@@ -155,6 +155,25 @@ class AuthService {
     }
   }
 
+  /// 重新認證（使用密碼）
+  ///
+  /// [email] 電子郵件
+  /// [password] 密碼
+  Future<void> reauthenticateWithPassword(String email, String password) async {
+    try {
+      final AuthCredential credential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+
+      await _auth.currentUser?.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw Exception('重新認證失敗: $e');
+    }
+  }
+
   /// 刪除用戶帳號
   Future<void> deleteAccount() async {
     try {
