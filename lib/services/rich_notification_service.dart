@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_ab_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -67,6 +68,27 @@ class RichNotificationService {
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
 
+        // Tracking info
+        final String? userId = data['userId'];
+        final String? notificationId = data['notificationId'];
+        final String? type = data['type'];
+        final String? groupName = data['group'];
+
+        if (userId != null && notificationId != null && type != null && groupName != null) {
+          ExperimentGroup group = ExperimentGroup.values.firstWhere(
+            (e) => e.name == groupName,
+            orElse: () => ExperimentGroup.control,
+          );
+
+          NotificationABService().trackEvent(
+            userId: userId,
+            notificationId: notificationId,
+            type: type,
+            group: group,
+            event: 'clicked',
+          );
+        }
+
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
@@ -126,7 +148,7 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification, {ExperimentGroup? group}) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +208,9 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'userId': notification.userId,
+      'type': notification.type,
+      'group': group?.name,
     };
 
     await _flutterLocalNotificationsPlugin.show(

@@ -5,6 +5,8 @@
 ///
 /// The current implementation uses a deterministic hash of the user ID to assign groups.
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum ExperimentGroup {
   control, // Group A (Default)
   variant, // Group B (Experimental)
@@ -26,6 +28,8 @@ class NotificationContent {
 }
 
 class NotificationABService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   /// Assigns a user to an experiment group based on their user ID.
   ///
   /// This uses a deterministic hash so the user always stays in the same group.
@@ -129,6 +133,29 @@ class NotificationABService {
           title: 'System Notification',
           body: message,
         );
+    }
+  }
+
+  /// Tracks notification events (sent/clicked) for A/B testing analysis.
+  Future<void> trackEvent({
+    required String userId,
+    required String notificationId,
+    required String type,
+    required ExperimentGroup group,
+    required String event,
+  }) async {
+    try {
+      await _firestore.collection('notification_analytics').add({
+        'userId': userId,
+        'notificationId': notificationId,
+        'type': type,
+        'group': group.name,
+        'event': event, // 'sent' or 'clicked'
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // Fail silently or log error, but don't crash the app
+      print('Error tracking notification event: $e');
     }
   }
 }
