@@ -31,11 +31,16 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 獲取啟動通知資訊
+  final initialRouteInfo = await RichNotificationService().getInitialRouteInfo();
+
+  runApp(ChinguApp(initialRouteInfo: initialRouteInfo));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final Map<String, dynamic>? initialRouteInfo;
+
+  const ChinguApp({super.key, this.initialRouteInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +60,20 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRouteName) {
+              final mainRoute = AppRouter.generateRoute(
+                  const RouteSettings(name: AppRoutes.mainNavigation));
+
+              if (initialRouteInfo != null) {
+                final targetRoute = AppRouter.generateRoute(RouteSettings(
+                  name: initialRouteInfo!['route'],
+                  arguments: initialRouteInfo!['args'],
+                ));
+                return [mainRoute, targetRoute];
+              }
+
+              return [mainRoute];
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
