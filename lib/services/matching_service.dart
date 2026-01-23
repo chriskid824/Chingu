@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -157,8 +158,6 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
         return true;
       }
       return false;
@@ -180,7 +179,22 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送通知 (使用 Cloud Function)
+    try {
+      final functions = FirebaseFunctions.instance;
+      await functions.httpsCallable('sendMatchNotification').call({
+        'userId': user1Id,
+        'targetUserId': user2Id,
+        'chatRoomId': chatRoomId,
+      });
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+      // 不中斷配對流程
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表
