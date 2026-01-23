@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -23,6 +25,8 @@ class RichNotificationService {
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    tz.initializeTimeZones();
 
     // Android 初始化設定
     // 預設使用 app icon，需確保 drawable/mipmap 中有 @mipmap/ic_launcher
@@ -195,5 +199,40 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 安排定時通知
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'chingu_scheduled_notifications',
+          'Scheduled Notifications',
+          channelDescription: 'Notifications for scheduled events',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
+
+  /// 取消指定 ID 的通知
+  Future<void> cancelNotification(int id) async {
+    await _flutterLocalNotificationsPlugin.cancel(id);
   }
 }

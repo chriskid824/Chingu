@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -58,6 +59,19 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      // 設置本地提醒（活動前 24 小時）
+      final reminderTime = dateTime.subtract(const Duration(hours: 24));
+      if (reminderTime.isAfter(DateTime.now())) {
+        await RichNotificationService().scheduleNotification(
+          id: docRef.id.hashCode,
+          title: '晚餐活動提醒',
+          body: '您明天有一個晚餐活動，別忘了參加！',
+          scheduledDate: reminderTime,
+          payload: '{"actionType": "view_event", "actionData": "${docRef.id}"}',
+        );
+      }
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -155,6 +169,21 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 設置本地提醒（活動前 24 小時）
+      final event = await getEvent(eventId);
+      if (event != null) {
+        final reminderTime = event.dateTime.subtract(const Duration(hours: 24));
+        if (reminderTime.isAfter(DateTime.now())) {
+          await RichNotificationService().scheduleNotification(
+            id: eventId.hashCode,
+            title: '晚餐活動提醒',
+            body: '您明天有一個晚餐活動，別忘了參加！',
+            scheduledDate: reminderTime,
+            payload: '{"actionType": "view_event", "actionData": "$eventId"}',
+          );
+        }
+      }
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,6 +234,10 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 取消本地提醒
+      await RichNotificationService().cancelNotification(eventId.hashCode);
+
     } catch (e) {
       throw Exception('退出活動失敗: $e');
     }
