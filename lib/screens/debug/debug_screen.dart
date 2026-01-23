@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import '../../widgets/in_app_notification.dart';
+import '../../models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -157,6 +159,33 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  InAppNotification.show(
+                    notification: NotificationModel(
+                      id: 'test_notification',
+                      userId: 'test_user',
+                      type: 'system',
+                      title: '測試通知',
+                      message: '這是一個測試用的應用內通知橫幅',
+                      createdAt: DateTime.now(),
+                    ),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('通知被點擊')),
+                      );
+                    },
+                  );
+                },
+                icon: const Icon(Icons.notifications_active_rounded),
+                label: const Text('測試應用內通知'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
