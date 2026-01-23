@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -66,11 +69,12 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? type = data['type'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        _handleNavigation(actionType, actionData, actionId, type);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,7 +82,7 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void _handleNavigation(String? actionType, String? actionData, String? actionId, String? type) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -89,8 +93,93 @@ class RichNotificationService {
     }
 
     // 處理一般通知點擊
+    // 優先權: actionType > type
     if (actionType != null) {
       _performAction(actionType, actionData, navigator);
+    } else if (type != null) {
+      _handleTypeNavigation(type, actionData, navigator);
+    } else {
+      navigator.pushNamed(AppRoutes.notifications);
+    }
+  }
+
+  void _handleTypeNavigation(String type, String? data, NavigatorState navigator) {
+    switch (type) {
+      case 'match':
+        navigator.pushNamed(AppRoutes.matchesList);
+        break;
+      case 'event':
+        navigator.pushNamed(AppRoutes.eventDetail);
+        break;
+      case 'message':
+        if (data != null) {
+          _navigateToChat(data, navigator);
+        } else {
+          navigator.pushNamed(AppRoutes.chatList);
+        }
+        break;
+      default:
+        navigator.pushNamed(AppRoutes.notifications);
+        break;
+    }
+  }
+
+  Future<void> _navigateToChat(String chatRoomId, NavigatorState navigator) async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) {
+        navigator.pushNamed(AppRoutes.chatList);
+        return;
+      }
+
+      // 獲取聊天室資料
+      final chatRoomDoc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) {
+        navigator.pushNamed(AppRoutes.chatList);
+        return;
+      }
+
+      final data = chatRoomDoc.data();
+      final List<dynamic> participants = data?['participantIds'] ?? [];
+
+      // 找出對方 ID
+      final otherUserId = participants.firstWhere(
+        (id) => id != currentUserId,
+        orElse: () => null,
+      );
+
+      if (otherUserId == null) {
+        navigator.pushNamed(AppRoutes.chatList);
+        return;
+      }
+
+      // 獲取對方資料
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(otherUserId)
+          .get();
+
+      if (!userDoc.exists) {
+        navigator.pushNamed(AppRoutes.chatList);
+        return;
+      }
+
+      final otherUser = UserModel.fromMap(userDoc.data()!, userDoc.id);
+
+      navigator.pushNamed(
+        AppRoutes.chatDetail,
+        arguments: {
+          'chatRoomId': chatRoomId,
+          'otherUser': otherUser,
+        },
+      );
+    } catch (e) {
+      debugPrint('Error navigating to chat: $e');
+      navigator.pushNamed(AppRoutes.chatList);
     }
   }
 
@@ -98,25 +187,16 @@ class RichNotificationService {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          _navigateToChat(data, navigator);
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
+        navigator.pushNamed(AppRoutes.eventDetail);
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
@@ -186,6 +266,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'type': notification.type,
     };
 
     await _flutterLocalNotificationsPlugin.show(
