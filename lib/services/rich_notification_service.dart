@@ -19,6 +19,7 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  String? _handledLaunchNotificationId;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -59,11 +60,45 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 獲取啟動時的通知路由資訊
+  Future<Map<String, dynamic>?> getInitialRouteInfo() async {
+    try {
+      final NotificationAppLaunchDetails? details =
+          await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+      if (details?.didNotificationLaunchApp ?? false) {
+        final response = details!.notificationResponse;
+        if (response?.payload != null) {
+          final Map<String, dynamic> data = json.decode(response!.payload!);
+          // 記錄已處理的通知 ID
+          _handledLaunchNotificationId = data['notificationId'];
+
+          return _getRouteFromNotificationData(
+            data['actionType'],
+            data['actionData'],
+            response.actionId,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting initial route info: $e');
+    }
+    return null;
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
+
+        // 檢查是否為已處理的啟動通知
+        if (data['notificationId'] != null &&
+            data['notificationId'] == _handledLaunchNotificationId) {
+          _handledLaunchNotificationId = null; // 清除標記
+          return;
+        }
+
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
 
@@ -82,46 +117,48 @@ class RichNotificationService {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
-    // 優先處理按鈕點擊
-    if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
-      return;
-    }
-
-    // 處理一般通知點擊
-    if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+    final routeInfo = _getRouteFromNotificationData(actionType, actionData, actionId);
+    if (routeInfo != null) {
+      navigator.pushNamed(
+        routeInfo['route'],
+        arguments: routeInfo['args'],
+      );
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
+  /// 解析通知數據並返回路由資訊
+  Map<String, dynamic>? _getRouteFromNotificationData(
+    String? actionType,
+    String? actionData,
+    String? actionId
+  ) {
+    String? targetAction;
+
+    // 優先處理按鈕點擊
+    if (actionId != null && actionId != 'default') {
+      targetAction = actionId;
+    } else if (actionType != null) {
+      targetAction = actionType;
+    }
+
+    if (targetAction == null) return null;
+
+    switch (targetAction) {
       case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
-        break;
+        // data 預期是 userId 或 chatRoomId
+        // 暫時導航到聊天列表，但在 args 中傳遞數據以備後用
+        return {'route': AppRoutes.chatList, 'args': actionData};
+
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
-        break;
+        // 傳遞 eventId
+        return {'route': AppRoutes.eventDetail, 'args': actionData};
+
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
+        return {'route': AppRoutes.matchesList, 'args': null};
+
       default:
         // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
-        break;
+        return {'route': AppRoutes.notifications, 'args': null};
     }
   }
 
