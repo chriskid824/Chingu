@@ -12,6 +12,8 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -22,6 +24,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 設置後台訊息處理
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
@@ -30,6 +35,9 @@ void main() async {
 
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
+
+  // 初始化通知服務
+  await NotificationService().initialize();
 
   runApp(const ChinguApp());
 }
