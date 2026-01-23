@@ -7,6 +7,7 @@ import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
 import 'chat/chat_list_screen.dart';
 import 'profile/profile_detail_screen.dart';
+import '../../services/notification_service.dart';
 
 class MainScreen extends StatefulWidget {
   final int? initialIndex;
@@ -27,6 +28,11 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+
+    // 初始化通知服務
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().initialize();
+    });
   }
 
   final List<Widget> _screens = [
