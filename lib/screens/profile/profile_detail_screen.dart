@@ -206,6 +206,9 @@ class ProfileDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildFavoritesCard(context),
+                      const SizedBox(height: 32),
+
                       _buildSectionTitle(context, '關於我'),
                       const SizedBox(height: 12),
                       Text(
@@ -271,6 +274,67 @@ class ProfileDetailScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFavoritesCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final chinguTheme = theme.extension<ChinguTheme>();
+
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.favorites);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: chinguTheme?.surfaceVariant ?? Colors.grey[200]!,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: chinguTheme?.shadowLight ?? Colors.black12,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+             Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (chinguTheme?.error ?? Colors.red).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.favorite_rounded, color: chinguTheme?.error ?? Colors.red),
+             ),
+             const SizedBox(width: 16),
+             Expanded(
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Text(
+                     '我的收藏',
+                     style: theme.textTheme.titleMedium?.copyWith(
+                       fontWeight: FontWeight.bold,
+                     ),
+                   ),
+                   const SizedBox(height: 4),
+                   Text(
+                     '查看您感興趣的用戶',
+                     style: theme.textTheme.bodySmall,
+                   ),
+                 ],
+               ),
+             ),
+             Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+          ],
+        ),
       ),
     );
   }
