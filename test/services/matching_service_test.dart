@@ -2,19 +2,84 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
-// Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
-import 'matching_service_test.mocks.dart';
+// Manual mock for NotificationService since we cannot run build_runner
+class MockNotificationService extends Mock implements NotificationService {
+  @override
+  Future<void> sendMatchNotification(
+      UserModel? sender, UserModel? receiver, String? chatRoomId) {
+    return super.noSuchMethod(
+      Invocation.method(#sendMatchNotification, [sender, receiver, chatRoomId]),
+      returnValue: Future.value(),
+      returnValueForMissingStub: Future.value(),
+    );
+  }
+}
+
+class MockFirestoreService extends Mock implements FirestoreService {
+  @override
+  Future<List<UserModel>> queryMatchingUsers({
+    required String? city,
+    int? budgetRange,
+    String? gender,
+    int? minAge,
+    int? maxAge,
+    int? limit = 20,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#queryMatchingUsers, [], {
+        #city: city,
+        #budgetRange: budgetRange,
+        #gender: gender,
+        #minAge: minAge,
+        #maxAge: maxAge,
+        #limit: limit
+      }),
+      returnValue: Future.value(<UserModel>[]),
+      returnValueForMissingStub: Future.value(<UserModel>[]),
+    ) as Future<List<UserModel>>;
+  }
+
+  @override
+  Future<void> updateUserStats(
+    String? uid, {
+    int? totalDinners,
+    int? totalMatches,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#updateUserStats, [
+        uid
+      ], {
+        #totalDinners: totalDinners,
+        #totalMatches: totalMatches,
+      }),
+      returnValue: Future.value(),
+      returnValueForMissingStub: Future.value(),
+    );
+  }
+}
+
+class MockChatService extends Mock implements ChatService {
+  @override
+  Future<String> createChatRoom(String? user1Id, String? user2Id) {
+    return super.noSuchMethod(
+      Invocation.method(#createChatRoom, [user1Id, user2Id]),
+      returnValue: Future.value(''),
+      returnValueForMissingStub: Future.value(''),
+    ) as Future<String>;
+  }
+}
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockNotificationService mockNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -31,7 +96,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    job: 'Developer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -47,18 +115,23 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    job: 'Designer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockNotificationService = MockNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: mockNotificationService,
     );
   });
 
@@ -78,12 +151,12 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Budget: same = 10
+      // Location: same city, same district = 30
+      // Age: 10
+      // Total: 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -157,6 +230,12 @@ void main() {
           .doc(candidateUser.uid)
           .set(candidateUser.toMap());
 
+      // And current user for notification
+      await fakeFirestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .set(currentUser.toMap());
+
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
@@ -174,6 +253,9 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notifications sent
+      verify(mockNotificationService.sendMatchNotification(any, any, 'chat_room_id')).called(2);
     });
   });
 }
