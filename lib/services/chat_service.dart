@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -95,6 +96,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Compatibility for older clients
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -103,17 +105,53 @@ class ChatService {
         'originalSenderName': originalSenderName,
       });
 
-      // 2. 更新聊天室最後訊息
-      await _chatRoomsCollection.doc(chatRoomId).update({
+      // 2. Fetch Chat Room to get participants
+      final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+
+      String recipientId = '';
+      if (chatRoomDoc.exists) {
+        final chatRoomData = chatRoomDoc.data() as Map<String, dynamic>;
+        final participantIds = List<String>.from(chatRoomData['participantIds'] ?? []);
+        recipientId = participantIds.firstWhere((id) => id != senderId, orElse: () => '');
+      }
+
+      // 3. 更新聊天室最後訊息
+      final Map<String, dynamic> updateData = {
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
-      });
+      };
+
+      if (recipientId.isNotEmpty) {
+        updateData['unreadCount.$recipientId'] = FieldValue.increment(1);
+      }
+
+      await _chatRoomsCollection.doc(chatRoomId).update(updateData);
+
+      // 4. Send Notification
+      if (recipientId.isNotEmpty) {
+        try {
+          final recipientDoc = await _firestore.collection('users').doc(recipientId).get();
+          if (recipientDoc.exists) {
+            final recipientData = recipientDoc.data() as Map<String, dynamic>;
+            final fcmToken = recipientData['fcmToken'] as String?;
+
+            if (fcmToken != null && fcmToken.isNotEmpty) {
+              await FirebaseFunctions.instance.httpsCallable('sendChatNotification').call({
+                'token': fcmToken,
+                'title': senderName,
+                'body': type == 'text' ? message : '傳送了一張圖片',
+                'data': {
+                  'chatRoomId': chatRoomId,
+                  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                },
+              });
+            }
+          }
+        } catch (e) {
+          print('Failed to send notification: $e');
+        }
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
