@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
+import 'package:chingu/providers/moment_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/widgets/comment_bottom_sheet.dart';
 import 'package:intl/intl.dart';
 
 class MomentCard extends StatefulWidget {
@@ -46,11 +50,35 @@ class _MomentCardState extends State<MomentCard> {
 
   void _toggleLike() {
     HapticUtils.light();
+
+    // Optimistic local update
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
+
+    // Notify parent if needed
     widget.onLikeChanged?.call(_isLiked);
+
+    // Call provider to persist
+    try {
+      final userId = context.read<AuthProvider>().uid;
+      if (userId != null) {
+        // We use read() here because we are in a callback, not build
+        context.read<MomentProvider>().toggleLike(widget.moment.id, userId);
+      }
+    } catch (_) {
+      // If provider is not available, just ignore (fallback to local state/callback)
+    }
+  }
+
+  void _showComments(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CommentBottomSheet(momentId: widget.moment.id),
+    );
   }
 
   @override
@@ -167,7 +195,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: widget.onCommentTap ?? () => _showComments(context),
               ),
             ],
           ),
