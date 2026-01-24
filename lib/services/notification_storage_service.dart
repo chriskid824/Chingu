@@ -323,4 +323,28 @@ class NotificationStorageService {
 
     await _notificationsRef(userId).add(notification.toMap());
   }
+
+  /// 創建消息通知 (為指定用戶)
+  Future<void> createMessageNotificationForUser({
+    required String recipientId,
+    required String senderName,
+    required String senderId,
+    required String messagePreview,
+    String? senderPhotoUrl,
+  }) async {
+    final notification = NotificationModel(
+      id: '',
+      userId: recipientId,
+      type: 'message',
+      title: senderName,
+      message: messagePreview,
+      imageUrl: senderPhotoUrl,
+      actionType: 'open_chat',
+      actionData: senderId,
+      isRead: false,
+      createdAt: DateTime.now(),
+    );
+
+    await _notificationsRef(recipientId).add(notification.toMap());
+  }
 }
