@@ -6,8 +6,8 @@
 
 // Export all functions
 export { sendBroadcast } from "./sendBroadcast";
+export { sendEventReminders } from "./sendEventReminders";
 
 // Future exports will be added here:
 // export {createWeeklyEvents} from "./createWeeklyEvents";
 // export {processEventAttendance} from "./processEventAttendance";
-// export {sendEventReminders} from "./sendEventReminders";
