@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
-import 'package:chingu/utils/haptic_utils.dart';
-import 'package:intl/intl.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/widgets/comments_bottom_sheet.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -25,6 +30,7 @@ class _MomentCardState extends State<MomentCard> {
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
+  final MomentService _momentService = MomentService();
 
   @override
   void initState() {
@@ -44,13 +50,59 @@ class _MomentCardState extends State<MomentCard> {
     }
   }
 
-  void _toggleLike() {
-    HapticUtils.light();
+  void _toggleLike() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.userModel;
+
+    if (user == null) {
+      // Prompt login or handle unauthenticated state
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請先登入')),
+      );
+      return;
+    }
+
+    HapticFeedback.lightImpact();
+
+    // Optimistic update
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
+
     widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      if (_isLiked) {
+        await _momentService.likeMoment(widget.moment.id, user.uid);
+      } else {
+        await _momentService.unlikeMoment(widget.moment.id, user.uid);
+      }
+    } catch (e) {
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          _likeCount += _isLiked ? 1 : -1;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('操作失敗，請稍後再試')),
+        );
+      }
+    }
+  }
+
+  void _handleCommentTap() {
+    if (widget.onCommentTap != null) {
+      widget.onCommentTap!();
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => CommentsBottomSheet(momentId: widget.moment.id),
+      );
+    }
   }
 
   @override
@@ -167,7 +219,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _handleCommentTap,
               ),
             ],
           ),
