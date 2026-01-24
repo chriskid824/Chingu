@@ -4,6 +4,11 @@
  * This file exports all Cloud Functions for the Chingu app.
  */
 
+import * as admin from "firebase-admin";
+
+// Initialize Firebase Admin SDK once for all functions
+admin.initializeApp();
+
 // Export all functions
 export { sendBroadcast } from "./sendBroadcast";
 
