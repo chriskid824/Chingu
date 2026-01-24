@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
+import '../core/routes/app_router.dart';
+import '../services/rich_notification_service.dart';
 
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
@@ -180,5 +182,134 @@ class InAppNotification extends StatelessWidget {
       default:
         return chinguTheme.success; // Or primary
     }
+  }
+
+  /// 顯示前景通知
+  static void show(
+    NotificationModel notification, {
+    BuildContext? context,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    final overlayState = context != null
+        ? Overlay.of(context)
+        : AppRouter.navigatorKey.currentState?.overlay;
+
+    if (overlayState == null) return;
+
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationOverlay(
+        notification: notification,
+        duration: duration,
+        onDismiss: () {
+          if (overlayEntry.mounted) {
+            overlayEntry.remove();
+          }
+        },
+      ),
+    );
+
+    overlayState.insert(overlayEntry);
+  }
+}
+
+class _InAppNotificationOverlay extends StatefulWidget {
+  final NotificationModel notification;
+  final Duration duration;
+  final VoidCallback onDismiss;
+
+  const _InAppNotificationOverlay({
+    required this.notification,
+    required this.duration,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_InAppNotificationOverlay> createState() =>
+      _InAppNotificationOverlayState();
+}
+
+class _InAppNotificationOverlayState extends State<_InAppNotificationOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  bool _isDismissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeIn,
+    ));
+
+    // Start entrance animation
+    _controller.forward();
+
+    // Setup auto dismiss
+    Future.delayed(widget.duration, () {
+      if (mounted && !_isDismissing) {
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() {
+    if (_isDismissing) return;
+    _isDismissing = true;
+    _controller.reverse().then((_) {
+      widget.onDismiss();
+    });
+  }
+
+  void _onTap() {
+    // Handle navigation action
+    final action = widget.notification.actionType;
+    final data = widget.notification.actionData;
+
+    if (action != null) {
+      RichNotificationService().performAction(action, data);
+    }
+
+    // Dismiss immediately on tap
+    _dismiss();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: Dismissible(
+          key: ValueKey(widget.notification.id),
+          direction: DismissDirection.up,
+          onDismissed: (_) => widget.onDismiss(),
+          child: InAppNotification(
+            notification: widget.notification,
+            onDismiss: _dismiss,
+            onTap: _onTap,
+          ),
+        ),
+      ),
+    );
   }
 }
