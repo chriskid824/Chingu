@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/services/notification_ab_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 void main() {
   late NotificationABService service;

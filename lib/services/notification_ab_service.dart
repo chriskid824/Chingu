@@ -1,3 +1,5 @@
+import '../models/notification_model.dart';
+
 /// Notification A/B Testing Service
 ///
 /// This service is responsible for assigning users to experimental groups (A/B testing)
@@ -8,14 +10,6 @@
 enum ExperimentGroup {
   control, // Group A (Default)
   variant, // Group B (Experimental)
-}
-
-enum NotificationType {
-  match,
-  message,
-  event,
-  rating,
-  system,
 }
 
 class NotificationContent {
