@@ -3,6 +3,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
@@ -157,8 +158,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
@@ -179,6 +179,20 @@ class MatchingService {
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
+    // 發送配對通知 (非阻塞)
+    try {
+      FirebaseFunctions.instance.httpsCallable('sendMatchNotification').call({
+        'user1Id': user1Id,
+        'user2Id': user2Id,
+      }).then((_) {
+        print('配對通知發送成功');
+      }).catchError((e) {
+        print('配對通知發送失敗: $e');
+      });
+    } catch (e) {
+      print('調用配對通知函數失敗: $e');
+    }
+
     // 創建聊天室
     return await _chatService.createChatRoom(user1Id, user2Id);
   }
