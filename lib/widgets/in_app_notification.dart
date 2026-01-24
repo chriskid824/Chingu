@@ -74,7 +74,7 @@ class InAppNotification extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          notification.message,
+                          notification.content,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.7),
                           ),
@@ -156,7 +156,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -164,20 +164,19 @@ class InAppNotification extends StatelessWidget {
     }
   }
 
-  Color _getIconColor(String type, ChinguTheme? chinguTheme, ThemeData theme) {
+  Color _getIconColor(NotificationType type, ChinguTheme? chinguTheme, ThemeData theme) {
     if (chinguTheme == null) return theme.colorScheme.primary;
 
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return chinguTheme.error; // Pink/Red for love/match
-      case 'event':
+      case NotificationType.event:
         return theme.colorScheme.primary;
-      case 'message':
+      case NotificationType.message:
         return chinguTheme.info;
-      case 'rating':
+      case NotificationType.rating:
         return chinguTheme.warning;
-      case 'system':
-      default:
+      case NotificationType.system:
         return chinguTheme.success; // Or primary
     }
   }
