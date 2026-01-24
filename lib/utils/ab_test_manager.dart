@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -10,6 +11,15 @@ class ABTestManager {
 
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+
+  @visibleForTesting
+  void setMockInstances({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
 
   FirebaseFirestore get _firestore => 
       _firestoreInstance ??= FirebaseFirestore.instance;
@@ -230,7 +240,7 @@ class ABTestConfig {
       description: data['description'] ?? '',
       isActive: data['isActive'] ?? false,
       variants: (data['variants'] as List<dynamic>? ?? [])
-          .map((v) => ABTestVariant.fromMap(v as Map<String, dynamic>))
+          .map((v) => ABTestVariant.fromMap(Map<String, dynamic>.from(v as Map)))
           .toList(),
       startDate: (data['startDate'] as Timestamp?)?.toDate(),
       endDate: (data['endDate'] as Timestamp?)?.toDate(),
@@ -265,7 +275,7 @@ class ABTestVariant {
     return ABTestVariant(
       name: map['name'] ?? '',
       weight: (map['weight'] ?? 50.0).toDouble(),
-      config: map['config'] ?? {},
+      config: Map<String, dynamic>.from(map['config'] as Map? ?? {}),
     );
   }
 
@@ -296,7 +306,7 @@ class FeatureConfig {
     return FeatureConfig(
       key: doc.id,
       enabled: data['enabled'] ?? false,
-      config: data['config'] ?? {},
+      config: Map<String, dynamic>.from(data['config'] as Map? ?? {}),
     );
   }
 
