@@ -84,17 +84,20 @@ class RichNotificationService {
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  void performAction(String action, String? data, [NavigatorState? navigator]) {
+    final nav = navigator ?? AppRouter.navigatorKey.currentState;
+    if (nav == null) return;
+
     switch (action) {
       case 'open_chat':
         if (data != null) {
@@ -102,9 +105,9 @@ class RichNotificationService {
           // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
           // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
           // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          nav.pushNamed(AppRoutes.chatList);
         } else {
-          navigator.pushNamed(AppRoutes.chatList);
+          nav.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
@@ -112,15 +115,15 @@ class RichNotificationService {
            // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
            // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
            // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          nav.pushNamed(AppRoutes.eventDetail);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        nav.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
         break;
       default:
         // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
+        nav.pushNamed(AppRoutes.notifications);
         break;
     }
   }
