@@ -230,6 +230,33 @@ class ProfileDetailScreen extends StatelessWidget {
                       
                       const SizedBox(height: 32),
                       
+                      // Favorites Button
+                      ListTile(
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.favorite_rounded,
+                            color: theme.colorScheme.secondary,
+                          ),
+                        ),
+                        title: const Text('我的收藏'),
+                        subtitle: const Text('查看您感興趣的用戶'),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: theme.dividerColor.withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
                       _buildSectionTitle(context, '基本資料'),
                       const SizedBox(height: 12),
                       _buildInfoRow(context, Icons.location_on_outlined, '居住地', '${user.city} ${user.district}'),

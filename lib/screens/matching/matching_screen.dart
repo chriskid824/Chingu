@@ -156,7 +156,16 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                   );
                                 }
                               },
-                              child: MatchCard(user: user),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.userDetail,
+                                    arguments: user,
+                                  );
+                                },
+                                child: MatchCard(user: user),
+                              ),
                             );
                           }).toList().reversed.toList(), // 反轉列表，讓第一個元素在 Stack 的最上面
                         ),
@@ -186,9 +195,35 @@ class _MatchingScreenState extends State<MatchingScreen> {
                             context,
                             Icons.star_rounded,
                             chinguTheme?.warning ?? Colors.amber,
-                            () {
+                            () async {
                               if (candidates.isNotEmpty && authProvider.uid != null) {
+                                final targetUser = candidates.first;
+                                // 先觸發動畫（視覺上向右滑動，看起來像喜歡）
+                                // 注意：這裡我們想要一個"保存"的效果，但 SwipeableCard 只有左右滑動
+                                // 我們使用 swipeRight 模擬"收下"
                                 _swipeController.swipeRight();
+
+                                // 調用 Provider 添加收藏
+                                try {
+                                  await context.read<MatchingProvider>().addToFavorites(
+                                    authProvider.uid!,
+                                    targetUser.uid,
+                                  );
+                                  // 更新 AuthProvider 狀態
+                                  await context.read<AuthProvider>().refreshUserData();
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('已加入收藏')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('收藏失敗: $e')),
+                                    );
+                                  }
+                                }
                               }
                             },
                             isSmall: true,
