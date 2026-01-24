@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:chingu/services/notification_storage_service.dart';
+import 'package:chingu/services/firestore_service.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -19,6 +22,8 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  StreamSubscription<List<NotificationModel>>? _subscription;
+  DateTime? _lastCheckTime;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -57,6 +62,94 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+  }
+
+  /// 開始監聽通知
+  void startListening(String userId) {
+    // 停止之前的監聽
+    stopListening();
+
+    _lastCheckTime = DateTime.now();
+
+    // 監聽最近的通知
+    _subscription = NotificationStorageService()
+        .watchNotifications(limit: 1)
+        .listen((notifications) {
+          _handleNewNotifications(userId, notifications);
+        });
+
+    debugPrint('Notification listener started for user: $userId');
+  }
+
+  /// 停止監聽
+  void stopListening() {
+    _subscription?.cancel();
+    _subscription = null;
+    debugPrint('Notification listener stopped');
+  }
+
+  /// 處理新通知
+  Future<void> _handleNewNotifications(String userId, List<NotificationModel> notifications) async {
+    if (notifications.isEmpty) return;
+
+    final notification = notifications.first;
+
+    // 檢查是否是新通知 (createdAt > _lastCheckTime)
+    // 確保只處理監聽開始後或上次檢查後的新通知
+    if (_lastCheckTime != null &&
+        notification.createdAt.isBefore(_lastCheckTime!)) {
+      return;
+    }
+
+    // 更新最後檢查時間
+    _lastCheckTime = DateTime.now();
+
+    // 檢查用戶偏好
+    final user = await FirestoreService().getUser(userId);
+    if (user == null) return;
+
+    // 1. 全局開關
+    if (!user.pushNotificationsEnabled) return;
+
+    // 2. 分類開關
+    bool shouldNotify = false;
+
+    switch (notification.type) {
+      case 'match':
+        // 目前系統僅在配對成功時發送 'match' 類型通知 (NotificationStorageService.createMatchNotification)
+        // 因此這裡使用 matchSuccessNotification 開關
+        // "新配對" (newMatchNotification) 用於單向喜歡，目前系統尚未產生此類通知，
+        // 該開關暫時保留以備將來擴充，或與配對成功共用
+        shouldNotify = user.matchSuccessNotification;
+        break;
+      case 'message':
+        shouldNotify = user.newMessageNotification;
+        break;
+      case 'event':
+        // 簡單判斷：如果是變更通知，通常標題或內容會包含"變更"
+        // 注意：此判斷依賴文字內容，若文案修改可能失效。
+        // TODO: 未來應在 NotificationModel 中增加 subtype 欄位以區分提醒與變更
+        if (notification.title.contains('變更') || notification.message.contains('變更')) {
+          shouldNotify = user.eventChangeNotification;
+        } else {
+          shouldNotify = user.eventReminderNotification;
+        }
+        break;
+      case 'marketing':
+        shouldNotify = user.marketingPromotionNotification;
+        break;
+      case 'newsletter':
+        shouldNotify = user.newsletterNotification;
+        break;
+      case 'system':
+      default:
+        shouldNotify = true;
+        break;
+    }
+
+    if (shouldNotify) {
+      await showNotification(notification);
+    }
   }
 
   /// 處理通知點擊事件
