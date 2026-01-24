@@ -9,8 +9,11 @@ class RichNotificationService {
   // Singleton pattern
   static final RichNotificationService _instance = RichNotificationService._internal();
 
+  @visibleForTesting
+  static RichNotificationService? mockInstance;
+
   factory RichNotificationService() {
-    return _instance;
+    return mockInstance ?? _instance;
   }
 
   RichNotificationService._internal();
@@ -32,9 +35,9 @@ class RichNotificationService {
     // iOS 初始化設定
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
+      requestSoundPermission: false,
+      requestBadgePermission: false,
+      requestAlertPermission: false,
     );
 
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -47,16 +50,36 @@ class RichNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // 請求 Android 13+ 通知權限
+    _isInitialized = true;
+  }
+
+  /// 請求通知權限
+  Future<bool> requestPermissions() async {
+    bool? isGranted = false;
+
+    // Android
     final androidImplementation = _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidImplementation != null) {
-      await androidImplementation.requestNotificationsPermission();
+      isGranted = await androidImplementation.requestNotificationsPermission();
     }
 
-    _isInitialized = true;
+    // iOS
+    final iOSImplementation = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+
+    if (iOSImplementation != null) {
+      isGranted = await iOSImplementation.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
+    return isGranted ?? false;
   }
 
   /// 處理通知點擊事件
