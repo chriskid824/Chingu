@@ -111,6 +111,12 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **個人統計儀表板 (Stats Dashboard)**:
+  - 新增 `StatsDashboardScreen` 顯示配對次數、活動參與、聊天活躍度與評分
+  - 更新 `UserModel` 與 `FirestoreService` 支援 `totalMessagesSent` 統計
+  - `ChatService` 發送訊息時自動累加發送數
+  - 在個人資料頁面整合統計數據入口
+  - 新增 Widget 測試與單元測試確保統計邏輯正確
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
