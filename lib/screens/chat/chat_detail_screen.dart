@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -178,9 +179,32 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'report') {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.reportUser,
+                  arguments: {
+                    'reportedUserId': _otherUser!.uid,
+                    'reportedUserName': _otherUser!.name,
+                  },
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text('檢舉用戶'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
