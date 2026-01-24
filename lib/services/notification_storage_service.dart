@@ -32,6 +32,11 @@ class NotificationStorageService {
         .collection('notifications');
   }
 
+  /// 發送通知給指定用戶
+  Future<void> sendNotificationToUser(String targetUserId, NotificationModel notification) async {
+    await _notificationsRef(targetUserId).add(notification.toMap());
+  }
+
   /// 儲存新通知
   Future<String> saveNotification(NotificationModel notification) async {
     final userId = _currentUserId;
