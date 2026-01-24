@@ -38,6 +38,10 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 隱私設定
+  final bool isOnlineHidden;
+  final bool isLastSeenHidden;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +70,8 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.isOnlineHidden = false,
+    this.isLastSeenHidden = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +110,8 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      isOnlineHidden: map['isOnlineHidden'] ?? false,
+      isLastSeenHidden: map['isLastSeenHidden'] ?? false,
     );
   }
 
@@ -136,6 +144,8 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'isOnlineHidden': isOnlineHidden,
+      'isLastSeenHidden': isLastSeenHidden,
     };
   }
 
@@ -166,6 +176,8 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? isOnlineHidden,
+    bool? isLastSeenHidden,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +207,8 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      isOnlineHidden: isOnlineHidden ?? this.isOnlineHidden,
+      isLastSeenHidden: isLastSeenHidden ?? this.isLastSeenHidden,
     );
   }
 
