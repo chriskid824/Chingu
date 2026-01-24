@@ -54,13 +54,19 @@ class MockDinnerEventService implements DinnerEventService {
   }
 
   @override
-  Future<List<DinnerEventModel>> getUserEvents(String userId, {String? status}) async {
+  Future<List<DinnerEventModel>> getUserEvents(String userId, {EventStatus? status}) async {
     if (shouldThrow) throw Exception('Mock Error');
-    return _mockEvents.where((e) => e.participantIds.contains(userId)).toList();
+    return _mockEvents.where((e) {
+      final matchesUser = e.participantIds.contains(userId);
+      if (status != null) {
+        return matchesUser && e.status == status;
+      }
+      return matchesUser;
+    }).toList();
   }
 
   @override
-  Future<void> joinEvent(String eventId, String userId) async {
+  Future<void> registerForEvent(String eventId, String userId) async {
     if (shouldThrow) throw Exception('Mock Error');
     final index = _mockEvents.indexWhere((e) => e.id == eventId);
     if (index != -1) {
@@ -75,7 +81,7 @@ class MockDinnerEventService implements DinnerEventService {
   }
 
   @override
-  Future<void> leaveEvent(String eventId, String userId) async {
+  Future<void> unregisterFromEvent(String eventId, String userId) async {
     if (shouldThrow) throw Exception('Mock Error');
     final index = _mockEvents.indexWhere((e) => e.id == eventId);
     if (index != -1) {
@@ -88,6 +94,18 @@ class MockDinnerEventService implements DinnerEventService {
       );
     }
   }
+
+  // Keeping these for backward compatibility/interface compliance if not removed yet,
+  // or implementing as alias to new methods if interface requires them.
+  // Assuming strict interface match to DinnerEventService which may not have these anymore or uses them.
+  // Since I didn't remove them from Service (I might have if I followed strict plan), but usually I keep them.
+  // Let's check Service. I didn't remove them explicitly in previous steps, just added new ones.
+  // Wait, I saw "Deprecated methods" in my write_file for service.
+  // If I kept them in service, I must keep them here.
+
+  // Actually, I wrote the file completely, let's check if I kept joinEvent/leaveEvent in Service.
+  // I did NOT keep them in the write_file of DinnerEventService. I replaced them with comments saying "Deprecated...".
+  // Wait, I should double check `lib/services/dinner_event_service.dart`.
 
   @override
   Future<List<DinnerEventModel>> getRecommendedEvents({
@@ -241,7 +259,7 @@ void main() {
         city: 'Taipei',
         district: 'Xinyi',
       );
-      await mockService.joinEvent(eventId, 'user2');
+      await mockService.registerForEvent(eventId, 'user2');
 
       final success = await provider.leaveEvent(eventId, 'user2');
       expect(success, isTrue);
