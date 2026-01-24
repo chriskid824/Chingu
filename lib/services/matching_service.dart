@@ -59,6 +59,18 @@ class MatchingService {
           continue;
         }
 
+        // 排除我封鎖的用戶
+        if (currentUser.blockedUsers.contains(candidate.uid)) {
+          print('跳過: 已封鎖 (${candidate.name})');
+          continue;
+        }
+
+        // 排除封鎖我的用戶
+        if (candidate.blockedUsers.contains(currentUser.uid)) {
+          print('跳過: 對方已封鎖我 (${candidate.name})');
+          continue;
+        }
+
         // 排除已滑過的
         if (swipedIds.contains(candidate.uid)) {
           print('跳過: 已滑過 (${candidate.name})');
