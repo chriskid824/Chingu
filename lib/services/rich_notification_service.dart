@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -195,5 +196,25 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 顯示應用內通知橫幅
+  Future<void> showInAppNotification(NotificationModel notification) async {
+    final context = AppRouter.navigatorKey.currentContext;
+    if (context != null) {
+      InAppNotification.show(
+        context,
+        notification,
+        onTap: () {
+          _handleNavigation(
+            notification.actionType,
+            notification.actionData,
+            null,
+          );
+        },
+      );
+    } else {
+      debugPrint('Unable to show in-app notification: context is null');
+    }
   }
 }
