@@ -112,6 +112,16 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **帳號刪除流程優化 (Account Deletion Optimization)**
+  - **功能實作**:
+    - 在 `SettingsScreen` 新增「帳號設定」區塊與「刪除帳號」選項
+    - 建立 `DeleteAccountScreen`，實作多步驟確認流程：
+      1. 警告提示 (Warning)
+      2. 資料備份 (Data Export - Copy to Clipboard)
+      3. 最終確認 (Final Confirmation - Type 'DELETE')
+    - 在 `AuthProvider` 新增 `deleteAccount` 方法，協調 Firestore 資料刪除與 Firebase Auth 帳號刪除
+    - 處理 `requires-recent-login` 錯誤與刪除後的狀態清理
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
