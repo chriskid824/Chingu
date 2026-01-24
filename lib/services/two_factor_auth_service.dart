@@ -5,8 +5,14 @@ import 'package:flutter/foundation.dart';
 
 /// 雙因素認證服務
 class TwoFactorAuthService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+
+  TwoFactorAuthService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService();
 
   // 集合名稱
   static const String _collection = 'two_factor_codes';
@@ -22,6 +28,13 @@ class TwoFactorAuthService {
     String? uid,
   }) async {
     try {
+      if (target.isEmpty) {
+        throw ArgumentError('Target cannot be empty');
+      }
+      if (method != 'email' && method != 'sms') {
+        throw ArgumentError('Invalid method: $method. Must be "email" or "sms".');
+      }
+
       // 1. 生成 6 位數驗證碼
       final code = _generateCode();
 
@@ -48,7 +61,7 @@ class TwoFactorAuthService {
 
     } catch (e) {
       debugPrint('發送驗證碼失敗: $e');
-      throw Exception('發送驗證碼失敗: $e');
+      rethrow;
     }
   }
 
@@ -99,7 +112,7 @@ class TwoFactorAuthService {
     } catch (e) {
       debugPrint('驗證代碼失敗: $e');
       // 如果是我們拋出的異常，直接重拋
-      if (e.toString().contains('Exception:')) {
+      if (e.toString().contains('Exception:') || e is Exception) {
         rethrow;
       }
       throw Exception('驗證失敗: $e');
