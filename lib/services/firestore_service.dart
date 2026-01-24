@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/moment_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -7,6 +8,7 @@ class FirestoreService {
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
+  CollectionReference get _momentsCollection => _firestore.collection('moments');
 
   /// 創建新用戶資料
   /// 
@@ -287,6 +289,42 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 創建用戶動態
+  ///
+  /// [moment] 動態模型
+  Future<void> createMoment(MomentModel moment) async {
+    try {
+      // 如果 ID 為空，則生成一個新 ID
+      final docRef = moment.id.isEmpty
+          ? _momentsCollection.doc()
+          : _momentsCollection.doc(moment.id);
+
+      final newMoment = moment.copyWith(id: docRef.id);
+
+      await docRef.set(newMoment.toMap());
+    } catch (e) {
+      throw Exception('創建動態失敗: $e');
+    }
+  }
+
+  /// 獲取用戶動態
+  ///
+  /// [userId] 用戶 ID
+  Future<List<MomentModel>> getUserMoments(String userId) async {
+    try {
+      final querySnapshot = await _momentsCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => MomentModel.fromMap(doc.data() as Map<String, dynamic>, id: doc.id))
+          .toList();
+    } catch (e) {
+      throw Exception('獲取動態失敗: $e');
     }
   }
 }
