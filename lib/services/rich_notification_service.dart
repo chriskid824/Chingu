@@ -20,6 +20,9 @@ class RichNotificationService {
 
   bool _isInitialized = false;
 
+  /// Callback for external handling (e.g., analytics)
+  Function(String id, String action, String? payload)? onTap;
+
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -66,9 +69,18 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? notificationId = data['notificationId'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+
+        // Trigger external callback (e.g. tracking)
+        if (notificationId != null) {
+          final action = actionId != null && actionId != 'default'
+              ? actionId
+              : (actionType ?? 'default');
+          onTap?.call(notificationId, action, response.payload);
+        }
 
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
