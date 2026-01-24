@@ -26,6 +26,8 @@ class AuthProvider with ChangeNotifier {
   AuthStatus get status => _status;
   firebase_auth.User? get firebaseUser => _firebaseUser;
   UserModel? get userModel => _userModel;
+  // Alias for userModel to support legacy code
+  UserModel? get user => _userModel;
   String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _status == AuthStatus.authenticated;

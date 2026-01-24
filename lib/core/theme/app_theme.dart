@@ -21,6 +21,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
   final Color surfaceVariant;
   final Color shadowLight;
   final Color shadowMedium;
+  final Color primary;
   final Color secondary;
   final Color info;
   final Color success;
@@ -36,6 +37,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
     required this.surfaceVariant,
     required this.shadowLight,
     required this.shadowMedium,
+    required this.primary,
     required this.secondary,
     required this.info,
     required this.success,
@@ -53,6 +55,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
     Color? surfaceVariant,
     Color? shadowLight,
     Color? shadowMedium,
+    Color? primary,
     Color? secondary,
     Color? info,
     Color? success,
@@ -68,6 +71,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
       surfaceVariant: surfaceVariant ?? this.surfaceVariant,
       shadowLight: shadowLight ?? this.shadowLight,
       shadowMedium: shadowMedium ?? this.shadowMedium,
+      primary: primary ?? this.primary,
       secondary: secondary ?? this.secondary,
       info: info ?? this.info,
       success: success ?? this.success,
@@ -90,6 +94,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
       surfaceVariant: Color.lerp(surfaceVariant, other.surfaceVariant, t)!,
       shadowLight: Color.lerp(shadowLight, other.shadowLight, t)!,
       shadowMedium: Color.lerp(shadowMedium, other.shadowMedium, t)!,
+      primary: Color.lerp(primary, other.primary, t)!,
       secondary: Color.lerp(secondary, other.secondary, t)!,
       info: Color.lerp(info, other.info, t)!,
       success: Color.lerp(success, other.success, t)!,
@@ -108,6 +113,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
     surfaceVariant: AppColorsMinimal.surfaceVariant,
     shadowLight: AppColorsMinimal.shadowLight,
     shadowMedium: AppColorsMinimal.shadowMedium,
+    primary: AppColorsMinimal.primary,
     secondary: AppColorsMinimal.secondary,
     info: AppColorsMinimal.info,
     success: AppColorsMinimal.success,
@@ -125,6 +131,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
     surfaceVariant: Color(0xFFEEEEEE),
     shadowLight: Color(0x0A000000),
     shadowMedium: Color(0x14000000),
+    primary: Color(0xFFFF6B35),
     secondary: Color(0xFF004E89),
     info: Color(0xFF0066B2),
     success: Color(0xFF06A77D),
@@ -213,7 +220,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surface,
         shape: RoundedRectangleBorder(
