@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class MatchingProvider with ChangeNotifier {
   final MatchingService _matchingService = MatchingService();
@@ -90,6 +91,22 @@ class MatchingProvider with ChangeNotifier {
       // 如果失敗，可能需要提示用戶或回滾（這裡簡化處理）
       print('滑動操作失敗: $e');
       return null;
+    }
+  }
+
+  /// 添加到收藏
+  Future<void> addToFavorites(String currentUserId, String targetUserId) async {
+    try {
+      // 樂觀更新 UI：從配對候選人中移除
+      _candidates.removeWhere((user) => user.uid == targetUserId);
+      notifyListeners();
+
+      // 調用 Firestore 服務
+      await FirestoreService().addFavorite(currentUserId, targetUserId);
+    } catch (e) {
+      print('添加收藏失敗: $e');
+      // 這裡可以選擇回滾 UI，但為簡化流程暫不實現
+      rethrow;
     }
   }
 
