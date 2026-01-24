@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
@@ -8,12 +9,43 @@ class InAppNotification extends StatelessWidget {
   final VoidCallback? onDismiss;
   final VoidCallback? onTap;
 
+  static OverlayEntry? _currentEntry;
+
   const InAppNotification({
     super.key,
     required this.notification,
     this.onDismiss,
     this.onTap,
   });
+
+  static void show(
+    BuildContext context,
+    NotificationModel notification, {
+    Duration duration = const Duration(seconds: 4),
+    VoidCallback? onTap,
+  }) {
+    _currentEntry?.remove();
+    _currentEntry = null;
+
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (context) => _InAppNotificationBanner(
+        notification: notification,
+        duration: duration,
+        onTap: onTap,
+        onDismiss: () {
+          if (_currentEntry == entry) {
+            _currentEntry?.remove();
+            _currentEntry = null;
+          }
+        },
+      ),
+    );
+
+    _currentEntry = entry;
+    Overlay.of(context).insert(entry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,5 +212,102 @@ class InAppNotification extends StatelessWidget {
       default:
         return chinguTheme.success; // Or primary
     }
+  }
+}
+
+class _InAppNotificationBanner extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback onDismiss;
+  final VoidCallback? onTap;
+  final Duration duration;
+
+  const _InAppNotificationBanner({
+    required this.notification,
+    required this.onDismiss,
+    this.onTap,
+    required this.duration,
+  });
+
+  @override
+  State<_InAppNotificationBanner> createState() => _InAppNotificationBannerState();
+}
+
+class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _autoDismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeInBack,
+    ));
+
+    _controller.forward();
+
+    _autoDismissTimer = Timer(widget.duration, () {
+      _dismiss();
+    });
+  }
+
+  Future<void> _dismiss() async {
+    _autoDismissTimer?.cancel();
+    try {
+      if (mounted) {
+        await _controller.reverse();
+      }
+    } catch (e) {
+      // ignore ticker canceled or other errors during dispose
+    }
+
+    if (mounted) {
+      widget.onDismiss();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _autoDismissTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: GestureDetector(
+          onVerticalDragEnd: (details) {
+            if (details.primaryVelocity != null && details.primaryVelocity! < 0) {
+              _dismiss();
+            }
+          },
+          child: InAppNotification(
+            notification: widget.notification,
+            onDismiss: _dismiss,
+            onTap: widget.onTap ??
+                () {
+                  _dismiss();
+                },
+          ),
+        ),
+      ),
+    );
   }
 }

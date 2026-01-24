@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -135,6 +137,28 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  final notification = NotificationModel(
+                    id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+                    userId: 'test_user',
+                    type: 'match',
+                    title: '測試通知',
+                    message: '這是一個測試用的應用內橫幅通知，點擊可消失。',
+                    createdAt: DateTime.now(),
+                    isRead: false,
+                  );
+                  RichNotificationService().showInAppNotification(notification);
+                },
+                icon: const Icon(Icons.notification_important_rounded),
+                label: const Text('測試應用內通知'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.blue),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
