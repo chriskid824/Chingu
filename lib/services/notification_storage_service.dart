@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -16,13 +17,34 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+  String? _testUserId;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
 
   /// 獲取當前用戶 ID
-  String? get _currentUserId => _auth.currentUser?.uid;
+  String? get _currentUserId => _testUserId ?? _auth.currentUser?.uid;
+
+  /// 設置依賴（用於測試）
+  @visibleForTesting
+  void setDependencies({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    String? userId,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+    _testUserId = userId;
+  }
+
+  /// 重置依賴（用於測試）
+  @visibleForTesting
+  void reset() {
+    _firestoreInstance = null;
+    _authInstance = null;
+    _testUserId = null;
+  }
 
   /// 獲取用戶通知集合引用
   CollectionReference<Map<String, dynamic>> _notificationsRef(String userId) {
