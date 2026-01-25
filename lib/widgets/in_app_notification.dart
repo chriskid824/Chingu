@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
+import '../core/routes/app_router.dart';
 
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
@@ -14,6 +16,37 @@ class InAppNotification extends StatelessWidget {
     this.onDismiss,
     this.onTap,
   });
+
+  /// 顯示應用內通知
+  static void show(
+    NotificationModel notification, {
+    BuildContext? context,
+    Duration duration = const Duration(seconds: 4),
+    VoidCallback? onTap,
+  }) {
+    final targetContext = context ?? AppRouter.navigatorKey.currentContext;
+    if (targetContext == null) return;
+
+    final overlayState = Overlay.of(targetContext);
+
+    // 建立 OverlayEntry 引用以便移除
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationContainer(
+        notification: notification,
+        duration: duration,
+        onDismiss: () {
+          if (overlayEntry.mounted) {
+            overlayEntry.remove();
+          }
+        },
+        onTap: onTap,
+      ),
+    );
+
+    overlayState.insert(overlayEntry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +189,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -169,7 +202,7 @@ class InAppNotification extends StatelessWidget {
 
     switch (type) {
       case 'match':
-        return chinguTheme.error; // Pink/Red for love/match
+        return chinguTheme.error;
       case 'event':
         return theme.colorScheme.primary;
       case 'message':
@@ -178,7 +211,98 @@ class InAppNotification extends StatelessWidget {
         return chinguTheme.warning;
       case 'system':
       default:
-        return chinguTheme.success; // Or primary
+        return chinguTheme.success;
     }
+  }
+}
+
+class _InAppNotificationContainer extends StatefulWidget {
+  final NotificationModel notification;
+  final Duration duration;
+  final VoidCallback onDismiss;
+  final VoidCallback? onTap;
+
+  const _InAppNotificationContainer({
+    required this.notification,
+    required this.duration,
+    required this.onDismiss,
+    this.onTap,
+  });
+
+  @override
+  State<_InAppNotificationContainer> createState() => _InAppNotificationContainerState();
+}
+
+class _InAppNotificationContainerState extends State<_InAppNotificationContainer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _controller.forward();
+
+    // Setup auto-dismiss timer
+    _dismissTimer = Timer(widget.duration, () {
+      _dismiss();
+    });
+  }
+
+  Future<void> _dismiss() async {
+    _dismissTimer?.cancel();
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: Material(
+          color: Colors.transparent,
+          child: Dismissible(
+            key: ValueKey(widget.notification.id),
+            direction: DismissDirection.up,
+            onDismissed: (_) => widget.onDismiss(),
+            child: InAppNotification(
+              notification: widget.notification,
+              onDismiss: () => _dismiss(),
+              onTap: () {
+                if (widget.onTap != null) {
+                  widget.onTap!();
+                }
+                _dismiss();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
