@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final UserBlockService _userBlockService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    UserBlockService? userBlockService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _userBlockService = userBlockService ?? UserBlockService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -35,6 +39,12 @@ class MatchingService {
       print('性別: ${currentUser.gender}');
       print('性別偏好: ${currentUser.preferredMatchType}');
       
+      // 0. 獲取封鎖名單
+      final blockedUsers = await _userBlockService.getBlockedUserIds(currentUser.uid);
+      final blockedByUsers = await _userBlockService.getBlockedByUserIds(currentUser.uid);
+      final excludedIds = {...blockedUsers, ...blockedByUsers};
+      print('封鎖過濾: 排除 ${excludedIds.length} 個用戶');
+
       // 1. 獲取所有潛在候選人 (同城市)
       print('開始查詢 Firestore...');
       final candidates = await _firestoreService.queryMatchingUsers(
@@ -56,6 +66,12 @@ class MatchingService {
         // 排除自己
         if (candidate.uid == currentUser.uid) {
           print('跳過: 自己 (${candidate.name})');
+          continue;
+        }
+
+        // 排除封鎖/被封鎖的用戶
+        if (excludedIds.contains(candidate.uid)) {
+          print('跳過: 封鎖名單 (${candidate.name})');
           continue;
         }
 
