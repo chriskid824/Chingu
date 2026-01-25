@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -43,9 +44,14 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      // Analytics: clear user id
+      await AnalyticsService.instance.setUserId(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
+      // Analytics: set user id
+      await AnalyticsService.instance.setUserId(firebaseUser.uid);
+
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
     }
@@ -95,6 +101,9 @@ class AuthProvider with ChangeNotifier {
 
       // 2. 更新顯示名稱
       await _authService.updateDisplayName(name);
+
+      // Analytics: log sign up
+      await AnalyticsService.instance.logSignUp(method: 'email');
 
       // 3. 在 Firestore 創建用戶資料（基本資料，詳細資料在 onboarding 中完成）
       final userModel = UserModel(
@@ -149,6 +158,9 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
 
+      // Analytics: log login
+      await AnalyticsService.instance.logLogin(method: 'email');
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -167,10 +179,16 @@ class AuthProvider with ChangeNotifier {
 
       final firebaseUser = await _authService.signInWithGoogle();
 
+      // Analytics: log login (Google)
+      await AnalyticsService.instance.logLogin(method: 'google');
+
       // 檢查是否為新用戶
       final exists = await _firestoreService.userExists(firebaseUser.uid);
 
       if (!exists) {
+        // Analytics: log sign up (Google - new user)
+        await AnalyticsService.instance.logSignUp(method: 'google');
+
         // 為新的 Google 用戶創建 Firestore 資料
         final userModel = UserModel(
           uid: firebaseUser.uid,

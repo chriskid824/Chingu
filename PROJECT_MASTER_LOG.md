@@ -72,6 +72,11 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **Firebase Analytics 整合**:
+  - 新增 `AnalyticsService` 追蹤用戶行為（頁面瀏覽、自定義事件）
+  - 整合至 `AuthProvider` 自動追蹤登入、註冊與用戶 ID
+  - 在 `main.dart` 中添加 `FirebaseAnalyticsObserver` 自動追蹤導航
+
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
@@ -87,6 +92,7 @@
     - Event Card Animation
     - Parallax Header
   - **服務與邏輯**:
+    - Analytics Service (`analytics_service.dart`)
     - Crash Reporting (`crash_reporting_service.dart`)
     - Matching Algorithm Optimization
     - Unit Tests for Dinner Event Provider & Matching Service
