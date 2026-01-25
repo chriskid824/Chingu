@@ -87,10 +87,19 @@ class ProfileDetailScreen extends StatelessWidget {
                               icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.visibility_outlined, color: Colors.white),
-                              onPressed: () => Navigator.pushNamed(context, AppRoutes.profilePreview),
-                              tooltip: '預覽',
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.favorite_border_rounded, color: Colors.white),
+                                  onPressed: () => Navigator.pushNamed(context, AppRoutes.favorites),
+                                  tooltip: '我的收藏',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.visibility_outlined, color: Colors.white),
+                                  onPressed: () => Navigator.pushNamed(context, AppRoutes.profilePreview),
+                                  tooltip: '預覽',
+                                ),
+                              ],
                             ),
                           ],
                         ),
