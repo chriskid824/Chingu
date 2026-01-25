@@ -11,6 +11,9 @@ class DinnerEventService {
   // 每桌最大人數
   static const int MAX_PARTICIPANTS = 6;
 
+  // 活動提醒時間（小時）：活動前 24 小時發送提醒
+  static const int REMINDER_HOURS_BEFORE = 24;
+
   /// 創建新的晚餐活動
   /// 
   /// [creatorId] 創建者 ID
@@ -111,6 +114,9 @@ class DinnerEventService {
 
   /// 加入活動
   /// 
+  /// 此操作會將用戶加入活動，並且系統會通過後端排程服務 (Cloud Scheduler)
+  /// 在活動開始前 [REMINDER_HOURS_BEFORE] 小時自動發送提醒通知。
+  ///
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
   Future<void> joinEvent(String eventId, String userId) async {
