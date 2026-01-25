@@ -64,13 +64,14 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+        if (actionId != null && actionId != 'default') {
+          data['actionId'] = actionId;
+        }
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(data);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,9 +79,13 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void handleNavigation(Map<String, dynamic> data) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
+
+    final String? actionType = data['actionType'];
+    final String? actionData = data['actionData'];
+    final String? actionId = data['actionId'];
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
