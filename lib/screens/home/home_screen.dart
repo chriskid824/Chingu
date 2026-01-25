@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/screens/home/widgets/booking_bottom_sheet.dart';
+import 'package:chingu/services/notification_storage_service.dart';
 
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/user_card.dart';
@@ -72,25 +73,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                               ),
                             ),
-                            Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                                  onPressed: () {},
-                                ),
-                                Positioned(
-                                  right: 8,
-                                  top: 8,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: chinguTheme?.error ?? theme.colorScheme.error,
-                                      shape: BoxShape.circle,
+                            StreamBuilder<int>(
+                              stream: NotificationStorageService().watchUnreadCount(),
+                              builder: (context, snapshot) {
+                                final unreadCount = snapshot.data ?? 0;
+                                return Stack(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                                      onPressed: () {
+                                        Navigator.pushNamed(context, AppRoutes.notifications);
+                                      },
                                     ),
-                                  ),
-                                ),
-                              ],
+                                    if (unreadCount > 0)
+                                      Positioned(
+                                        right: 8,
+                                        top: 8,
+                                        child: Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: chinguTheme?.error ?? theme.colorScheme.error,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
