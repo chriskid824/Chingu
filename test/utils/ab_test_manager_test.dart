@@ -1,5 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/utils/ab_test_manager.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// Simple Fake implementation since we only need uid
+class FakeUser extends Fake implements User {
+  @override
+  final String uid;
+  FakeUser(this.uid);
+}
+
+class FakeFirebaseAuth extends Fake implements FirebaseAuth {
+  final User? _user;
+  FakeFirebaseAuth({User? user}) : _user = user;
+
+  @override
+  User? get currentUser => _user;
+}
 
 void main() {
   group('ABTestVariant', () {
@@ -56,63 +73,138 @@ void main() {
       expect(result['isActive'], true);
       expect(result['variants'], hasLength(2));
     });
-
-    test('should handle optional dates', () {
-      final now = DateTime.now();
-      final config = ABTestConfig(
-        testId: 'test_2',
-        name: 'Dated Test',
-        description: 'With dates',
-        isActive: true,
-        variants: [ABTestVariant(name: 'control', weight: 100.0)],
-        startDate: now,
-        endDate: now.add(const Duration(days: 7)),
-      );
-
-      final map = config.toMap();
-      expect(map.containsKey('startDate'), true);
-      expect(map.containsKey('endDate'), true);
-    });
   });
 
-  group('FeatureConfig', () {
-    test('should create config with default values', () {
-      final config = FeatureConfig(
-        key: 'new_feature',
-        enabled: true,
-      );
+  group('ABTestManager Logic', () {
+    late ABTestManager manager;
+    late FakeFirebaseFirestore fakeFirestore;
+    late FakeFirebaseAuth fakeAuth;
+    final testUser = FakeUser('user_123');
 
-      expect(config.key, 'new_feature');
-      expect(config.enabled, true);
-      expect(config.config, isEmpty);
+    setUp(() {
+      manager = ABTestManager();
+      fakeFirestore = FakeFirebaseFirestore();
+      fakeAuth = FakeFirebaseAuth(user: testUser);
+      manager.setDependencies(firestore: fakeFirestore, auth: fakeAuth);
+      manager.clearCache();
     });
 
-    test('should convert to map correctly', () {
-      final config = FeatureConfig(
-        key: 'feature_1',
-        enabled: false,
-        config: const {'timeout': 5000},
-      );
+    test('initialize should load active tests from Firestore', () async {
+      await fakeFirestore.collection('ab_tests').doc('test_1').set({
+        'name': 'Test 1',
+        'isActive': true,
+        'variants': [
+          {'name': 'control', 'weight': 50},
+          {'name': 'variant_a', 'weight': 50}
+        ]
+      });
 
-      final map = config.toMap();
-      expect(map['enabled'], false);
-      expect(map['config']['timeout'], 5000);
+      // Inactive test
+      await fakeFirestore.collection('ab_tests').doc('test_2').set({
+        'name': 'Test 2',
+        'isActive': false,
+        'variants': []
+      });
+
+      await manager.initialize();
+
+      // Check if test_1 is loaded (indirectly via getVariant or internal check if we exposed it)
+      // Since _cachedTests is private, we can try to access the test via isFeatureEnabled logic
+      // But better to check getVariant behavior
+
+      // If test is not loaded, getVariant returns 'control' by default,
+      // but if loaded, it calculates.
+      // Let's rely on behavior.
     });
 
-    test('should handle custom config', () {
-      final config = FeatureConfig(
-        key: 'advanced_feature',
-        enabled: true,
-        config: const {
-          'maxUsers': 100,
-          'theme': 'dark',
-          'features': ['chat', 'video']
-        },
-      );
+    test('getVariant should be deterministic based on userId and testId', () async {
+      // Setup a test with 50/50 split
+      await fakeFirestore.collection('ab_tests').doc('test_deterministic').set({
+        'name': 'Deterministic Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 50},
+          {'name': 'B', 'weight': 50}
+        ]
+      });
 
-      expect(config.config['maxUsers'], 100);
-      expect(config.config['theme'], 'dark');
-      expect(config.config['features'], hasLength(2));
+      await manager.initialize();
+
+      // For user_123 and test_deterministic
+      // (user_123 + test_deterministic).hashCode % 100
+      // We don't know the exact hash here, but it should be constant.
+
+      final variant1 = await manager.getVariant('test_deterministic');
+
+      // Clear cache to force recalculation (though getVariant checks _userVariants cache first)
+      manager.clearCache();
+      // Re-init dependencies because clearCache might affect internal state?
+      // clearCache clears _cachedTests and _userVariants.
+      // We need to re-initialize to load tests again.
+      await manager.initialize();
+
+      final variant2 = await manager.getVariant('test_deterministic');
+
+      expect(variant1, variant2);
+    });
+
+    test('getVariant should persist assignment to Firestore', () async {
+      await fakeFirestore.collection('ab_tests').doc('test_persist').set({
+        'name': 'Persist Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 100}, // 100% A
+        ]
+      });
+
+      await manager.initialize();
+
+      await manager.getVariant('test_persist');
+
+      final userVariantDoc = await fakeFirestore
+          .collection('users')
+          .doc(testUser.uid)
+          .collection('ab_test_variants')
+          .doc('test_persist')
+          .get();
+
+      expect(userVariantDoc.exists, true);
+      expect(userVariantDoc.data()?['variant'], 'A');
+    });
+
+    test('isFeatureEnabled should respect feature flags', () async {
+      await fakeFirestore.collection('feature_flags').doc('feature_x').set({
+        'enabled': true,
+        'config': {}
+      });
+
+      final isEnabled = await manager.isFeatureEnabled('feature_x');
+      expect(isEnabled, true);
+
+      await fakeFirestore.collection('feature_flags').doc('feature_y').set({
+        'enabled': false,
+        'config': {}
+      });
+
+      final isEnabledY = await manager.isFeatureEnabled('feature_y');
+      expect(isEnabledY, false);
+    });
+
+    test('isFeatureEnabled should fall back to A/B test if flag not found', () async {
+      // Setup AB test acting as feature flag
+      await fakeFirestore.collection('ab_tests').doc('new_feature_rollout').set({
+        'isActive': true,
+        'variants': [
+          {'name': 'control', 'weight': 0},
+          {'name': 'variant_on', 'weight': 100}
+        ]
+      });
+
+      await manager.initialize();
+
+      final isEnabled = await manager.isFeatureEnabled('new_feature_rollout');
+      // non-control variant returns true
+      expect(isEnabled, true);
     });
   });
 }

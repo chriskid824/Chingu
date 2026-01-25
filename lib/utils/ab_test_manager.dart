@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -16,11 +17,20 @@ class ABTestManager {
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
 
+  @visibleForTesting
+  void setDependencies({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
+
   // 本地緩存的測試配置
-  Map<String, ABTestConfig> _cachedTests = {};
+  final Map<String, ABTestConfig> _cachedTests = {};
   
   // 用戶的變體分配緩存
-  Map<String, String> _userVariants = {};
+  final Map<String, String> _userVariants = {};
 
   /// 初始化 A/B 測試管理器
   /// 從 Firestore 加載配置
@@ -40,7 +50,7 @@ class ABTestManager {
       // 加載用戶的變體分配
       await _loadUserVariants();
     } catch (e) {
-      print('Failed to initialize ABTestManager: $e');
+      debugPrint('Failed to initialize ABTestManager: $e');
     }
   }
 
@@ -61,7 +71,7 @@ class ABTestManager {
         _userVariants[doc.id] = doc.data()['variant'] as String;
       }
     } catch (e) {
-      print('Failed to load user variants: $e');
+      debugPrint('Failed to load user variants: $e');
     }
   }
 
@@ -89,17 +99,29 @@ class ABTestManager {
 
   /// 分配變體(基於權重)
   String _assignVariant(ABTestConfig config) {
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
+    final userId = _auth.currentUser?.uid;
+
+    // 如果沒有用戶 ID，使用隨機分配 (Fallback)
+    // 但如果有 User ID，我們使用確定性哈希確保一致性
+    int hashValue;
+    if (userId != null) {
+      // 簡單的確定性哈希: (userId + testId).hashCode
+      // 取絕對值確保為正數
+      hashValue = (userId + config.testId).hashCode.abs() % 100;
+    } else {
+      hashValue = DateTime.now().microsecondsSinceEpoch % 100;
+    }
+
     var cumulative = 0.0;
 
     for (var variant in config.variants) {
       cumulative += variant.weight;
-      if (random < cumulative) {
+      if (hashValue < cumulative) {
         return variant.name;
       }
     }
 
-    return config.variants.first.name;
+    return config.variants.isNotEmpty ? config.variants.first.name : 'control';
   }
 
   /// 保存用戶的變體分配到 Firestore
@@ -119,7 +141,7 @@ class ABTestManager {
         'testId': testId,
       });
     } catch (e) {
-      print('Failed to save variant assignment: $e');
+      debugPrint('Failed to save variant assignment: $e');
     }
   }
 
@@ -155,6 +177,7 @@ class ABTestManager {
       if (!doc.exists) return null;
       return FeatureConfig.fromFirestore(doc);
     } catch (e) {
+      debugPrint('Error getting feature config: $e');
       return null;
     }
   }
@@ -180,7 +203,7 @@ class ABTestManager {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Failed to track event: $e');
+      debugPrint('Failed to track event: $e');
     }
   }
 
@@ -222,7 +245,7 @@ class ABTestConfig {
   });
 
   factory ABTestConfig.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = Map<String, dynamic>.from(doc.data() as Map);
     
     return ABTestConfig(
       testId: doc.id,
@@ -230,7 +253,7 @@ class ABTestConfig {
       description: data['description'] ?? '',
       isActive: data['isActive'] ?? false,
       variants: (data['variants'] as List<dynamic>? ?? [])
-          .map((v) => ABTestVariant.fromMap(v as Map<String, dynamic>))
+          .map((v) => ABTestVariant.fromMap(Map<String, dynamic>.from(v as Map)))
           .toList(),
       startDate: (data['startDate'] as Timestamp?)?.toDate(),
       endDate: (data['endDate'] as Timestamp?)?.toDate(),
@@ -265,7 +288,9 @@ class ABTestVariant {
     return ABTestVariant(
       name: map['name'] ?? '',
       weight: (map['weight'] ?? 50.0).toDouble(),
-      config: map['config'] ?? {},
+      config: map['config'] != null
+          ? Map<String, dynamic>.from(map['config'] as Map)
+          : {},
     );
   }
 
@@ -291,12 +316,14 @@ class FeatureConfig {
   });
 
   factory FeatureConfig.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = Map<String, dynamic>.from(doc.data() as Map);
     
     return FeatureConfig(
       key: doc.id,
       enabled: data['enabled'] ?? false,
-      config: data['config'] ?? {},
+      config: data['config'] != null
+          ? Map<String, dynamic>.from(data['config'] as Map)
+          : {},
     );
   }
 
