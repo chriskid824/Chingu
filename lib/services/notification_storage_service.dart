@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import 'notification_ab_service.dart';
+import 'notification_service.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -256,20 +258,34 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // Use AB Service for content
+    final abService = NotificationABService();
+    final content = abService.getContent(
+      userId,
+      NotificationType.match,
+      params: {'partnerName': matchedUserName},
+    );
+    final group = abService.getGroup(userId);
+    final groupString = group.toString().split('.').last;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'match',
-      title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      title: content.title,
+      message: content.body,
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupString,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
+
+    // Track send
+    await NotificationService().trackSend(userId, 'match', groupString);
   }
 
   /// 創建活動通知
@@ -282,20 +298,34 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // Use AB Service for content
+    final abService = NotificationABService();
+    final content = abService.getContent(
+      userId,
+      NotificationType.event,
+      params: {'eventTitle': eventTitle},
+    );
+    final group = abService.getGroup(userId);
+    final groupString = group.toString().split('.').last;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'event',
-      title: eventTitle,
-      message: message,
+      title: content.title,
+      message: content.body, // Overriding passed message with AB content
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupString,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
+
+    // Track send
+    await NotificationService().trackSend(userId, 'event', groupString);
   }
 
   /// 創建消息通知
@@ -308,19 +338,33 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // Use AB Service for content
+    final abService = NotificationABService();
+    final content = abService.getContent(
+      userId,
+      NotificationType.message,
+      params: {'senderName': senderName},
+    );
+    final group = abService.getGroup(userId);
+    final groupString = group.toString().split('.').last;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
       type: 'message',
-      title: senderName,
-      message: messagePreview,
+      title: content.title,
+      message: content.body, // Overriding preview with AB content
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
       isRead: false,
       createdAt: DateTime.now(),
+      experimentGroup: groupString,
     );
 
     await _notificationsRef(userId).add(notification.toMap());
+
+    // Track send
+    await NotificationService().trackSend(userId, 'message', groupString);
   }
 }

@@ -12,6 +12,7 @@ class NotificationModel {
   final String? actionData; // JSON string or ID
   final bool isRead;
   final DateTime createdAt;
+  final String? experimentGroup;
 
   NotificationModel({
     required this.id,
@@ -24,6 +25,7 @@ class NotificationModel {
     this.actionData,
     this.isRead = false,
     required this.createdAt,
+    this.experimentGroup,
   });
 
   /// 從 Firestore 文檔創建 NotificationModel
@@ -45,6 +47,7 @@ class NotificationModel {
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      experimentGroup: map['experimentGroup'],
     );
   }
 
@@ -60,6 +63,7 @@ class NotificationModel {
       'actionData': actionData,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
+      'experimentGroup': experimentGroup,
     };
   }
 
@@ -76,6 +80,7 @@ class NotificationModel {
       actionData: actionData,
       isRead: true,
       createdAt: createdAt,
+      experimentGroup: experimentGroup,
     );
   }
 

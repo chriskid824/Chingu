@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -21,6 +22,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       message: '王小華 喜歡了您的個人資料',
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
       isRead: false,
+      experimentGroup: 'control',
+      actionType: 'open_chat',
+      actionData: 'user_1',
     ),
     NotificationModel(
       id: '2',
@@ -30,6 +34,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       message: '李小美 傳送了一則訊息給您',
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
       isRead: false,
+      experimentGroup: 'variant',
+      actionType: 'open_chat',
+      actionData: 'user_2',
     ),
     NotificationModel(
       id: '3',
@@ -246,6 +253,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
       child: ListTile(
+        onTap: () {
+          // Track notification click
+          if (notification.experimentGroup != null) {
+            NotificationService().trackClick(
+              notification.userId,
+              notification.type,
+              notification.experimentGroup!,
+              notification.id,
+            );
+          }
+        },
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
