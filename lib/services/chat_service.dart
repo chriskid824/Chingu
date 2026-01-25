@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -84,9 +85,11 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
+      final previewText = type == 'text' ? message : '[${type}]';
 
       // 1. 新增訊息到 messages 集合
       await _firestore.collection('messages').add({
@@ -95,6 +98,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // For compatibility with older UI
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -105,8 +109,9 @@ class ChatService {
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': previewText,
         'lastMessageTime': timestamp,
+        'lastMessageAt': timestamp, // For compatibility with ChatProvider
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
         // 這裡需要知道接收者的 ID，但在這裡我們沒有。
@@ -114,6 +119,32 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      if (recipientId != null) {
+        // 截取訊息預覽 (前20字)
+        String body = previewText;
+        if (body.length > 20) {
+          body = '${body.substring(0, 20)}...';
+        }
+
+        try {
+          await FirebaseFunctions.instance.httpsCallable('sendNotification').call({
+            'targetUserId': recipientId,
+            'title': senderName,
+            'body': body,
+            'data': {
+              'type': 'message',
+              'senderId': senderId,
+              'chatRoomId': chatRoomId,
+              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            },
+          });
+        } catch (e) {
+          print('發送通知失敗: $e');
+          // 不拋出異常，以免影響訊息發送流程
+        }
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
