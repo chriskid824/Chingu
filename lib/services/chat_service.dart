@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -84,6 +85,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -95,6 +97,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Backwards compatibility
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -105,7 +108,7 @@ class ChatService {
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': type == 'text' ? message : '[$type]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
@@ -114,6 +117,37 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送通知
+      try {
+        String? targetUserId = recipientId;
+
+        if (targetUserId == null) {
+          final chatRoom = await _chatRoomsCollection.doc(chatRoomId).get();
+          final data = chatRoom.data() as Map<String, dynamic>?;
+          if (data != null) {
+            final participants =
+                List<String>.from(data['participantIds'] ?? []);
+            targetUserId = participants.firstWhere(
+              (id) => id != senderId,
+              orElse: () => '',
+            );
+          }
+        }
+
+        if (targetUserId != null && targetUserId.isNotEmpty) {
+          await FirebaseFunctions.instance
+              .httpsCallable('sendChatNotification')
+              .call({
+            'recipientId': targetUserId,
+            'senderName': senderName,
+            'message': type == 'text' ? message : '發送了一個附件',
+          });
+        }
+      } catch (e) {
+        // 記錄錯誤但不阻擋流程，因為訊息已發送成功
+        print('發送通知失敗: $e');
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
