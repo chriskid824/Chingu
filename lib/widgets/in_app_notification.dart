@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
+import '../core/routes/app_router.dart';
 
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
@@ -14,6 +16,30 @@ class InAppNotification extends StatelessWidget {
     this.onDismiss,
     this.onTap,
   });
+
+  /// 顯示應用內通知橫幅
+  static void show({
+    required NotificationModel notification,
+    Duration duration = const Duration(seconds: 4),
+    VoidCallback? onTap,
+  }) {
+    final context = AppRouter.navigatorKey.currentContext;
+    if (context == null) return;
+
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => _NotificationSlideTransition(
+        notification: notification,
+        duration: duration,
+        overlayEntry: overlayEntry,
+        onTap: onTap,
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,5 +206,94 @@ class InAppNotification extends StatelessWidget {
       default:
         return chinguTheme.success; // Or primary
     }
+  }
+}
+
+class _NotificationSlideTransition extends StatefulWidget {
+  final NotificationModel notification;
+  final Duration duration;
+  final OverlayEntry overlayEntry;
+  final VoidCallback? onTap;
+
+  const _NotificationSlideTransition({
+    required this.notification,
+    required this.duration,
+    required this.overlayEntry,
+    this.onTap,
+  });
+
+  @override
+  State<_NotificationSlideTransition> createState() => _NotificationSlideTransitionState();
+}
+
+class _NotificationSlideTransitionState extends State<_NotificationSlideTransition> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeInBack,
+    ));
+
+    _controller.forward();
+
+    if (widget.duration != Duration.zero) {
+      _timer = Timer(widget.duration, () {
+        _dismiss();
+      });
+    }
+  }
+
+  void _dismiss() async {
+    if (!mounted) return;
+    _timer?.cancel();
+    await _controller.reverse();
+    if (mounted) {
+      try {
+        widget.overlayEntry.remove();
+      } catch (e) {
+        // Overlay entry might have been already removed
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: InAppNotification(
+          notification: widget.notification,
+          onDismiss: _dismiss,
+          onTap: () {
+            _dismiss();
+            widget.onTap?.call();
+          },
+        ),
+      ),
+    );
   }
 }
