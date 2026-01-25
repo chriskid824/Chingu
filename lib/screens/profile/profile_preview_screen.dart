@@ -13,7 +13,7 @@ class ProfilePreviewScreen extends StatelessWidget {
     final chinguTheme = theme.extension<ChinguTheme>();
 
     // Get current user from provider
-    final user = context.select<AuthProvider, UserModel?>((p) => p.user);
+    final user = context.select<AuthProvider, UserModel?>((p) => p.userModel);
 
     if (user == null) {
       return Scaffold(

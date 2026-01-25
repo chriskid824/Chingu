@@ -24,7 +24,6 @@ import '../../screens/matching/matching_screen.dart';
 import '../../screens/matching/user_detail_screen.dart';
 import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
-import '../../screens/matching/match_success_screen.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
@@ -43,6 +42,7 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/delete_account_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
@@ -98,6 +98,7 @@ class AppRoutes {
   static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
+  static const String deleteAccount = '/delete-account';
   static const String reportUser = '/report-user';
 }
 
@@ -229,6 +230,9 @@ class AppRouter {
 
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      case AppRoutes.deleteAccount:
+        return MaterialPageRoute(builder: (_) => const DeleteAccountScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;

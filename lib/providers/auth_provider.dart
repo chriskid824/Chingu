@@ -292,6 +292,38 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 刪除帳號
+  Future<void> deleteAccount() async {
+    try {
+      if (_firebaseUser == null) return;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      final uid = _firebaseUser!.uid;
+
+      // 1. 刪除 Firestore 資料
+      await _firestoreService.deleteUser(uid);
+
+      // 2. 刪除 Firebase Auth 帳號
+      await _authService.deleteAccount();
+
+      // 3. 清理本地狀態
+      _status = AuthStatus.unauthenticated;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      // 重新拋出異常以便 UI 處理（特別是 requires-recent-login）
+      rethrow;
+    }
+  }
 }
 
 

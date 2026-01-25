@@ -83,6 +83,9 @@ class SettingsScreen extends StatelessWidget {
           _buildListTile(context, Icons.notifications_outlined, '通知設定', () {
             Navigator.of(context).pushNamed(AppRoutes.notificationSettings);
           }),
+          _buildListTile(context, Icons.delete_forever_outlined, '刪除帳號', () {
+            Navigator.of(context).pushNamed(AppRoutes.deleteAccount);
+          }),
           const Divider(),
           // App Settings
           _buildSectionTitle(context, '應用程式'),
