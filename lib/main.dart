@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -31,11 +32,50 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 獲取初始通知訊息 (如果是從通知啟動 App)
+  RemoteMessage? initialMessage =
+      await FirebaseMessaging.instance.getInitialMessage();
+
+  String? initialRoute;
+  Object? initialArguments;
+
+  if (initialMessage != null) {
+    final data = initialMessage.data;
+    final actionType = data['actionType'];
+    // final actionData = data['actionData']; // 預留給未來需要參數時使用
+
+    switch (actionType) {
+      case 'open_chat':
+        initialRoute = AppRoutes.chatList;
+        break;
+      case 'view_event':
+        initialRoute = AppRoutes.eventDetail;
+        break;
+      case 'match_history':
+        initialRoute = AppRoutes.matchesList;
+        break;
+      default:
+        // 預設導航到通知頁面
+        initialRoute = AppRoutes.notifications;
+        break;
+    }
+  }
+
+  runApp(ChinguApp(
+    initialRoute: initialRoute,
+    initialArguments: initialArguments,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialRoute;
+  final Object? initialArguments;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute,
+    this.initialArguments,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +95,21 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRouteName) {
+              final List<Route<dynamic>> routes = [
+                AppRouter.generateRoute(
+                    const RouteSettings(name: AppRoutes.mainNavigation)),
+              ];
+
+              if (initialRoute != null) {
+                routes.add(AppRouter.generateRoute(RouteSettings(
+                  name: initialRoute,
+                  arguments: initialArguments,
+                )));
+              }
+
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
