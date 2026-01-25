@@ -177,7 +177,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: (chinguTheme?.primary ?? theme.colorScheme.primary).withOpacity(0.3),
+                  color: (theme.colorScheme.primary).withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
