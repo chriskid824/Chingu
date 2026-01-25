@@ -8,6 +8,7 @@ class AppIconButton extends StatelessWidget {
   final Color? backgroundColor;
   final double size;
   final double iconSize;
+  final String? tooltip;
 
   const AppIconButton({
     Key? key,
@@ -17,6 +18,7 @@ class AppIconButton extends StatelessWidget {
     this.backgroundColor,
     this.size = 40,
     this.iconSize = 24,
+    this.tooltip,
   }) : super(key: key);
 
   @override
@@ -38,6 +40,7 @@ class AppIconButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         constraints: BoxConstraints(),
         visualDensity: VisualDensity.compact,
+        tooltip: tooltip,
       ),
     );
   }
