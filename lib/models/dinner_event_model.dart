@@ -1,6 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// 晚餐活動模型（固定6人）
+enum EventStatus {
+  pending,    // 等待配對/報名中
+  open,       // 開放報名 (synonym for pending/active)
+  full,       // 額滿 (waiting list open)
+  closed,     // 報名截止
+  confirmed,  // 已確認成團
+  completed,  // 活動結束
+  cancelled,  // 活動取消
+}
+
+/// 晚餐活動模型
 class DinnerEventModel {
   final String id;
   final String creatorId;
@@ -10,9 +20,12 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者
+  final int maxParticipants;
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final List<String> waitingList; // 候補名單 UID 列表
+  final DateTime? registrationDeadline;
   
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
@@ -21,7 +34,7 @@ class DinnerEventModel {
   final String? restaurantPhone;
   
   // 活動狀態
-  final String status; // 'pending', 'confirmed', 'completed', 'cancelled'
+  final EventStatus status;
   final DateTime createdAt;
   final DateTime? confirmedAt;
   final DateTime? completedAt;
@@ -41,13 +54,16 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
     required this.participantIds,
     required this.participantStatus,
+    this.waitingList = const [],
+    this.registrationDeadline,
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
     this.restaurantPhone,
-    this.status = 'pending',
+    this.status = EventStatus.pending,
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
@@ -72,13 +88,18 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitingList: List<String>.from(map['waitingList'] ?? []),
+      registrationDeadline: map['registrationDeadline'] != null
+          ? (map['registrationDeadline'] as Timestamp).toDate()
+          : null,
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
       restaurantPhone: map['restaurantPhone'],
-      status: map['status'] ?? 'pending',
+      status: _parseStatus(map['status']),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       confirmedAt: map['confirmedAt'] != null 
           ? (map['confirmedAt'] as Timestamp).toDate() 
@@ -105,13 +126,18 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'waitingList': waitingList,
+      'registrationDeadline': registrationDeadline != null
+          ? Timestamp.fromDate(registrationDeadline!)
+          : null,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
       'restaurantPhone': restaurantPhone,
-      'status': status,
+      'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
@@ -128,13 +154,16 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitingList,
+    DateTime? registrationDeadline,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
     String? restaurantPhone,
-    String? status,
+    EventStatus? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
     List<String>? icebreakerQuestions,
@@ -149,8 +178,11 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      waitingList: waitingList ?? this.waitingList,
+      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -184,21 +216,37 @@ class DinnerEventModel {
   /// 獲取狀態文字
   String get statusText {
     switch (status) {
-      case 'pending':
-        return '等待配對';
-      case 'confirmed':
+      case EventStatus.pending:
+      case EventStatus.open:
+        return '開放報名';
+      case EventStatus.full:
+        return '已額滿 (可候補)';
+      case EventStatus.closed:
+        return '報名截止';
+      case EventStatus.confirmed:
         return '已確認';
-      case 'completed':
+      case EventStatus.completed:
         return '已完成';
-      case 'cancelled':
+      case EventStatus.cancelled:
         return '已取消';
       default:
         return '未知';
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  /// 檢查是否已滿
+  bool get isFull => participantIds.length >= maxParticipants;
+
+  /// 檢查是否可以報名
+  bool get canRegister {
+    if (status == EventStatus.cancelled || status == EventStatus.completed || status == EventStatus.closed) {
+      return false;
+    }
+    if (registrationDeadline != null && DateTime.now().isAfter(registrationDeadline!)) {
+      return false;
+    }
+    return true;
+  }
 
   /// 獲取已確認人數
   int get confirmedCount {
@@ -212,14 +260,31 @@ class DinnerEventModel {
     return participantStatus[userId] == 'confirmed';
   }
 
+  /// 檢查用戶是否在候補名單
+  bool isUserWaitlisted(String userId) {
+    return waitingList.contains(userId);
+  }
+
   /// 獲取平均評分
   double get averageRating {
     if (ratings == null || ratings!.isEmpty) return 0.0;
     final sum = ratings!.values.reduce((a, b) => a + b);
     return sum / ratings!.length;
   }
+
+  static EventStatus _parseStatus(String? status) {
+    if (status == null) return EventStatus.pending;
+    try {
+      return EventStatus.values.firstWhere((e) => e.name == status);
+    } catch (_) {
+      // Backward compatibility mapping
+      switch (status) {
+        case 'pending': return EventStatus.pending;
+        case 'confirmed': return EventStatus.confirmed;
+        case 'completed': return EventStatus.completed;
+        case 'cancelled': return EventStatus.cancelled;
+        default: return EventStatus.pending;
+      }
+    }
+  }
 }
-
-
-
-

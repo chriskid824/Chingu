@@ -295,7 +295,7 @@ class DatabaseSeeder {
         notes: eventData['notes'] as String,
         participantIds: [targetUserId],
         participantStatus: {targetUserId: 'confirmed'},
-        status: 'pending',
+        status: EventStatus.pending,
         createdAt: DateTime.now(),
         icebreakerQuestions: ['大家最近有什麼有趣的事情分享嗎？'],
       );
