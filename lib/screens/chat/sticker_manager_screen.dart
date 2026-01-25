@@ -200,15 +200,15 @@ class _StickerManagerScreenState extends State<StickerManagerScreen> {
                               )
                             else if (pack.isDownloaded)
                               AppIconButton(
-                                icon: Icon(Icons.delete_outline,
-                                    color: theme.colorScheme.error),
+                                icon: Icons.delete_outline,
+                                color: theme.colorScheme.error,
                                 onPressed: () => _deletePack(pack),
                                 tooltip: 'Remove Pack',
                               )
                             else
                               AppIconButton(
-                                icon: Icon(Icons.download,
-                                    color: theme.colorScheme.primary),
+                                icon: Icons.download,
+                                color: theme.colorScheme.primary,
                                 onPressed: () => _downloadPack(pack),
                                 tooltip: 'Download Pack',
                               ),
