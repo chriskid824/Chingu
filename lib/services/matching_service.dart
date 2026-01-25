@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final NotificationService _notificationService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    NotificationService? notificationService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _notificationService = notificationService ?? NotificationService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -121,6 +125,14 @@ class MatchingService {
           // 獲取對方資料以返回
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
+
+          // 發送配對通知給雙方
+          await _notificationService.sendMatchNotification(
+            currentUserId: userId,
+            matchedUserId: targetUserId,
+            matchedUserName: partner.name,
+            matchedUserPhotoUrl: partner.photoUrls.isNotEmpty ? partner.photoUrls.first : null,
+          );
           
           return {
             'isMatch': true,
@@ -158,7 +170,7 @@ class MatchingService {
 
       if (query.docs.isNotEmpty) {
         // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // await _handleMatchSuccess(userId, targetUserId); // Fix: Avoid double calling
         return true;
       }
       return false;
