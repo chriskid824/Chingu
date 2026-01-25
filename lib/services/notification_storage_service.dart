@@ -32,6 +32,36 @@ class NotificationStorageService {
         .collection('notifications');
   }
 
+  /// 檢查用戶是否接收特定類型的通知
+  Future<bool> _shouldCreateNotification(String userId, String type) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (!doc.exists) return true;
+
+      final data = doc.data();
+      if (data == null) return true;
+
+      // 檢查特定類型開關
+      switch (type) {
+        case 'match':
+          return data['enableMatchNotifications'] ?? true;
+        case 'message':
+          return data['enableMessageNotifications'] ?? true;
+        case 'event':
+          return data['enableEventNotifications'] ?? true;
+        // system 類型通常強制發送，或使用 enablePushNotifications
+        case 'system':
+          return true;
+        default:
+          return true;
+      }
+    } catch (e) {
+      // 發生錯誤時預設允許，避免遺漏重要通知
+      print('Error checking notification preferences: $e');
+      return true;
+    }
+  }
+
   /// 儲存新通知
   Future<String> saveNotification(NotificationModel notification) async {
     final userId = _currentUserId;
@@ -256,6 +286,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    if (!await _shouldCreateNotification(userId, 'match')) return;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
@@ -282,6 +314,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    if (!await _shouldCreateNotification(userId, 'event')) return;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
@@ -307,6 +341,8 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    if (!await _shouldCreateNotification(userId, 'message')) return;
 
     final notification = NotificationModel(
       id: '',
