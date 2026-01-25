@@ -38,6 +38,11 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final bool matchNotificationsEnabled;
+  final bool messageNotificationsEnabled;
+  final bool eventNotificationsEnabled;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +71,9 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.matchNotificationsEnabled = true,
+    this.messageNotificationsEnabled = true,
+    this.eventNotificationsEnabled = true,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +112,9 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      matchNotificationsEnabled: map['matchNotificationsEnabled'] ?? true,
+      messageNotificationsEnabled: map['messageNotificationsEnabled'] ?? true,
+      eventNotificationsEnabled: map['eventNotificationsEnabled'] ?? true,
     );
   }
 
@@ -136,6 +147,9 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'matchNotificationsEnabled': matchNotificationsEnabled,
+      'messageNotificationsEnabled': messageNotificationsEnabled,
+      'eventNotificationsEnabled': eventNotificationsEnabled,
     };
   }
 
@@ -166,6 +180,9 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? matchNotificationsEnabled,
+    bool? messageNotificationsEnabled,
+    bool? eventNotificationsEnabled,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +212,9 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      matchNotificationsEnabled: matchNotificationsEnabled ?? this.matchNotificationsEnabled,
+      messageNotificationsEnabled: messageNotificationsEnabled ?? this.messageNotificationsEnabled,
+      eventNotificationsEnabled: eventNotificationsEnabled ?? this.eventNotificationsEnabled,
     );
   }
 
