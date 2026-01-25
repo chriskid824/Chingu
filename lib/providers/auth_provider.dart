@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
@@ -60,6 +61,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 更新 FCM Token
+        await _updateFcmToken(uid);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -70,6 +73,24 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = '載入資料失敗: $e';
       _userModel = null;
       notifyListeners();
+    }
+  }
+
+  /// 更新 FCM Token
+  Future<void> _updateFcmToken(String uid) async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+      if (token != null) {
+        await _firestoreService.updateUser(uid, {'fcmToken': token});
+
+        // Listen to token refresh
+        messaging.onTokenRefresh.listen((newToken) {
+          _firestoreService.updateUser(uid, {'fcmToken': newToken});
+        });
+      }
+    } catch (e) {
+      debugPrint('Error updating FCM token: $e');
     }
   }
 

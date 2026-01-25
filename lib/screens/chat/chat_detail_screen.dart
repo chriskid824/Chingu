@@ -59,6 +59,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
         text: text,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
       );
       if (!mounted) return;
       if (_scrollController.hasClients) {
@@ -91,6 +93,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         senderId: currentUser.uid,
         text: url,
         type: 'image',
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
       );
       if (!mounted) return;
       if (_scrollController.hasClients) {
@@ -246,7 +250,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
-    final text = message['text'] ?? '';
+    final text = message['message'] ?? message['text'] ?? '';
     final type = message['type'] as String?;
     final isImage = (type == 'image' || type == 'gif') || (type == null && (text as String).endsWith('.gif'));
 
