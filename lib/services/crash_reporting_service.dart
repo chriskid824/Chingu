@@ -39,4 +39,9 @@ class CrashReportingService {
   Future<void> setCustomKey(String key, Object value) async {
     await FirebaseCrashlytics.instance.setCustomKey(key, value);
   }
+
+  /// Enable or disable crash collection
+  Future<void> setCrashlyticsCollectionEnabled(bool enabled) async {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(enabled);
+  }
 }
