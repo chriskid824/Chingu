@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
-import 'package:chingu/utils/haptic_utils.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
   final Function(bool isLiked)? onLikeChanged;
   final VoidCallback? onCommentTap;
+  final VoidCallback? onDelete;
 
   const MomentCard({
     super.key,
     required this.moment,
     this.onLikeChanged,
     this.onCommentTap,
+    this.onDelete,
   });
 
   @override
@@ -45,7 +47,7 @@ class _MomentCardState extends State<MomentCard> {
   }
 
   void _toggleLike() {
-    HapticUtils.light();
+    HapticFeedback.lightImpact();
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
@@ -110,12 +112,27 @@ class _MomentCardState extends State<MomentCard> {
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.more_horiz),
-                onPressed: () {
-                  // TODO: Implement more options
-                },
-              ),
+              if (widget.onDelete != null)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      widget.onDelete?.call();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                          SizedBox(width: 8),
+                          Text('刪除', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
 
