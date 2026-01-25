@@ -1,14 +1,85 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/notification_service.dart';
 
-class NotificationSettingsScreen extends StatelessWidget {
+class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
-  
+
+  @override
+  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  Set<String> _subscribedTopics = {};
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().userModel;
+      if (user != null) {
+        setState(() {
+          _subscribedTopics = Set.from(user.subscribedTopics);
+        });
+      }
+    });
+  }
+
+  Future<void> _toggleTopic(String topic, bool value) async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Optimistic update
+    final previousState = Set<String>.from(_subscribedTopics);
+    if (value) {
+      _subscribedTopics.add(topic);
+    } else {
+      _subscribedTopics.remove(topic);
+    }
+
+    try {
+      final notificationService = NotificationService();
+      final authProvider = context.read<AuthProvider>();
+
+      if (value) {
+        await notificationService.subscribeToTopic(topic);
+      } else {
+        await notificationService.unsubscribeFromTopic(topic);
+      }
+
+      // Update Firestore
+      await authProvider.updateUserData({
+        'subscribedTopics': _subscribedTopics.toList(),
+      });
+    } catch (e) {
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _subscribedTopics = previousState;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('設定更新失敗: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -17,45 +88,55 @@ class NotificationSettingsScreen extends StatelessWidget {
         backgroundColor: theme.scaffoldBackgroundColor,
         foregroundColor: theme.colorScheme.onSurface,
         elevation: 0,
+        bottom: _isLoading
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(2),
+                child: LinearProgressIndicator(
+                  color: theme.colorScheme.primary,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                  minHeight: 2,
+                ),
+              )
+            : null,
       ),
       body: ListView(
         children: [
-          _buildSectionTitle(context, '推播通知'),
-          SwitchListTile(
-            title: const Text('啟用推播通知'),
-            subtitle: Text('接收應用程式的推播通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
-          ),
+          // 地區訂閱
+          _buildSectionTitle(context, '地區訂閱 (Region Subscription)'),
+          _buildTopicCheckbox('台北 (Taipei)', 'region_taipei', theme),
+          _buildTopicCheckbox('台中 (Taichung)', 'region_taichung', theme),
+          _buildTopicCheckbox('高雄 (Kaohsiung)', 'region_kaohsiung', theme),
+
           const Divider(),
-          _buildSectionTitle(context, '配對通知'),
+
+          // 興趣訂閱
+          _buildSectionTitle(context, '興趣訂閱 (Interest Subscription)'),
+          _buildTopicCheckbox('休閒娛樂 (Entertainment)', 'interest_entertainment', theme),
+          _buildTopicCheckbox('生活風格 (Lifestyle)', 'interest_lifestyle', theme),
+          _buildTopicCheckbox('運動健身 (Sports)', 'interest_sports', theme),
+          _buildTopicCheckbox('藝術創意 (Arts)', 'interest_arts', theme),
+          _buildTopicCheckbox('科技與知識 (Tech)', 'interest_tech', theme),
+
+          const Divider(),
+
+          // 其他通知 (保留原有 UI)
+          _buildSectionTitle(context, '一般通知'),
           SwitchListTile(
             title: const Text('新配對'),
             subtitle: Text('當有人喜歡您時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: true, // Placeholder
+            onChanged: (v) {}, // Placeholder
             activeColor: theme.colorScheme.primary,
           ),
-          SwitchListTile(
-            title: const Text('配對成功'),
-            subtitle: Text('當配對成功時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
-          ),
-          const Divider(),
-          _buildSectionTitle(context, '訊息通知'),
           SwitchListTile(
             title: const Text('新訊息'),
             subtitle: Text('收到新訊息時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: true, // Placeholder
+            onChanged: (v) {}, // Placeholder
             activeColor: theme.colorScheme.primary,
           ),
           ListTile(
             title: const Text('顯示訊息預覽'),
-            subtitle: Text('總是顯示', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
             trailing: Icon(
               Icons.arrow_forward_ios,
               size: 16,
@@ -64,38 +145,6 @@ class NotificationSettingsScreen extends StatelessWidget {
             onTap: () {
               Navigator.pushNamed(context, AppRoutes.notificationPreview);
             },
-          ),
-          const Divider(),
-          _buildSectionTitle(context, '活動通知'),
-          SwitchListTile(
-            title: const Text('預約提醒'),
-            subtitle: Text('晚餐前 1 小時提醒', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
-          ),
-          SwitchListTile(
-            title: const Text('預約變更'),
-            subtitle: Text('當預約有變更時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
-          ),
-          const Divider(),
-          _buildSectionTitle(context, '行銷通知'),
-          SwitchListTile(
-            title: const Text('優惠活動'),
-            subtitle: Text('接收優惠和活動資訊', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: false,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
-          ),
-          SwitchListTile(
-            title: const Text('電子報'),
-            subtitle: Text('接收每週電子報', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: false,
-            onChanged: (v) {},
-            activeColor: theme.colorScheme.primary,
           ),
         ],
       ),
@@ -116,9 +165,19 @@ class NotificationSettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildTopicCheckbox(String title, String topic, ThemeData theme) {
+    final isSubscribed = _subscribedTopics.contains(topic);
+    return CheckboxListTile(
+      title: Text(title),
+      value: isSubscribed,
+      onChanged: (bool? value) {
+        if (value != null) {
+          _toggleTopic(topic, value);
+        }
+      },
+      activeColor: theme.colorScheme.primary,
+      controlAffinity: ListTileControlAffinity.trailing,
+    );
+  }
 }
-
-
-
-
-
