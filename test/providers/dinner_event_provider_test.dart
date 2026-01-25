@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/services/dinner_event_service.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/models/event_registration_status.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Mock class
@@ -61,6 +62,11 @@ class MockDinnerEventService implements DinnerEventService {
 
   @override
   Future<void> joinEvent(String eventId, String userId) async {
+    await registerForEvent(eventId, userId);
+  }
+
+  @override
+  Future<EventRegistrationStatus> registerForEvent(String eventId, String userId) async {
     if (shouldThrow) throw Exception('Mock Error');
     final index = _mockEvents.indexWhere((e) => e.id == eventId);
     if (index != -1) {
@@ -72,10 +78,16 @@ class MockDinnerEventService implements DinnerEventService {
         participantStatus: newStatus,
       );
     }
+    return EventRegistrationStatus.registered;
   }
 
   @override
   Future<void> leaveEvent(String eventId, String userId) async {
+    await unregisterFromEvent(eventId, userId);
+  }
+
+  @override
+  Future<void> unregisterFromEvent(String eventId, String userId) async {
     if (shouldThrow) throw Exception('Mock Error');
     final index = _mockEvents.indexWhere((e) => e.id == eventId);
     if (index != -1) {
