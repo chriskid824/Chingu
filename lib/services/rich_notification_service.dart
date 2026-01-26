@@ -19,6 +19,12 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  Function(Map<String, dynamic>)? _onNotificationTapCallback;
+
+  /// 設置通知點擊回調
+  void setOnNotificationTap(Function(Map<String, dynamic>) callback) {
+    _onNotificationTapCallback = callback;
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -64,11 +70,18 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+        if (actionId != null) {
+          data['actionId'] = actionId;
+        }
+
+        // 調用回調
+        _onNotificationTapCallback?.call(data);
+
+        final String? actionType = data['actionType'];
+        final String? actionData = data['actionData'];
 
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
@@ -126,7 +139,7 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification, {Map<String, dynamic>? additionalPayload}) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +199,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      ...?additionalPayload,
     };
 
     await _flutterLocalNotificationsPlugin.show(
