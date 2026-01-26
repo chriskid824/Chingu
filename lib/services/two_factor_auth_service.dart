@@ -5,8 +5,14 @@ import 'package:flutter/foundation.dart';
 
 /// 雙因素認證服務
 class TwoFactorAuthService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+
+  TwoFactorAuthService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService();
 
   // 集合名稱
   static const String _collection = 'two_factor_codes';
@@ -149,7 +155,7 @@ class TwoFactorAuthService {
 
   /// 生成 6 位數隨機代碼
   String _generateCode() {
-    final random = Random();
+    final random = Random.secure();
     final code = random.nextInt(900000) + 100000;
     return code.toString();
   }

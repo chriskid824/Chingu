@@ -111,6 +111,10 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **雙因素認證服務 (TwoFactorAuthService)**:
+  - 重構 `TwoFactorAuthService` 以支援依賴注入
+  - 新增完整單元測試 (`test/services/two_factor_auth_service_test.dart`)
+  - 支援 SMS 與 Email 驗證碼邏輯驗證
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
