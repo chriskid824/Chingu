@@ -1,7 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -118,27 +120,43 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         }
 
         // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
+        // Firebase limits multicast to 500 tokens per batch
+        const BATCH_SIZE = 500;
+        let totalSuccessCount = 0;
+        let totalFailureCount = 0;
 
-        const response = await admin.messaging().sendEachForMulticast(message);
+        // Process tokens in batches
+        for (let i = 0; i < targetTokens.length; i += BATCH_SIZE) {
+            const batchTokens = targetTokens.slice(i, i + BATCH_SIZE);
 
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
+            const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: batchTokens,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+
+            totalSuccessCount += response.successCount;
+            totalFailureCount += response.failureCount;
+
+            if (response.failureCount > 0) {
+                console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: Failed to send ${response.failureCount} messages`);
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        // idx is relative to the batch, so we map back to the original token index
+                        const originalIdx = i + idx;
+                        console.error(`Error sending to token ${targetTokens[originalIdx]}:`, resp.error);
+                    }
+                });
+            }
         }
+
+        console.log(`Broadcast complete. Total success: ${totalSuccessCount}, Total failure: ${totalFailureCount}`);
 
         // Log the broadcast
         await admin.firestore().collection("broadcast_logs").add({
@@ -148,14 +166,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
             sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: totalSuccessCount,
+            failureCount: totalFailureCount,
         });
 
         return {
             success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: totalSuccessCount,
+            failureCount: totalFailureCount,
             totalTargets: targetTokens.length,
         };
     } catch (error) {
