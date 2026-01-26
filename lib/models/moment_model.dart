@@ -1,6 +1,6 @@
-import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class MomentModel extends Equatable {
+class MomentModel {
   final String id;
   final String userId;
   final String userName;
@@ -12,7 +12,7 @@ class MomentModel extends Equatable {
   final int commentCount;
   final bool isLiked;
 
-  const MomentModel({
+  MomentModel({
     required this.id,
     required this.userId,
     required this.userName,
@@ -24,6 +24,34 @@ class MomentModel extends Equatable {
     this.commentCount = 0,
     this.isLiked = false,
   });
+
+  factory MomentModel.fromMap(Map<String, dynamic> map, String id) {
+    return MomentModel(
+      id: id,
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? 'Unknown',
+      userAvatar: map['userAvatar'],
+      content: map['content'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      likeCount: map['likeCount'] ?? 0,
+      commentCount: map['commentCount'] ?? 0,
+      isLiked: map['isLiked'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+    };
+  }
 
   MomentModel copyWith({
     String? id,
@@ -50,18 +78,4 @@ class MomentModel extends Equatable {
       isLiked: isLiked ?? this.isLiked,
     );
   }
-
-  @override
-  List<Object?> get props => [
-        id,
-        userId,
-        userName,
-        userAvatar,
-        content,
-        imageUrl,
-        createdAt,
-        likeCount,
-        commentCount,
-        isLiked,
-      ];
 }
