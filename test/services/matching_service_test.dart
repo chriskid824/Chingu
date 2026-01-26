@@ -6,15 +6,18 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([FirestoreService, ChatService, FirebaseFunctions, HttpsCallable, HttpsCallableResult])
 import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockFirebaseFunctions mockFunctions;
+  late MockHttpsCallable mockCallable;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -23,6 +26,10 @@ void main() {
     email: 'current@test.com',
     name: 'Current User',
     gender: 'male',
+    job: 'Developer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -31,7 +38,6 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
   );
 
   final candidateUser = UserModel(
@@ -39,6 +45,10 @@ void main() {
     email: 'candidate@test.com',
     name: 'Candidate User',
     gender: 'female',
+    job: 'Designer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -47,18 +57,24 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockFunctions = MockFirebaseFunctions();
+    mockCallable = MockHttpsCallable();
     fakeFirestore = FakeFirebaseFirestore();
+
+    // Mock functions behavior
+    when(mockFunctions.httpsCallable(any)).thenReturn(mockCallable);
+    when(mockCallable.call(any)).thenAnswer((_) async => MockHttpsCallableResult());
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      functions: mockFunctions,
     );
   });
 
@@ -80,10 +96,11 @@ void main() {
       // Score calculation:
       // Interest: 1 common ('coding') / 3 * 40 = 13.33
       // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Location: same city, same district = 30
+      // Age: 10
+      // Budget: 10
+      // Total: 12.5 + 30 + 10 + 10 = 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -160,6 +177,12 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      // Mock getUser for notifications
+      when(mockFirestoreService.getUser(currentUser.uid))
+          .thenAnswer((_) async => currentUser);
+      when(mockFirestoreService.getUser(candidateUser.uid))
+          .thenAnswer((_) async => candidateUser);
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -174,6 +197,9 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notifications sent
+      verify(mockFunctions.httpsCallable('sendNotification')).called(2);
     });
   });
 }
