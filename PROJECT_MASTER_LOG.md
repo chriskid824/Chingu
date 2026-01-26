@@ -112,6 +112,11 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **Firebase Messaging Android 整合**:
+  - 更新 `android/settings.gradle.kts` 與 `android/app/build.gradle.kts`，加入 Google Services plugin 與 Firebase BOM 依賴。
+  - 建立 `android/app/google-services.json` 佔位檔案以通過構建驗證。
+  - 配置 `android/app/src/main/AndroidManifest.xml` 加入預設通知圖示設定。
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
