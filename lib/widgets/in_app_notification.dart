@@ -156,7 +156,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -169,7 +169,7 @@ class InAppNotification extends StatelessWidget {
 
     switch (type) {
       case 'match':
-        return chinguTheme.error; // Pink/Red for love/match
+        return chinguTheme.error;
       case 'event':
         return theme.colorScheme.primary;
       case 'message':
@@ -178,7 +178,7 @@ class InAppNotification extends StatelessWidget {
         return chinguTheme.warning;
       case 'system':
       default:
-        return chinguTheme.success; // Or primary
+        return chinguTheme.success;
     }
   }
 }
