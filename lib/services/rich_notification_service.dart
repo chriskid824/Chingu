@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -125,8 +126,54 @@ class RichNotificationService {
     }
   }
 
+  UserModel? _currentUser;
+
+  /// 更新當前用戶資料（用於檢查通知偏好）
+  void updateUser(UserModel? user) {
+    _currentUser = user;
+  }
+
   /// 顯示豐富通知
   Future<void> showNotification(NotificationModel notification) async {
+    // 檢查用戶通知偏好設定
+    // 使用快取的用戶資料，避免每次通知都查詢 Firestore
+    if (_currentUser != null && _currentUser!.uid == notification.userId) {
+      final user = _currentUser!;
+
+      try {
+        // 如果總開關關閉，不顯示通知
+        if (!user.isPushEnabled) {
+          debugPrint('Notification suppressed: Push disabled');
+          return;
+        }
+
+        // 檢查各類別開關
+        bool allowed = true;
+        switch (notification.type) {
+          case 'match':
+            allowed = user.matchNotificationsEnabled;
+            break;
+          case 'message':
+            allowed = user.messageNotificationsEnabled;
+            break;
+          case 'event':
+            allowed = user.eventNotificationsEnabled;
+            break;
+          case 'marketing':
+            allowed = user.marketingNotificationsEnabled;
+            break;
+          // 其他類型預設允許
+        }
+
+        if (!allowed) {
+          debugPrint('Notification suppressed: ${notification.type} disabled');
+          return;
+        }
+      } catch (e) {
+        debugPrint('Error checking notification preferences: $e');
+      }
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
