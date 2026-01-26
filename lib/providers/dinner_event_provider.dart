@@ -57,7 +57,7 @@ class DinnerEventProvider with ChangeNotifier {
   Future<void> fetchMyEvents(String userId) async {
     try {
       _setLoading(true);
-      _myEvents = await _dinnerEventService.getUserEvents(userId);
+      _myEvents = await _dinnerEventService.getUserEvents(userId, includeWaitlist: true);
       _setLoading(false);
     } catch (e) {
       debugPrint('獲取我的活動失敗: $e');
@@ -91,7 +91,7 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.joinEvent(eventId, userId);
+      await _dinnerEventService.registerForEvent(eventId, userId);
       
       // 刷新列表
       await fetchMyEvents(userId);
@@ -112,7 +112,7 @@ class DinnerEventProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.leaveEvent(eventId, userId);
+      await _dinnerEventService.unregisterFromEvent(eventId, userId);
       
       // 刷新列表
       await fetchMyEvents(userId);

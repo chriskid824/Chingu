@@ -11,8 +11,12 @@ class DinnerEventModel {
   final String? notes;
   
   // 參與者（固定6人）
+  final int maxParticipants;
+  final int currentParticipants;
   final List<String> participantIds; // 用戶 UID 列表
+  final List<String> waitlistIds; // 等候名單 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
+  final DateTime registrationDeadline;
   
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
@@ -41,8 +45,12 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
+    this.currentParticipants = 0,
     required this.participantIds,
+    this.waitlistIds = const [],
     required this.participantStatus,
+    required this.registrationDeadline,
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -72,8 +80,12 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
+      currentParticipants: map['currentParticipants'] ?? 0,
       participantIds: List<String>.from(map['participantIds'] ?? []),
+      waitlistIds: List<String>.from(map['waitlistIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      registrationDeadline: (map['registrationDeadline'] as Timestamp).toDate(),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -105,8 +117,12 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
+      'currentParticipants': currentParticipants,
       'participantIds': participantIds,
+      'waitlistIds': waitlistIds,
       'participantStatus': participantStatus,
+      'registrationDeadline': Timestamp.fromDate(registrationDeadline),
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -128,8 +144,12 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
+    int? currentParticipants,
     List<String>? participantIds,
+    List<String>? waitlistIds,
     Map<String, String>? participantStatus,
+    DateTime? registrationDeadline,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -149,8 +169,12 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
+      currentParticipants: currentParticipants ?? this.currentParticipants,
       participantIds: participantIds ?? this.participantIds,
+      waitlistIds: waitlistIds ?? this.waitlistIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
