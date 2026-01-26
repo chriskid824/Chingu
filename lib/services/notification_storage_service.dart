@@ -43,6 +43,12 @@ class NotificationStorageService {
     return docRef.id;
   }
 
+  /// 為特定用戶儲存通知 (可用於發送給其他用戶)
+  Future<String> saveNotificationForUser(String userId, NotificationModel notification) async {
+    final docRef = await _notificationsRef(userId).add(notification.toMap());
+    return docRef.id;
+  }
+
   /// 批量儲存通知 (用於同步)
   Future<void> saveNotifications(List<NotificationModel> notifications) async {
     final userId = _currentUserId;

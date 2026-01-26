@@ -3,20 +3,33 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/services/notification_storage_service.dart';
+import 'package:chingu/services/notification_ab_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final RichNotificationService _richNotificationService;
+  final NotificationStorageService _notificationStorageService;
+  final NotificationABService _notificationABService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    RichNotificationService? richNotificationService,
+    NotificationStorageService? notificationStorageService,
+    NotificationABService? notificationABService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _richNotificationService = richNotificationService ?? RichNotificationService(),
+        _notificationStorageService = notificationStorageService ?? NotificationStorageService(),
+        _notificationABService = notificationABService ?? NotificationABService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -157,8 +170,9 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
+        // 注意：這裡不再調用 _handleMatchSuccess，避免重複創建和通知
+        // _handleMatchSuccess 會在 recordSwipe 中被調用
         return true;
       }
       return false;
@@ -170,8 +184,8 @@ class MatchingService {
 
   /// 處理配對成功
   ///
-  /// [user1Id] 用戶 1 ID
-  /// [user2Id] 用戶 2 ID
+  /// [user1Id] 用戶 1 ID (發起滑動者)
+  /// [user2Id] 用戶 2 ID (被滑動者)
   ///
   /// 返回新創建的聊天室 ID
   Future<String> _handleMatchSuccess(String user1Id, String user2Id) async {
@@ -180,7 +194,69 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送通知
+    try {
+      final user1 = await _firestoreService.getUser(user1Id);
+      final user2 = await _firestoreService.getUser(user2Id);
+
+      if (user1 != null && user2 != null) {
+        // 1. 通知 User 1 (當前用戶)
+        final content1 = _notificationABService.getContent(
+          user1Id,
+          NotificationType.match,
+          params: {'partnerName': user2.name}
+        );
+
+        final notification1 = NotificationModel(
+          id: '', // Firestore generated
+          userId: user1Id,
+          type: 'match',
+          title: content1.title,
+          message: content1.body,
+          imageUrl: user2.avatarUrl,
+          actionType: 'open_chat',
+          actionData: user2Id,
+          isRead: false,
+          createdAt: DateTime.now(),
+        );
+
+        // 儲存到 Firestore (會觸發 Cloud Function 發送推播)
+        await _notificationStorageService.saveNotificationForUser(user1Id, notification1);
+
+        // 立即顯示本地通知
+        await _richNotificationService.showNotification(notification1);
+
+        // 2. 通知 User 2 (對方)
+        final content2 = _notificationABService.getContent(
+          user2Id,
+          NotificationType.match,
+          params: {'partnerName': user1.name}
+        );
+
+        final notification2 = NotificationModel(
+          id: '',
+          userId: user2Id,
+          type: 'match',
+          title: content2.title,
+          message: content2.body,
+          imageUrl: user1.avatarUrl,
+          actionType: 'open_chat',
+          actionData: user1Id,
+          isRead: false,
+          createdAt: DateTime.now(),
+        );
+
+        // 儲存到 Firestore (會觸發 Cloud Function 發送推播)
+        await _notificationStorageService.saveNotificationForUser(user2Id, notification2);
+      }
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+      // 不拋出異常，以免影響配對流程
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表
