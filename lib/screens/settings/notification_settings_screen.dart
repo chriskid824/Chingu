@@ -28,6 +28,18 @@ class NotificationSettingsScreen extends StatelessWidget {
             onChanged: (v) {},
             activeColor: theme.colorScheme.primary,
           ),
+          ListTile(
+            title: const Text('訂閱主題'),
+            subtitle: Text('設定感興趣的地區和話題', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+            ),
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.notificationTopicSubscription);
+            },
+          ),
           const Divider(),
           _buildSectionTitle(context, '配對通知'),
           SwitchListTile(
