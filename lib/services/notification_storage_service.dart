@@ -65,7 +65,7 @@ class NotificationStorageService {
     if (userId == null) return [];
 
     Query<Map<String, dynamic>> query = _notificationsRef(userId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .limit(limit);
 
     if (startAfter != null) {
@@ -85,7 +85,7 @@ class NotificationStorageService {
 
     final snapshot = await _notificationsRef(userId)
         .where('isRead', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .get();
 
     return snapshot.docs
@@ -166,7 +166,7 @@ class NotificationStorageService {
     final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
     final snapshot = await _notificationsRef(userId)
-        .where('createdAt', isLessThan: cutoffTimestamp)
+        .where('timestamp', isLessThan: cutoffTimestamp)
         .get();
 
     if (snapshot.docs.isEmpty) return 0;
@@ -186,7 +186,7 @@ class NotificationStorageService {
     if (userId == null) return Stream.value([]);
 
     return _notificationsRef(userId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -212,7 +212,7 @@ class NotificationStorageService {
 
     final snapshot = await _notificationsRef(userId)
         .where('type', isEqualTo: type)
-        .orderBy('createdAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .get();
 
     return snapshot.docs
@@ -223,10 +223,9 @@ class NotificationStorageService {
   /// 創建系統通知
   Future<void> createSystemNotification({
     required String title,
-    required String message,
+    required String content,
     String? imageUrl,
-    String? actionType,
-    String? actionData,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -236,12 +235,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'system',
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
+      deeplink: deeplink,
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -261,12 +259,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'match',
       title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      content: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
-      actionType: 'open_chat',
-      actionData: matchedUserId,
+      deeplink: '/chat_detail?id=$matchedUserId',
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -276,7 +273,7 @@ class NotificationStorageService {
   Future<void> createEventNotification({
     required String eventId,
     required String eventTitle,
-    required String message,
+    required String content,
     String? imageUrl,
   }) async {
     final userId = _currentUserId;
@@ -287,12 +284,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'event',
       title: eventTitle,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
-      actionType: 'view_event',
-      actionData: eventId,
+      deeplink: '/event_detail?id=$eventId',
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
@@ -313,12 +309,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'message',
       title: senderName,
-      message: messagePreview,
+      content: messagePreview,
       imageUrl: senderPhotoUrl,
-      actionType: 'open_chat',
-      actionData: senderId,
+      deeplink: '/chat_detail?id=$senderId',
       isRead: false,
-      createdAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     await _notificationsRef(userId).add(notification.toMap());
