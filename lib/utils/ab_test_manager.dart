@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -11,16 +12,31 @@ class ABTestManager {
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
 
-  FirebaseFirestore get _firestore => 
+  @visibleForTesting
+  set setFirestoreInstance(FirebaseFirestore instance) =>
+      _firestoreInstance = instance;
+
+  @visibleForTesting
+  set setAuthInstance(FirebaseAuth instance) => _authInstance = instance;
+
+  FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
-  FirebaseAuth get _auth => 
-      _authInstance ??= FirebaseAuth.instance;
+  FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
 
   // 本地緩存的測試配置
   Map<String, ABTestConfig> _cachedTests = {};
-  
+
   // 用戶的變體分配緩存
   Map<String, String> _userVariants = {};
+
+  /// 重置管理器狀態 (用於測試)
+  @visibleForTesting
+  void reset() {
+    _cachedTests.clear();
+    _userVariants.clear();
+    _firestoreInstance = null;
+    _authInstance = null;
+  }
 
   /// 初始化 A/B 測試管理器
   /// 從 Firestore 加載配置
@@ -38,14 +54,14 @@ class ABTestManager {
       }
 
       // 加載用戶的變體分配
-      await _loadUserVariants();
+      await loadUserVariants();
     } catch (e) {
       print('Failed to initialize ABTestManager: $e');
     }
   }
 
   /// 加載用戶已分配的變體
-  Future<void> _loadUserVariants() async {
+  Future<void> loadUserVariants() async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
@@ -65,6 +81,11 @@ class ABTestManager {
     }
   }
 
+  /// 清除用戶的變體分配 (例如登出時)
+  void clearUserVariants() {
+    _userVariants.clear();
+  }
+
   /// 獲取用戶在特定測試中的變體
   /// 如果用戶尚未分配變體,則自動分配
   Future<String> getVariant(String testId) async {
@@ -82,7 +103,7 @@ class ABTestManager {
     // 分配新變體
     final variant = _assignVariant(config);
     await _saveVariantAssignment(testId, variant);
-    
+
     _userVariants[testId] = variant;
     return variant;
   }
@@ -223,7 +244,7 @@ class ABTestConfig {
 
   factory ABTestConfig.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return ABTestConfig(
       testId: doc.id,
       name: data['name'] ?? '',
@@ -292,7 +313,7 @@ class FeatureConfig {
 
   factory FeatureConfig.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return FeatureConfig(
       key: doc.id,
       enabled: data['enabled'] ?? false,
