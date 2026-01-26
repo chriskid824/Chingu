@@ -38,6 +38,13 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final bool isPushEnabled;
+  final bool matchNotificationsEnabled;
+  final bool messageNotificationsEnabled;
+  final bool eventNotificationsEnabled;
+  final bool marketingNotificationsEnabled;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +73,11 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.isPushEnabled = true,
+    this.matchNotificationsEnabled = true,
+    this.messageNotificationsEnabled = true,
+    this.eventNotificationsEnabled = true,
+    this.marketingNotificationsEnabled = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +116,11 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      isPushEnabled: map['isPushEnabled'] ?? true,
+      matchNotificationsEnabled: map['matchNotificationsEnabled'] ?? true,
+      messageNotificationsEnabled: map['messageNotificationsEnabled'] ?? true,
+      eventNotificationsEnabled: map['eventNotificationsEnabled'] ?? true,
+      marketingNotificationsEnabled: map['marketingNotificationsEnabled'] ?? false,
     );
   }
 
@@ -136,6 +153,11 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'isPushEnabled': isPushEnabled,
+      'matchNotificationsEnabled': matchNotificationsEnabled,
+      'messageNotificationsEnabled': messageNotificationsEnabled,
+      'eventNotificationsEnabled': eventNotificationsEnabled,
+      'marketingNotificationsEnabled': marketingNotificationsEnabled,
     };
   }
 
@@ -166,6 +188,11 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? isPushEnabled,
+    bool? matchNotificationsEnabled,
+    bool? messageNotificationsEnabled,
+    bool? eventNotificationsEnabled,
+    bool? marketingNotificationsEnabled,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +222,11 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      isPushEnabled: isPushEnabled ?? this.isPushEnabled,
+      matchNotificationsEnabled: matchNotificationsEnabled ?? this.matchNotificationsEnabled,
+      messageNotificationsEnabled: messageNotificationsEnabled ?? this.messageNotificationsEnabled,
+      eventNotificationsEnabled: eventNotificationsEnabled ?? this.eventNotificationsEnabled,
+      marketingNotificationsEnabled: marketingNotificationsEnabled ?? this.marketingNotificationsEnabled,
     );
   }
 
