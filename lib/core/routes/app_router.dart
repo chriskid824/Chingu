@@ -8,7 +8,7 @@ import '../../screens/auth/email_verification_screen.dart';
 // 主導航
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
-import '../../screens/home/notifications_screen.dart';
+import '../../screens/notifications/notification_center_screen.dart';
 import '../../screens/home/search_screen.dart';
 // 個人資料模組
 import '../../screens/profile/profile_setup_screen.dart';
@@ -24,7 +24,6 @@ import '../../screens/matching/matching_screen.dart';
 import '../../screens/matching/user_detail_screen.dart';
 import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
-import '../../screens/matching/match_success_screen.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
@@ -139,7 +138,7 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       
       case AppRoutes.notifications:
-        return MaterialPageRoute(builder: (_) => const NotificationsScreen());
+        return MaterialPageRoute(builder: (_) => const NotificationCenterScreen());
       
       case AppRoutes.search:
         return MaterialPageRoute(builder: (_) => const SearchScreen());
