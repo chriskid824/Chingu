@@ -38,6 +38,9 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // Notification Topics
+  final List<String> notificationTopics;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +69,7 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notificationTopics = const [],
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +108,7 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationTopics: List<String>.from(map['notificationTopics'] ?? []),
     );
   }
 
@@ -136,6 +141,7 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationTopics': notificationTopics,
     };
   }
 
@@ -166,6 +172,7 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    List<String>? notificationTopics,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +202,7 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationTopics: notificationTopics ?? this.notificationTopics,
     );
   }
 
