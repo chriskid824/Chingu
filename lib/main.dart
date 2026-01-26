@@ -34,8 +34,21 @@ void main() async {
   runApp(const ChinguApp());
 }
 
-class ChinguApp extends StatelessWidget {
+class ChinguApp extends StatefulWidget {
   const ChinguApp({super.key});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RichNotificationService().processPendingInteractions();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
