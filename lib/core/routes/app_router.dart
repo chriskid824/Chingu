@@ -184,7 +184,14 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        final eventId = args?['eventId'] as String?;
+        if (eventId == null) {
+          return MaterialPageRoute(
+             builder: (_) => const Scaffold(body: Center(child: Text('Error: Missing eventId'))),
+          );
+        }
+        return MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: eventId));
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
