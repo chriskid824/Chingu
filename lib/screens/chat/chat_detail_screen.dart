@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/chat_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -22,6 +24,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  String? _otherUserId;
+  bool _isFetching = false;
 
   @override
   void didChangeDependencies() {
@@ -31,8 +35,51 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+        _otherUserId = args['userId'];
       }
       _isInit = true;
+    }
+
+    if (!_isFetching) {
+      final authProvider = context.read<AuthProvider>();
+      final shouldFetchUser = _otherUser == null && _otherUserId != null;
+      final shouldFetchRoom = _chatRoomId == null && _otherUserId != null && authProvider.uid != null;
+
+      if (shouldFetchUser || shouldFetchRoom) {
+        _fetchMissingData();
+      }
+    }
+  }
+
+  Future<void> _fetchMissingData() async {
+    if (_otherUserId == null) return;
+
+    // Capture auth provider before async operations
+    final authProvider = context.read<AuthProvider>();
+    final currentUid = authProvider.uid;
+
+    setState(() => _isFetching = true);
+
+    try {
+      if (_otherUser == null) {
+        final user = await FirestoreService().getUser(_otherUserId!);
+        if (mounted && user != null) {
+          setState(() => _otherUser = user);
+        }
+      }
+
+      if (_chatRoomId == null) {
+        if (currentUid != null) {
+          final roomId = await ChatService().createChatRoom(currentUid, _otherUserId!);
+          if (mounted) {
+            setState(() => _chatRoomId = roomId);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching chat data: $e');
+    } finally {
+      if (mounted) setState(() => _isFetching = false);
     }
   }
 
