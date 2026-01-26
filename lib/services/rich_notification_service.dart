@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +21,11 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+
+  // In-App Notification State
+  OverlayEntry? _overlayEntry;
+  Timer? _dismissTimer;
+  GlobalKey<_NotificationSlideTransitionState>? _animationKey;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -125,7 +132,55 @@ class RichNotificationService {
     }
   }
 
-  /// 顯示豐富通知
+  /// 顯示應用內通知橫幅
+  void showInAppNotification(NotificationModel notification) {
+    _removeOverlayImmediately();
+
+    _animationKey = GlobalKey<_NotificationSlideTransitionState>();
+    _overlayEntry = OverlayEntry(
+      builder: (context) => _NotificationSlideTransition(
+        key: _animationKey,
+        onDismiss: _dismissInAppNotification,
+        child: InAppNotification(
+          notification: notification,
+          onDismiss: _dismissInAppNotification,
+          onTap: () {
+            _handleNavigation(
+              notification.actionType,
+              notification.actionData,
+              null,
+            );
+            _dismissInAppNotification();
+          },
+        ),
+      ),
+    );
+
+    final overlay = AppRouter.navigatorKey.currentState?.overlay;
+    if (overlay != null) {
+      overlay.insert(_overlayEntry!);
+      _dismissTimer = Timer(const Duration(seconds: 4), () {
+        _dismissInAppNotification();
+      });
+    }
+  }
+
+  Future<void> _dismissInAppNotification() async {
+    _dismissTimer?.cancel();
+    if (_animationKey?.currentState != null) {
+      await _animationKey!.currentState!.animateOut();
+    }
+    _removeOverlayImmediately();
+  }
+
+  void _removeOverlayImmediately() {
+    _dismissTimer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _animationKey = null;
+  }
+
+  /// 顯示豐富通知 (System Tray)
   Future<void> showNotification(NotificationModel notification) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
@@ -194,6 +249,73 @@ class RichNotificationService {
       notification.message,
       platformChannelSpecifics,
       payload: json.encode(payload),
+    );
+  }
+}
+
+class _NotificationSlideTransition extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onDismiss;
+
+  const _NotificationSlideTransition({
+    super.key,
+    required this.child,
+    this.onDismiss,
+  });
+
+  @override
+  State<_NotificationSlideTransition> createState() =>
+      _NotificationSlideTransitionState();
+}
+
+class _NotificationSlideTransitionState
+    extends State<_NotificationSlideTransition>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    ));
+
+    _controller.forward();
+  }
+
+  Future<void> animateOut() {
+    return _controller.reverse();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Material(
+        type: MaterialType.transparency,
+        child: SlideTransition(
+          position: _offsetAnimation,
+          child: widget.child,
+        ),
+      ),
     );
   }
 }

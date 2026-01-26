@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import '../../models/notification_model.dart';
+import '../../services/rich_notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -157,6 +159,29 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final notification = NotificationModel(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    userId: 'current_user',
+                    type: 'match',
+                    title: 'New Match!',
+                    message: 'You have a new match with Alice. Start chatting now!',
+                    createdAt: DateTime.now(),
+                    actionType: 'open_chat',
+                    actionData: 'some_chat_id',
+                  );
+                  RichNotificationService().showInAppNotification(notification);
+                },
+                icon: const Icon(Icons.notifications_active_rounded),
+                label: const Text('Test In-App Notification'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
