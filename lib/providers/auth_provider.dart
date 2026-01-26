@@ -262,6 +262,37 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 刪除帳號
+  Future<bool> deleteAccount() async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      if (_firebaseUser == null) {
+        throw Exception('未登入用戶無法刪除帳號');
+      }
+
+      // 1. 刪除 Firestore 資料
+      await _firestoreService.deleteUser(_firebaseUser!.uid);
+
+      // 2. 刪除 Auth 帳號
+      await _authService.deleteAccount();
+
+      // 3. 清理本地狀態
+      _status = AuthStatus.uninitialized;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 檢查用戶是否完成 Onboarding
   bool hasCompletedOnboarding() {
     if (_userModel == null) return false;
