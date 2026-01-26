@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -10,7 +11,8 @@ class StorageService {
     try {
       final ref = _storage.ref().child(path);
       return ref.putFile(file);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace);
       throw Exception('Failed to start upload: $e');
     }
   }
@@ -19,7 +21,8 @@ class StorageService {
   Future<String> getDownloadUrl(String path) async {
     try {
       return await _storage.ref().child(path).getDownloadURL();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace);
       throw Exception('Failed to get download URL: $e');
     }
   }
