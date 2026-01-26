@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -178,9 +179,73 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) async {
+              if (value == 'block') {
+                if (currentUserId == null) return;
+
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('封鎖用戶'),
+                    content: Text('確定要封鎖 ${_otherUser!.name} 嗎？封鎖後將不再收到對方的訊息，且對方不會出現在您的配對名單中。'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: chinguTheme?.error ?? Colors.red,
+                        ),
+                        child: const Text('封鎖'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && mounted) {
+                  try {
+                    await UserBlockService().blockUser(currentUserId, _otherUser!.uid);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('已封鎖該用戶')),
+                      );
+                      Navigator.pop(context); // 離開聊天室
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('封鎖失敗: $e')),
+                      );
+                    }
+                  }
+                }
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'block',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.block_rounded,
+                      color: chinguTheme?.error ?? Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '封鎖用戶',
+                      style: TextStyle(
+                        color: chinguTheme?.error ?? Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
