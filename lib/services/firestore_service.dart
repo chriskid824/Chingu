@@ -3,7 +3,10 @@ import 'package:chingu/models/user_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -287,6 +290,33 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 提交意見回饋
+  Future<void> submitFeedback({
+    required String userId,
+    required String feedbackType,
+    required String content,
+    String? contactEmail,
+    String? platform,
+    String? deviceInfo,
+    String? appVersion,
+  }) async {
+    try {
+      await _firestore.collection('feedback').add({
+        'userId': userId,
+        'feedbackType': feedbackType,
+        'content': content,
+        'contactEmail': contactEmail,
+        'platform': platform,
+        'deviceInfo': deviceInfo,
+        'appVersion': appVersion,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'new',
+      });
+    } catch (e) {
+      throw Exception('提交意見回饋失敗: $e');
     }
   }
 }
