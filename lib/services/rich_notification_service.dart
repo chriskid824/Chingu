@@ -2,8 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../firebase_options.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +28,8 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  String? _pendingActionType;
+  String? _pendingActionData;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -56,7 +67,64 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    // Firebase Messaging Setup
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Foreground message
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showForegroundNotification(message);
+    });
+
+    // Background -> Opened
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _handleRemoteMessageNavigation(message);
+    });
+
+    // Terminated -> Opened
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      _pendingActionType = initialMessage.data['actionType'];
+      _pendingActionData = initialMessage.data['actionData'];
+    }
+
     _isInitialized = true;
+  }
+
+  void _showForegroundNotification(RemoteMessage message) {
+    RemoteNotification? notification = message.notification;
+    AndroidNotification? android = message.notification?.android;
+    AppleNotification? apple = message.notification?.apple;
+
+    if (notification != null) {
+      final model = NotificationModel(
+        id: message.messageId ?? DateTime.now().toString(),
+        userId: '', // Not critical for display
+        type: message.data['type'] ?? 'system',
+        title: notification.title ?? '',
+        message: notification.body ?? '',
+        imageUrl: android?.imageUrl ?? apple?.imageUrl,
+        actionType: message.data['actionType'],
+        actionData: message.data['actionData'],
+        createdAt: DateTime.now(),
+      );
+      showNotification(model);
+    }
+  }
+
+  void _handleRemoteMessageNavigation(RemoteMessage message) {
+    final String? actionType = message.data['actionType'];
+    final String? actionData = message.data['actionData'];
+    _handleNavigation(actionType, actionData, null);
+  }
+
+  /// Process any pending interactions (e.g. from terminated state)
+  void processPendingInteractions() {
+    final navigator = AppRouter.navigatorKey.currentState;
+    if (navigator != null && _pendingActionType != null) {
+      _handleNavigation(_pendingActionType, _pendingActionData, null);
+      _pendingActionType = null;
+      _pendingActionData = null;
+    }
   }
 
   /// 處理通知點擊事件
