@@ -35,6 +35,8 @@ class DinnerEventService {
       final participantIds = [creatorId];
       final participantStatus = {creatorId: 'confirmed'};
       
+      // Note: Cloud Scheduler (sendEventReminders) will automatically send a reminder to all participants 24 hours before the event.
+
       // 預設破冰問題（之後可以從題庫隨機選取）
       final icebreakerQuestions = [
         '如果可以和世界上任何人共進晚餐，你會選誰？',
@@ -141,6 +143,8 @@ class DinnerEventService {
         // 更新參與者狀態
         final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
         participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
+
+        // Note: Joining the event automatically opts the user in for the 24-hour reminder via Cloud Scheduler.
 
         final updates = {
           'participantIds': participantIds,
