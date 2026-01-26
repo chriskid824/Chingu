@@ -11,7 +11,7 @@ import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -28,8 +28,8 @@ void main() async {
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
 
-  // 初始化豐富通知服務
-  await RichNotificationService().initialize();
+  // 初始化通知服務 (包含 A/B 測試和統計追蹤)
+  await NotificationService().initialize();
 
   runApp(const ChinguApp());
 }
