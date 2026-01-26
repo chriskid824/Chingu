@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
+import '../services/firestore_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -17,6 +19,8 @@ class RichNotificationService {
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  final FirestoreService _firestoreService = FirestoreService();
 
   bool _isInitialized = false;
 
@@ -65,7 +69,15 @@ class RichNotificationService {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
+        final dynamic rawActionData = data['actionData'];
+        String? actionData;
+
+        // Ensure actionData is a string
+        if (rawActionData is String) {
+          actionData = rawActionData;
+        } else if (rawActionData != null) {
+          actionData = json.encode(rawActionData);
+        }
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
@@ -78,50 +90,82 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  Future<void> _handleNavigation(String? actionType, String? actionData, String? actionId) async {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      await _performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      await _performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  Future<void> _performAction(String action, String? data, NavigatorState navigator) async {
     switch (action) {
       case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
+        await _handleOpenChat(data, navigator);
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
+        // EventDetailScreen currently hardcoded or doesn't accept args in AppRouter
+        navigator.pushNamed(AppRoutes.eventDetail);
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+      case 'new_match':
+      case 'match_success':
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
         break;
+    }
+  }
+
+  Future<void> _handleOpenChat(String? data, NavigatorState navigator) async {
+    if (data == null) {
+      navigator.pushNamed(AppRoutes.chatList);
+      return;
+    }
+
+    try {
+      Map<String, dynamic> args = {};
+
+      try {
+        args = json.decode(data);
+      } catch (_) {
+        // If not JSON, assume it might be chatRoomId
+        args = {'chatRoomId': data};
+      }
+
+      final String? chatRoomId = args['chatRoomId'];
+      final String? otherUserId = args['otherUserId'];
+
+      if (chatRoomId != null && otherUserId != null) {
+        // Fetch user model
+        final UserModel? otherUser = await _firestoreService.getUser(otherUserId);
+        if (otherUser != null) {
+          navigator.pushNamed(
+            AppRoutes.chatDetail,
+            arguments: {
+              'chatRoomId': chatRoomId,
+              'otherUser': otherUser,
+            },
+          );
+          return;
+        }
+      }
+
+      // Fallback
+      navigator.pushNamed(AppRoutes.chatList);
+    } catch (e) {
+      debugPrint('Error handling open_chat: $e');
+      navigator.pushNamed(AppRoutes.chatList);
     }
   }
 
