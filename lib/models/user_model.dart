@@ -38,6 +38,12 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final bool notificationMatchEnabled;
+  final bool notificationMessageEnabled;
+  final bool notificationEventEnabled;
+  final bool notificationMarketingEnabled;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +72,10 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notificationMatchEnabled = true,
+    this.notificationMessageEnabled = true,
+    this.notificationEventEnabled = true,
+    this.notificationMarketingEnabled = true,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +114,10 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationMatchEnabled: map['notificationMatchEnabled'] ?? true,
+      notificationMessageEnabled: map['notificationMessageEnabled'] ?? true,
+      notificationEventEnabled: map['notificationEventEnabled'] ?? true,
+      notificationMarketingEnabled: map['notificationMarketingEnabled'] ?? true,
     );
   }
 
@@ -136,6 +150,10 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationMatchEnabled': notificationMatchEnabled,
+      'notificationMessageEnabled': notificationMessageEnabled,
+      'notificationEventEnabled': notificationEventEnabled,
+      'notificationMarketingEnabled': notificationMarketingEnabled,
     };
   }
 
@@ -166,6 +184,10 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? notificationMatchEnabled,
+    bool? notificationMessageEnabled,
+    bool? notificationEventEnabled,
+    bool? notificationMarketingEnabled,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +217,10 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationMatchEnabled: notificationMatchEnabled ?? this.notificationMatchEnabled,
+      notificationMessageEnabled: notificationMessageEnabled ?? this.notificationMessageEnabled,
+      notificationEventEnabled: notificationEventEnabled ?? this.notificationEventEnabled,
+      notificationMarketingEnabled: notificationMarketingEnabled ?? this.notificationMarketingEnabled,
     );
   }
 
