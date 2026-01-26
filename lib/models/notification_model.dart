@@ -1,15 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum NotificationType {
+  match,
+  message,
+  event,
+  system,
+  rating,
+}
+
 /// 通知模型
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final NotificationType type;
   final String title;
-  final String message;
+  final String content;
   final String? imageUrl;
-  final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
-  final String? actionData; // JSON string or ID
+  final String? deeplink;
   final bool isRead;
   final DateTime createdAt;
 
@@ -18,10 +25,9 @@ class NotificationModel {
     required this.userId,
     required this.type,
     required this.title,
-    required this.message,
+    required this.content,
     this.imageUrl,
-    this.actionType,
-    this.actionData,
+    this.deeplink,
     this.isRead = false,
     required this.createdAt,
   });
@@ -37,12 +43,11 @@ class NotificationModel {
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
-      type: map['type'] ?? 'system',
+      type: _parseType(map['type']),
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
+      content: map['content'] ?? map['message'] ?? '', // Backward compatibility
       imageUrl: map['imageUrl'],
-      actionType: map['actionType'],
-      actionData: map['actionData'],
+      deeplink: map['deeplink'] ?? _constructDeeplink(map['actionType'], map['actionData']),
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -52,12 +57,12 @@ class NotificationModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'type': type,
+      'type': type.name,
       'title': title,
-      'message': message,
+      'content': content,
+      'message': content, // Keep message for backward compatibility
       'imageUrl': imageUrl,
-      'actionType': actionType,
-      'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -70,53 +75,48 @@ class NotificationModel {
       userId: userId,
       type: type,
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
+      deeplink: deeplink,
       isRead: true,
       createdAt: createdAt,
     );
   }
 
-  /// 獲取通知圖標
+  /// 獲取通知圖標名稱
   String get iconName {
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return 'favorite';
-      case 'event':
+      case NotificationType.event:
         return 'event';
-      case 'message':
+      case NotificationType.message:
         return 'message';
-      case 'rating':
+      case NotificationType.rating:
         return 'star';
-      case 'system':
-      default:
+      case NotificationType.system:
         return 'notifications';
     }
   }
+
+  static NotificationType _parseType(String? type) {
+    if (type == null) return NotificationType.system;
+    try {
+      return NotificationType.values.firstWhere((e) => e.name == type);
+    } catch (_) {
+      // Fallback for old string values if they differ or just in case
+      return NotificationType.system;
+    }
+  }
+
+  static String? _constructDeeplink(String? actionType, String? actionData) {
+    if (actionType == null) return null;
+    if (actionType == 'open_chat' && actionData != null) {
+        return 'app://chingu/chat-detail?userId=$actionData';
+    }
+    if (actionType == 'view_event' && actionData != null) {
+        return 'app://chingu/event-detail?eventId=$actionData';
+    }
+    return null;
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

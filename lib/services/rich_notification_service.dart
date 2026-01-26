@@ -64,62 +64,73 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
+        final String? deeplink = data['deeplink'];
+        // actionId handling omitted for simplicity as we use main deeplink for now
 
-        // 如果是點擊按鈕，actionId 會是按鈕的 ID
-        final String? actionId = response.actionId;
-
-        _handleNavigation(actionType, actionData, actionId);
+        if (deeplink != null) {
+             _handleDeeplink(deeplink);
+        } else {
+             // Fallback for old payload format
+             final String? actionType = data['actionType'];
+             final String? actionData = data['actionData'];
+             _handleLegacyAction(actionType, actionData);
+        }
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
     }
   }
 
-  /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void _handleDeeplink(String deeplink) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
-    // 優先處理按鈕點擊
-    if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
-      return;
-    }
-
-    // 處理一般通知點擊
-    if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+    try {
+        final Uri uri = Uri.parse(deeplink);
+        if (uri.path == '/chat-detail') {
+             final userId = uri.queryParameters['userId'];
+             if (userId != null) {
+                 navigator.pushNamed(AppRoutes.chatDetail, arguments: {'userId': userId});
+             } else {
+                 navigator.pushNamed(AppRoutes.chatList);
+             }
+        } else if (uri.path == '/event-detail') {
+            final eventId = uri.queryParameters['eventId'];
+            if (eventId != null) {
+                 navigator.pushNamed(AppRoutes.eventDetail, arguments: {'eventId': eventId});
+            } else {
+                 navigator.pushNamed(AppRoutes.eventsList);
+            }
+        } else {
+            // Default fallback
+            navigator.pushNamed(AppRoutes.notifications);
+        }
+    } catch (e) {
+        debugPrint('Error handling deeplink: $e');
+        navigator.pushNamed(AppRoutes.notifications);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
+  void _handleLegacyAction(String? actionType, String? actionData) {
+     final navigator = AppRouter.navigatorKey.currentState;
+     if (navigator == null) return;
+
+    switch (actionType) {
       case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+        if (actionData != null) {
+          navigator.pushNamed(AppRoutes.chatDetail, arguments: {'userId': actionData});
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+        if (actionData != null) {
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: {'eventId': actionData});
+        } else {
+          navigator.pushNamed(AppRoutes.eventsList);
         }
         break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
       default:
-        // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
         break;
     }
@@ -139,30 +150,36 @@ class RichNotificationService {
         styleInformation = BigPictureStyleInformation(
           bigPicture,
           contentTitle: notification.title,
-          summaryText: notification.message,
+          summaryText: notification.content,
           hideExpandedLargeIcon: true,
         );
       } catch (e) {
         debugPrint('Error downloading image for notification: $e');
         // 圖片下載失敗則降級為普通通知
-        styleInformation = BigTextStyleInformation(notification.message);
+        styleInformation = BigTextStyleInformation(notification.content);
       }
     } else {
-      styleInformation = BigTextStyleInformation(notification.message);
+      styleInformation = BigTextStyleInformation(notification.content);
     }
 
     // 定義操作按鈕
     List<AndroidNotificationAction> actions = [];
-    if (notification.actionType == 'open_chat') {
+    if (notification.type == NotificationType.message) {
       actions.add(const AndroidNotificationAction(
         'open_chat',
         '回覆',
         showsUserInterface: true,
       ));
-    } else if (notification.actionType == 'view_event') {
+    } else if (notification.type == NotificationType.event) {
       actions.add(const AndroidNotificationAction(
         'view_event',
         '查看詳情',
+        showsUserInterface: true,
+      ));
+    } else if (notification.type == NotificationType.match) {
+       actions.add(const AndroidNotificationAction(
+        'open_chat',
+        '打招呼',
         showsUserInterface: true,
       ));
     }
@@ -183,15 +200,14 @@ class RichNotificationService {
 
     // 構建 Payload
     final Map<String, dynamic> payload = {
-      'actionType': notification.actionType,
-      'actionData': notification.actionData,
+      'deeplink': notification.deeplink,
       'notificationId': notification.id,
     };
 
     await _flutterLocalNotificationsPlugin.show(
       notification.id.hashCode, // 使用 hashCode 作為 ID
       notification.title,
-      notification.message,
+      notification.content,
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
