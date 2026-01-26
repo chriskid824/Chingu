@@ -13,8 +13,8 @@ enum AuthStatus {
 
 /// 認證 Provider - 管理用戶認證狀態
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final AuthService _authService;
+  final FirestoreService _firestoreService;
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -31,7 +31,11 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   String? get uid => _firebaseUser?.uid;
 
-  AuthProvider() {
+  AuthProvider({
+    AuthService? authService,
+    FirestoreService? firestoreService,
+  })  : _authService = authService ?? AuthService(),
+        _firestoreService = firestoreService ?? FirestoreService() {
     // 監聽認證狀態變化
     _authService.authStateChanges.listen(_onAuthStateChanged);
   }
@@ -278,6 +282,35 @@ class AuthProvider with ChangeNotifier {
     if (_firebaseUser != null) {
       await _loadUserData(_firebaseUser!.uid);
       notifyListeners();
+    }
+  }
+
+  /// 切換收藏狀態
+  Future<void> toggleFavorite(String targetUserId) async {
+    if (_userModel == null) return;
+
+    try {
+      final List<String> currentFavorites = List.from(_userModel!.favorites);
+
+      if (currentFavorites.contains(targetUserId)) {
+        currentFavorites.remove(targetUserId);
+      } else {
+        currentFavorites.add(targetUserId);
+      }
+
+      // 樂觀更新 (Optimistic UI Update)
+      _userModel = _userModel!.copyWith(favorites: currentFavorites);
+      notifyListeners();
+
+      // 更新 Firestore
+      await _firestoreService.updateUser(_userModel!.uid, {
+        'favorites': currentFavorites,
+      });
+    } catch (e) {
+      // 如果失敗，恢復原狀 (這裡暫時簡化，僅打印錯誤並重新加載)
+      debugPrint('切換收藏狀態失敗: $e');
+      await refreshUserData();
+      rethrow;
     }
   }
 
