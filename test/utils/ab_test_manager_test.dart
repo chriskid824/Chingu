@@ -1,5 +1,12 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/utils/ab_test_manager.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+@GenerateMocks([FirebaseAuth, User])
+import 'ab_test_manager_test.mocks.dart';
 
 void main() {
   group('ABTestVariant', () {
@@ -113,6 +120,138 @@ void main() {
       expect(config.config['maxUsers'], 100);
       expect(config.config['theme'], 'dark');
       expect(config.config['features'], hasLength(2));
+    });
+  });
+
+  group('ABTestManager Logic', () {
+    late ABTestManager manager;
+    late FakeFirebaseFirestore fakeFirestore;
+    late MockFirebaseAuth mockAuth;
+    late MockUser mockUser;
+
+    setUp(() {
+      fakeFirestore = FakeFirebaseFirestore();
+      mockAuth = MockFirebaseAuth();
+      mockUser = MockUser();
+
+      manager = ABTestManager();
+      manager.clearCache(); // Singleton reset
+      manager.setInstancesForTesting(
+        firestore: fakeFirestore,
+        auth: mockAuth,
+      );
+
+      // Setup default user
+      when(mockAuth.currentUser).thenReturn(mockUser);
+      when(mockUser.uid).thenReturn('test_user_123');
+    });
+
+    test('initialize should load configs from firestore', () async {
+      // Arrange
+      await fakeFirestore.collection('ab_tests').doc('test_experiment').set({
+        'name': 'Test Experiment',
+        'isActive': true,
+        'variants': [
+          {'name': 'control', 'weight': 50.0},
+          {'name': 'variant_a', 'weight': 50.0},
+        ],
+      });
+
+      // Act
+      await manager.initialize();
+
+      // Assert
+      final result = await manager.getVariant('test_experiment');
+      expect(result, isNotNull);
+    });
+
+    test('getVariant should use deterministic hash', () async {
+      // Arrange
+      await fakeFirestore.collection('ab_tests').doc('hash_test').set({
+        'name': 'Hash Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 50.0},
+          {'name': 'B', 'weight': 50.0},
+        ],
+      });
+      await manager.initialize();
+
+      // Act
+      final variant1 = await manager.getVariant('hash_test');
+
+      // Simulate app restart / cache clear
+      manager.clearCache();
+      await manager.initialize(); // Reload config
+
+      final variant2 = await manager.getVariant('hash_test');
+
+      // Assert
+      expect(variant1, variant2);
+    });
+
+    test('getVariant should persist assignment', () async {
+      // Arrange
+      await fakeFirestore.collection('ab_tests').doc('persist_test').set({
+        'name': 'Persist Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 100.0},
+        ],
+      });
+      await manager.initialize();
+
+      // Act
+      final variant = await manager.getVariant('persist_test');
+
+      // Assert
+      expect(variant, 'A');
+
+      final savedDoc = await fakeFirestore
+          .collection('users')
+          .doc('test_user_123')
+          .collection('ab_test_variants')
+          .doc('persist_test')
+          .get();
+
+      expect(savedDoc.exists, true);
+      expect(savedDoc.data()!['variant'], 'A');
+    });
+
+    test('isFeatureEnabled should respect AB test variants', () async {
+       // Arrange
+      await fakeFirestore.collection('ab_tests').doc('feature_test').set({
+        'name': 'Feature Test',
+        'isActive': true,
+        'variants': [
+          {'name': 'control', 'weight': 0.0},
+          {'name': 'enabled_variant', 'weight': 100.0},
+        ],
+      });
+      await manager.initialize();
+
+      // Act
+      final isEnabled = await manager.isFeatureEnabled('feature_test');
+
+      // Assert
+      expect(isEnabled, true); // Not 'control' -> true
+
+      final isSpecific = await manager.isFeatureEnabled('feature_test', specificVariant: 'enabled_variant');
+      expect(isSpecific, true);
+    });
+
+    test('isFeatureEnabled should work for simple feature flags', () async {
+      // Arrange
+      await fakeFirestore.collection('feature_flags').doc('simple_flag').set({
+        'enabled': true,
+        'config': {},
+      });
+
+      // Act
+      final isEnabled = await manager.isFeatureEnabled('simple_flag');
+
+      // Assert
+      expect(isEnabled, true);
     });
   });
 }

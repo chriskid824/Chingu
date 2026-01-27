@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -15,6 +16,12 @@ class ABTestManager {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
+
+  @visibleForTesting
+  void setInstancesForTesting({FirebaseFirestore? firestore, FirebaseAuth? auth}) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
 
   // 本地緩存的測試配置
   Map<String, ABTestConfig> _cachedTests = {};
@@ -89,17 +96,40 @@ class ABTestManager {
 
   /// 分配變體(基於權重)
   String _assignVariant(ABTestConfig config) {
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
-    var cumulative = 0.0;
+    // 獲取當前用戶 ID
+    final userId = _auth.currentUser?.uid;
 
+    // 如果沒有用戶 ID (未登錄), 返回默認變體
+    if (userId == null) {
+      return config.variants.isNotEmpty ? config.variants.first.name : 'control';
+    }
+
+    // 使用確定性雜湊 (Deterministic Hash)
+    // 結合 userId 和 testId 確保同一用戶在同一測試中始終獲得相同結果
+    final hashInput = '$userId:${config.testId}';
+    final hash = _generateHash(hashInput);
+
+    // 正規化到 0-100
+    final normalized = (hash % 10000) / 100.0;
+
+    var cumulative = 0.0;
     for (var variant in config.variants) {
       cumulative += variant.weight;
-      if (random < cumulative) {
+      if (normalized < cumulative) {
         return variant.name;
       }
     }
 
-    return config.variants.first.name;
+    return config.variants.isNotEmpty ? config.variants.first.name : 'control';
+  }
+
+  /// 簡單的字串雜湊算法 (DJB2)
+  int _generateHash(String input) {
+    int hash = 5381;
+    for (int i = 0; i < input.length; i++) {
+      hash = ((hash << 5) + hash) + input.codeUnitAt(i); /* hash * 33 + c */
+    }
+    return hash.abs();
   }
 
   /// 保存用戶的變體分配到 Firestore
@@ -155,6 +185,7 @@ class ABTestManager {
       if (!doc.exists) return null;
       return FeatureConfig.fromFirestore(doc);
     } catch (e) {
+      print('Error getting feature config: $e');
       return null;
     }
   }
@@ -222,7 +253,7 @@ class ABTestConfig {
   });
 
   factory ABTestConfig.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = (doc.data() as Map).cast<String, dynamic>();
     
     return ABTestConfig(
       testId: doc.id,
@@ -230,7 +261,7 @@ class ABTestConfig {
       description: data['description'] ?? '',
       isActive: data['isActive'] ?? false,
       variants: (data['variants'] as List<dynamic>? ?? [])
-          .map((v) => ABTestVariant.fromMap(v as Map<String, dynamic>))
+          .map((v) => ABTestVariant.fromMap((v as Map).cast<String, dynamic>()))
           .toList(),
       startDate: (data['startDate'] as Timestamp?)?.toDate(),
       endDate: (data['endDate'] as Timestamp?)?.toDate(),
@@ -265,7 +296,7 @@ class ABTestVariant {
     return ABTestVariant(
       name: map['name'] ?? '',
       weight: (map['weight'] ?? 50.0).toDouble(),
-      config: map['config'] ?? {},
+      config: (map['config'] as Map?)?.cast<String, dynamic>() ?? {},
     );
   }
 
@@ -291,12 +322,12 @@ class FeatureConfig {
   });
 
   factory FeatureConfig.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = (doc.data() as Map).cast<String, dynamic>();
     
     return FeatureConfig(
       key: doc.id,
       enabled: data['enabled'] ?? false,
-      config: data['config'] ?? {},
+      config: (data['config'] as Map?)?.cast<String, dynamic>() ?? {},
     );
   }
 

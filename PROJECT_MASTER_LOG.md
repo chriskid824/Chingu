@@ -87,6 +87,7 @@
     - Event Card Animation
     - Parallax Header
   - **服務與邏輯**:
+    - A/B Testing Framework (`ab_test_manager.dart`)
     - Crash Reporting (`crash_reporting_service.dart`)
     - Matching Algorithm Optimization
     - Unit Tests for Dinner Event Provider & Matching Service
