@@ -166,32 +166,30 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-                        // Debug Button
-                        // Debug Button
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.pushNamed(context, AppRoutes.debug);
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.bug_report_rounded, size: 16, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '開發者工具',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
+
+                        // Action Buttons
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildActionButton(
+                                  context,
+                                  '我的活動',
+                                  Icons.event_note_rounded,
+                                  () => Navigator.pushNamed(context, AppRoutes.eventHistory),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildActionButton(
+                                  context,
+                                  '開發者工具',
+                                  Icons.bug_report_rounded,
+                                  () => Navigator.pushNamed(context, AppRoutes.debug),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -271,6 +269,38 @@ class ProfileDetailScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, String label, IconData icon, VoidCallback onTap) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
