@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -19,6 +20,12 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  UserModel? _currentUser;
+
+  /// 更新當前用戶資料（用於權限檢查）
+  void updateCurrentUser(UserModel? user) {
+    _currentUser = user;
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -127,6 +134,51 @@ class RichNotificationService {
 
   /// 顯示豐富通知
   Future<void> showNotification(NotificationModel notification) async {
+    // 檢查通知權限
+    if (_currentUser != null) {
+      if (!_currentUser!.enablePushNotifications) {
+        debugPrint('Notification suppressed: Push notifications disabled');
+        return;
+      }
+
+      bool allowed = true;
+      switch (notification.type) {
+        case 'match':
+          // 目前無法區分新配對與配對成功，暫時使用新配對設定
+          // 若要區分，需擴充 NotificationModel 或檢查標題/內容
+          allowed = _currentUser!.newMatchNotification || _currentUser!.matchSuccessNotification;
+          // 邏輯：只要開啟其中一個，就允許顯示配對相關通知（寬鬆策略），避免漏接重要訊息
+          // 或者改為： if title contains "Success" check matchSuccessNotification?
+          // 暫時採用寬鬆策略
+          break;
+        case 'message':
+          allowed = _currentUser!.newMessageNotification;
+          break;
+        case 'event':
+          // 包含預約提醒與變更
+          allowed = _currentUser!.eventReminderNotification || _currentUser!.eventUpdateNotification;
+          break;
+        case 'marketing':
+          allowed = _currentUser!.marketingNotification;
+          break;
+        case 'newsletter':
+          allowed = _currentUser!.newsletterNotification;
+          break;
+        case 'system':
+          allowed = true; // 系統通知通常很重要
+          break;
+        default:
+          // 對於未知類型，如果是行銷類（假設），應被阻擋。但若是系統通知，應顯示。
+          // 默認顯示，除非明確知道是行銷。
+          allowed = true;
+      }
+
+      if (!allowed) {
+        debugPrint('Notification suppressed: ${notification.type} notifications disabled');
+        return;
+      }
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
