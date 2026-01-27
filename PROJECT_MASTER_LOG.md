@@ -111,6 +111,11 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **用戶反饋系統 (Feedback System) - Task 110**:
+    - 創建 `FeedbackModel` 與 `FeedbackService`
+    - 實作 `FeedbackScreen` (意見回饋頁面)
+    - 整合路由與設定頁面
+    - 包含完整的單元測試
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
