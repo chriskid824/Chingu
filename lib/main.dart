@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -17,25 +19,74 @@ void main() async {
   // 確保 Flutter 綁定已初始化
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 Firebase
+  // 1. 優先初始化 Firebase (關鍵路徑)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 初始化 Crashlytics
-  await CrashReportingService().initialize();
+  // 2. 平行處理其他非阻塞初始化
+  // 使用 Future.wait 加速啟動流程
+  await Future.wait([
+    CrashReportingService().initialize(),
+    initializeDateFormatting('zh_TW', null),
+    RichNotificationService().initialize(),
+  ]);
 
-  // 初始化日期格式化
-  await initializeDateFormatting('zh_TW', null);
+  // 3. 檢查通知啟動 (FCM & Local)
+  // 檢查是否有初始 FCM 訊息
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
 
-  // 初始化豐富通知服務
-  await RichNotificationService().initialize();
+  // 檢查是否有初始本地通知
+  final localLaunchDetails = await RichNotificationService().getLaunchDetails();
 
-  runApp(const ChinguApp());
+  String? targetRoute;
+  Object? targetArgs;
+
+  // 優先處理 FCM
+  if (initialMessage != null) {
+    final routeInfo = RichNotificationService.getRouteInfo(
+      data: initialMessage.data,
+    );
+    if (routeInfo != null) {
+      targetRoute = routeInfo['route'];
+      targetArgs = routeInfo['arguments'];
+    }
+  }
+  // 其次處理本地通知
+  else if (localLaunchDetails?.didNotificationLaunchApp ?? false) {
+    final payload = localLaunchDetails!.notificationResponse?.payload;
+    if (payload != null) {
+      try {
+        final Map<String, dynamic> data = json.decode(payload);
+        final routeInfo = RichNotificationService.getRouteInfo(
+          data: data,
+          actionId: localLaunchDetails.notificationResponse?.actionId,
+        );
+        if (routeInfo != null) {
+          targetRoute = routeInfo['route'];
+          targetArgs = routeInfo['arguments'];
+        }
+      } catch (e) {
+        debugPrint('Error parsing launch payload: $e');
+      }
+    }
+  }
+
+  runApp(ChinguApp(
+    initialTargetRoute: targetRoute,
+    initialTargetArgs: targetArgs,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialTargetRoute;
+  final Object? initialTargetArgs;
+
+  const ChinguApp({
+    super.key,
+    this.initialTargetRoute,
+    this.initialTargetArgs,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +107,21 @@ class ChinguApp extends StatelessWidget {
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRoute) {
+              // 構建路由堆疊：Main -> Target
+              final List<Route<dynamic>> routes = [
+                AppRouter.generateRoute(const RouteSettings(name: AppRoutes.mainNavigation)),
+              ];
+
+              if (initialTargetRoute != null && initialTargetRoute != AppRoutes.mainNavigation) {
+                routes.add(AppRouter.generateRoute(RouteSettings(
+                  name: initialTargetRoute,
+                  arguments: initialTargetArgs,
+                )));
+              }
+
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
