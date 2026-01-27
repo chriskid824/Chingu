@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -43,6 +44,7 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      RichNotificationService().updateCurrentUser(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
@@ -60,6 +62,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 更新通知服務中的用戶資料
+        RichNotificationService().updateCurrentUser(_userModel);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -250,6 +254,9 @@ class AuthProvider with ChangeNotifier {
 
       // 重新載入用戶資料
       await _loadUserData(_firebaseUser!.uid);
+
+      // 更新通知服務中的用戶資料 (已在 _loadUserData 中呼叫，但為了確保邏輯清晰，這裡依賴 _loadUserData 即可)
+      // _loadUserData 已經呼叫了 RichNotificationService().updateCurrentUser(_userModel);
 
       _setLoading(false);
       notifyListeners();
