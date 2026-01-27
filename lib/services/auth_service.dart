@@ -155,6 +155,51 @@ class AuthService {
     }
   }
 
+  /// 重新認證用戶
+  ///
+  /// [password] 密碼（如果提供者是 password）
+  Future<void> reauthenticate({String? password}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('用戶未登入');
+
+    try {
+      // 檢查用戶的認證提供者
+      // 優先檢查密碼提供者
+      if (user.providerData.any((p) => p.providerId == 'password')) {
+        if (password == null) throw Exception('需要密碼進行驗證');
+
+        final credential = EmailAuthProvider.credential(
+          email: user.email!,
+          password: password
+        );
+
+        await user.reauthenticateWithCredential(credential);
+        return;
+      }
+
+      // 檢查 Google 提供者
+      if (user.providerData.any((p) => p.providerId == 'google.com')) {
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) throw Exception('Google 驗證已取消');
+
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        await user.reauthenticateWithCredential(credential);
+        return;
+      }
+
+      throw Exception('未支援的認證方式，無法重新驗證');
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw Exception('重新驗證失敗: $e');
+    }
+  }
+
   /// 刪除用戶帳號
   Future<void> deleteAccount() async {
     try {
