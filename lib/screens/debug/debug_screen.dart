@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -14,6 +16,51 @@ class DebugScreen extends StatefulWidget {
 class _DebugScreenState extends State<DebugScreen> {
   bool _isLoading = false;
   String _status = '';
+  String _selectedNotificationType = 'system';
+  final List<String> _notificationTypes = ['match', 'event', 'message', 'rating', 'system'];
+
+  Future<void> _sendTestNotification() async {
+    setState(() {
+      _isLoading = true;
+      _status = '正在發送通知...';
+    });
+
+    try {
+      await RichNotificationService().initialize();
+
+      final notification = NotificationModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: FirebaseAuth.instance.currentUser?.uid ?? 'debug_user',
+        type: _selectedNotificationType,
+        title: '測試通知: $_selectedNotificationType',
+        message: '這是一則測試通知，類型為 $_selectedNotificationType。發送時間: ${DateTime.now().toString()}',
+        createdAt: DateTime.now(),
+        actionType: _selectedNotificationType == 'message' ? 'open_chat' :
+                   _selectedNotificationType == 'event' ? 'view_event' :
+                   _selectedNotificationType == 'match' ? 'match_history' : null,
+      );
+
+      await RichNotificationService().showNotification(notification);
+
+      setState(() {
+        _status = '✅ 通知發送成功！';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('通知已發送')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _status = '❌ 發送失敗: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _runSeeder() async {
     setState(() {
@@ -160,6 +207,45 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('通知測試工具', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: DropdownButtonFormField<String>(
+                value: _selectedNotificationType,
+                decoration: const InputDecoration(
+                  labelText: '選擇通知類型',
+                  border: OutlineInputBorder(),
+                ),
+                items: _notificationTypes.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type.toUpperCase()),
+                  );
+                }).toList(),
+                onChanged: _isLoading ? null : (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedNotificationType = value;
+                    });
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _sendTestNotification,
+              icon: const Icon(Icons.notifications_active_rounded),
+              label: const Text('發送測試通知'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
