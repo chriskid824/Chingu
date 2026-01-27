@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -47,6 +48,14 @@ class AuthProvider with ChangeNotifier {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
+
+      // 用戶登入後，同步 FCM 主題訂閱
+      if (_userModel != null) {
+        // 我們傳入空陣列作為 oldTopics，確保所有目前訂閱的主題都會被重新訂閱 (Sync)
+        // 這對於新裝置登入是必要的
+        await RichNotificationService().syncTopics(_userModel!.subscribedTopics, []);
+      }
+
       _status = AuthStatus.authenticated;
     }
     notifyListeners();
@@ -262,6 +271,40 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 更新訂閱主題
+  Future<bool> updateSubscribedTopics(List<String> newTopics) async {
+    try {
+      if (_firebaseUser == null || _userModel == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      final oldTopics = _userModel!.subscribedTopics;
+
+      // 1. Update Firestore
+      await _firestoreService.updateUser(_firebaseUser!.uid, {
+        'subscribedTopics': newTopics,
+      });
+
+      // 2. Sync with FCM
+      // Note: We sync AFTER updating Firestore, or in parallel.
+      // If Firestore fails, we shouldn't probably sync, so order is important.
+      await RichNotificationService().syncTopics(newTopics, oldTopics);
+
+      // 3. Reload user data to reflect changes locally
+      await _loadUserData(_firebaseUser!.uid);
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 檢查用戶是否完成 Onboarding
   bool hasCompletedOnboarding() {
     if (_userModel == null) return false;
@@ -293,6 +336,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
