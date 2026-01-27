@@ -58,8 +58,10 @@ class AuthProvider with ChangeNotifier {
       _userModel = await _firestoreService.getUser(uid);
 
       if (_userModel != null) {
-        // 更新最後登入時間
-        await _firestoreService.updateLastLogin(uid);
+        // 更新最後登入時間 (如果用戶沒有隱藏)
+        if (!_userModel!.hideLastSeen) {
+          await _firestoreService.updateLastLogin(uid);
+        }
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
