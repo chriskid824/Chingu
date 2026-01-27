@@ -72,6 +72,11 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **主題訂閱 (Topic Subscription)**:
+  - 實現通知主題訂閱功能，支援地區 (台北/台中/高雄) 與興趣 (戶外/美食/藝文等) 訂閱。
+  - 更新 `UserModel` 以儲存訂閱主題，實作 `RichNotificationService` 處理 FCM 主題訂閱/取消。
+  - 更新 `NotificationSettingsScreen` 提供視覺化訂閱管理介面。
+
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
@@ -154,7 +159,7 @@
 - [ ] 設定頁面
 - [ ] 編輯個人資料
 - [ ] 隱私設定
-- [ ] 通知設定
+- [x] 通知設定 (已實作主題訂閱)
 - [ ] 幫助中心
 - [ ] 關於
 

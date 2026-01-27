@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -195,5 +196,43 @@ class RichNotificationService {
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
+  }
+
+  /// 訂閱主題
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await FirebaseMessaging.instance.subscribeToTopic(topic);
+      debugPrint('Subscribed to topic: $topic');
+    } catch (e) {
+      debugPrint('Error subscribing to topic $topic: $e');
+    }
+  }
+
+  /// 取消訂閱主題
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+      debugPrint('Unsubscribed from topic: $topic');
+    } catch (e) {
+      debugPrint('Error unsubscribing from topic $topic: $e');
+    }
+  }
+
+  /// 同步訂閱主題
+  Future<void> syncTopics(List<String> newTopics, List<String> oldTopics) async {
+    final Set<String> newSet = newTopics.toSet();
+    final Set<String> oldSet = oldTopics.toSet();
+
+    // 需要訂閱的：在新列表中但不在舊列表中
+    final added = newSet.difference(oldSet);
+    for (final topic in added) {
+      await subscribeToTopic(topic);
+    }
+
+    // 需要取消訂閱的：在舊列表中但不在新列表中
+    final removed = oldSet.difference(newSet);
+    for (final topic in removed) {
+      await unsubscribeFromTopic(topic);
+    }
   }
 }
