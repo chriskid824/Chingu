@@ -16,6 +16,9 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/favorites_screen.dart';
+// Models
+import '../../models/user_model.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -99,6 +102,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String favorites = '/favorites';
 }
 
 /// 應用程式路由配置
@@ -166,12 +170,16 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final user = settings.arguments as UserModel?;
+        return MaterialPageRoute(builder: (_) => UserDetailScreen(user: user));
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
