@@ -112,6 +112,13 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **系統廣播功能 (System Broadcast)**:
+  - 創建 `sendBroadcast` Cloud Function
+  - 實作安全的 Firebase Admin 初始化 (防止重複實例化)
+  - 實作 Firestore `in` 查詢批次處理 (解決 30 筆上限限制)
+  - 實作 FCM 多播批次發送 (解決 500 筆上限限制)
+  - 支援全體廣播、城市定向與特定用戶定向通知
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 

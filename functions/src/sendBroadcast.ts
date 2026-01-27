@@ -1,7 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -84,14 +86,30 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             return { success: true, messageId: response, recipients: "all" };
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
-            const usersSnapshot = await admin.firestore()
-                .collection("users")
-                .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
-                .get();
+            // Firestore 'in' query supports up to 30 items. We batch queries to handle more.
+            const chunks = [];
+            for (let i = 0; i < targetUserIds.length; i += 30) {
+                chunks.push(targetUserIds.slice(i, i + 30));
+            }
 
-            targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
-                .filter((token) => token); // Remove null/undefined tokens
+            const promises = chunks.map(chunk =>
+                admin.firestore()
+                .collection("users")
+                .where(admin.firestore.FieldPath.documentId(), "in", chunk)
+                .get()
+            );
+
+            const snapshots = await Promise.all(promises);
+
+            targetTokens = [];
+            snapshots.forEach(snap => {
+                snap.docs.forEach(doc => {
+                    const token = doc.data().fcmToken;
+                    if (token) {
+                        targetTokens.push(token);
+                    }
+                });
+            });
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
@@ -117,28 +135,43 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             );
         }
 
-        // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
+        // Send multicast message in batches
+        let successCount = 0;
+        let failureCount = 0;
+        const BATCH_SIZE = 500;
 
-        const response = await admin.messaging().sendEachForMulticast(message);
+        console.log(`Sending broadcast to ${targetTokens.length} tokens...`);
 
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
+        for (let i = 0; i < targetTokens.length; i += BATCH_SIZE) {
+            const batchTokens = targetTokens.slice(i, i + BATCH_SIZE);
+
+            const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: batchTokens,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+            successCount += response.successCount;
+            failureCount += response.failureCount;
+
+             if (response.failureCount > 0) {
+                console.log(`Failed to send ${response.failureCount} messages in batch ${i / BATCH_SIZE}`);
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        // Log error but don't expose sensitive token info too much
+                        console.error(`Error sending to token index ${idx}:`, resp.error);
+                        // TODO: Handle invalid tokens (e.g. remove from DB)
+                    }
+                });
+            }
         }
+
+        console.log(`Total sent: ${successCount}, Total failed: ${failureCount}`);
 
         // Log the broadcast
         await admin.firestore().collection("broadcast_logs").add({
@@ -148,14 +181,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
             sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: successCount,
+            failureCount: failureCount,
         });
 
         return {
             success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: successCount,
+            failureCount: failureCount,
             totalTargets: targetTokens.length,
         };
     } catch (error) {
