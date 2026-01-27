@@ -118,19 +118,31 @@ class ChatProvider with ChangeNotifier {
     required String senderId,
     required String text,
     String type = 'text',
+    String? recipientId,
+    String? senderName,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
 
       // 1. 新增訊息
-      await _firestore.collection('messages').add({
+      final Map<String, dynamic> messageData = {
         'chatRoomId': chatRoomId,
         'senderId': senderId,
         'text': text,
         'type': type,
         'timestamp': timestamp,
         'isRead': false,
-      });
+      };
+
+      if (recipientId != null) {
+        messageData['recipientId'] = recipientId;
+      }
+
+      if (senderName != null) {
+        messageData['senderName'] = senderName;
+      }
+
+      await _firestore.collection('messages').add(messageData);
 
       // 2. 更新聊天室最後訊息
       await _firestore.collection('chat_rooms').doc(chatRoomId).update({

@@ -84,12 +84,13 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
 
       // 1. 新增訊息到 messages 集合
-      await _firestore.collection('messages').add({
+      final Map<String, dynamic> messageData = {
         'chatRoomId': chatRoomId,
         'senderId': senderId,
         'senderName': senderName,
@@ -101,7 +102,13 @@ class ChatService {
         'isForwarded': isForwarded,
         'originalSenderId': originalSenderId,
         'originalSenderName': originalSenderName,
-      });
+      };
+
+      if (recipientId != null) {
+        messageData['recipientId'] = recipientId;
+      }
+
+      await _firestore.collection('messages').add(messageData);
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
