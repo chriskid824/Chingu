@@ -9,11 +9,13 @@ class DinnerEventProvider with ChangeNotifier {
       : _dinnerEventService = dinnerEventService ?? DinnerEventService();
 
   List<DinnerEventModel> _myEvents = [];
+  List<DinnerEventModel> _myWaitlistEvents = [];
   List<DinnerEventModel> _recommendedEvents = [];
   bool _isLoading = false;
   String? _errorMessage;
 
   List<DinnerEventModel> get myEvents => _myEvents;
+  List<DinnerEventModel> get myWaitlistEvents => _myWaitlistEvents;
   List<DinnerEventModel> get recommendedEvents => _recommendedEvents;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -58,6 +60,7 @@ class DinnerEventProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _myEvents = await _dinnerEventService.getUserEvents(userId);
+      _myWaitlistEvents = await _dinnerEventService.getUserWaitlistEvents(userId);
       _setLoading(false);
     } catch (e) {
       debugPrint('獲取我的活動失敗: $e');
@@ -85,13 +88,13 @@ class DinnerEventProvider with ChangeNotifier {
     }
   }
 
-  /// 加入活動
-  Future<bool> joinEvent(String eventId, String userId) async {
+  /// 註冊活動（取代 joinEvent）
+  Future<bool> registerForEvent(String eventId, String userId) async {
     try {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.joinEvent(eventId, userId);
+      await _dinnerEventService.registerForEvent(eventId, userId);
       
       // 刷新列表
       await fetchMyEvents(userId);
@@ -100,19 +103,20 @@ class DinnerEventProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = e.toString();
+      debugPrint('報名失敗: $e');
       _setLoading(false);
       notifyListeners();
       return false;
     }
   }
 
-  /// 退出活動
-  Future<bool> leaveEvent(String eventId, String userId) async {
+  /// 取消註冊（取代 leaveEvent）
+  Future<bool> unregisterFromEvent(String eventId, String userId) async {
     try {
       _setLoading(true);
       _errorMessage = null;
 
-      await _dinnerEventService.leaveEvent(eventId, userId);
+      await _dinnerEventService.unregisterFromEvent(eventId, userId);
       
       // 刷新列表
       await fetchMyEvents(userId);
@@ -121,10 +125,23 @@ class DinnerEventProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = e.toString();
+      debugPrint('取消報名失敗: $e');
       _setLoading(false);
       notifyListeners();
       return false;
     }
+  }
+
+  /// 加入活動 (Legacy wrapper calling new logic or kept for backward compatibility if needed)
+  /// 但根據需求，我們應該全面使用新的邏輯。
+  /// 為了安全起見，讓它調用 registerForEvent
+  Future<bool> joinEvent(String eventId, String userId) async {
+    return registerForEvent(eventId, userId);
+  }
+
+  /// 退出活動 (Legacy wrapper)
+  Future<bool> leaveEvent(String eventId, String userId) async {
+    return unregisterFromEvent(eventId, userId);
   }
 
   /// 獲取本週四和下週四的日期
