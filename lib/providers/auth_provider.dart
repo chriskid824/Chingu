@@ -218,6 +218,38 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 刪除帳號
+  Future<bool> deleteAccount({String? password}) async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      // 1. 重新驗證
+      await _authService.reauthenticate(password: password);
+
+      // 2. 刪除 Firestore 資料
+      if (_firebaseUser != null) {
+        await _firestoreService.deleteUser(_firebaseUser!.uid);
+      }
+
+      // 3. 刪除 Auth 帳號
+      await _authService.deleteAccount();
+
+      // 4. 清理狀態
+      _status = AuthStatus.uninitialized;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 發送密碼重設郵件
   Future<bool> sendPasswordResetEmail(String email) async {
     try {
