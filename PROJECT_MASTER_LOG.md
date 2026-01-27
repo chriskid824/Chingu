@@ -86,6 +86,7 @@
     - Gradient Text (`gradient_text.dart`)
     - Event Card Animation
     - Parallax Header
+    - **Task 132**: 已完成 `InAppNotification` 實作與測試 (`lib/widgets/in_app_notification.dart`)
   - **服務與邏輯**:
     - Crash Reporting (`crash_reporting_service.dart`)
     - Matching Algorithm Optimization
