@@ -61,6 +61,10 @@
   - [x] 實作即時訊息監聽 (Real-time listener)
   - [x] 實作發送訊息功能
   - [x] 修復 AppRouter settings 參數傳遞問題
+- [x] **整合 Firebase Messaging (Android)**
+  - [x] 更新 `android/settings.gradle.kts` 添加 Google Services 插件
+  - [x] 更新 `android/app/build.gradle.kts` 應用插件
+  - [x] 更新 `AndroidManifest.xml` 添加預設通知頻道 ID (`chingu_rich_notifications`)
 - [ ] **連接首頁活動資料**
   - [ ] 從 Firestore 載入「即將到來的晚餐」
   - [ ] 在首頁顯示真實活動列表
