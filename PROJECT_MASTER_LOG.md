@@ -112,6 +112,11 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **通知儲存服務 (Notification Storage Service)**:
+  - 創建 `lib/services/notification_storage_service.dart`，負責將通知存入 Firestore `notifications` 集合。
+  - 實作 `saveNotification`、`getUserNotificationsStream` (支援時間排序)、`markAsRead`、`markAllAsRead` 與 `getUnreadCount`。
+  - 採用依賴注入 (Dependency Injection) 設計，並建立單元測試 `test/services/notification_storage_service_test.dart` 確保邏輯正確。
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
