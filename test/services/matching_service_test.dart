@@ -2,20 +2,16 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
-
-// Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
-import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
-  late MockFirestoreService mockFirestoreService;
-  late MockChatService mockChatService;
+  late FakeFirestoreService fakeFirestoreService;
+  late FakeChatService fakeChatService;
   late FakeFirebaseFirestore fakeFirestore;
+  late FakeFirebaseFunctions fakeFunctions;
 
   // Test data
   final currentUser = UserModel(
@@ -31,7 +27,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    job: 'Developer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -47,18 +46,23 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    job: 'Designer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
-    mockFirestoreService = MockFirestoreService();
-    mockChatService = MockChatService();
+    fakeFirestoreService = FakeFirestoreService();
+    fakeChatService = FakeChatService();
     fakeFirestore = FakeFirebaseFirestore();
+    fakeFunctions = FakeFirebaseFunctions();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
-      firestoreService: mockFirestoreService,
-      chatService: mockChatService,
+      firestoreService: fakeFirestoreService,
+      chatService: fakeChatService,
+      functions: fakeFunctions,
     );
   });
 
@@ -66,10 +70,7 @@ void main() {
     test('should return candidates when hard filters pass and not swiped',
         () async {
       // Arrange
-      when(mockFirestoreService.queryMatchingUsers(
-        city: anyNamed('city'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => [candidateUser]);
+      fakeFirestoreService.queryMatchingUsersStub = ({required city, limit, budgetRange}) async => [candidateUser];
 
       // Act
       final results = await matchingService.getMatches(currentUser);
@@ -78,12 +79,12 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Budget: same = 10
+      // Location: same city, same district = 30
+      // Age: 10
+      // Total: 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -95,10 +96,7 @@ void main() {
         'isLike': true,
       });
 
-      when(mockFirestoreService.queryMatchingUsers(
-        city: anyNamed('city'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => [candidateUser]);
+      fakeFirestoreService.queryMatchingUsersStub = ({required city, limit, budgetRange}) async => [candidateUser];
 
       // Act
       final results = await matchingService.getMatches(currentUser);
@@ -111,10 +109,7 @@ void main() {
       // Arrange
       final oldCandidate = candidateUser.copyWith(age: 40); // > maxAge 30
 
-      when(mockFirestoreService.queryMatchingUsers(
-        city: anyNamed('city'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => [oldCandidate]);
+      fakeFirestoreService.queryMatchingUsersStub = ({required city, limit, budgetRange}) async => [oldCandidate];
 
       // Act
       final results = await matchingService.getMatches(currentUser);
@@ -126,6 +121,9 @@ void main() {
 
   group('recordSwipe', () {
     test('should record swipe correctly', () async {
+      // Arrange
+      fakeChatService.createChatRoomStub = (u1, u2) async => 'chat_room_id';
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -157,8 +155,7 @@ void main() {
           .doc(candidateUser.uid)
           .set(candidateUser.toMap());
 
-      when(mockChatService.createChatRoom(any, any))
-          .thenAnswer((_) async => 'chat_room_id');
+      fakeChatService.createChatRoomStub = (u1, u2) async => 'chat_room_id';
 
       // Act
       final result = await matchingService.recordSwipe(
@@ -172,8 +169,82 @@ void main() {
       expect(result['chatRoomId'], 'chat_room_id');
 
       // Verify stats updated
-      verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
-      verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+      expect(fakeFirestoreService.updateUserStatsCalls[currentUser.uid], 1);
+      expect(fakeFirestoreService.updateUserStatsCalls[candidateUser.uid], 1);
+
+      // Verify notification sent
+      expect(fakeFunctions.callable.called, true);
+      expect(fakeFunctions.callable.capturedData['matchedUserId'], candidateUser.uid);
     });
   });
+}
+
+// Manual Fakes
+
+class FakeFirestoreService extends Fake implements FirestoreService {
+  Future<List<UserModel>> Function({required String city, int? limit, int? budgetRange})? queryMatchingUsersStub;
+  Map<String, int> updateUserStatsCalls = {};
+
+  @override
+  Future<List<UserModel>> queryMatchingUsers({
+    required String city,
+    int? budgetRange,
+    String? gender,
+    int? minAge,
+    int? maxAge,
+    int limit = 20,
+  }) async {
+    if (queryMatchingUsersStub != null) {
+      return queryMatchingUsersStub!(city: city, limit: limit, budgetRange: budgetRange);
+    }
+    return [];
+  }
+
+  @override
+  Future<void> updateUserStats(String uid, {int? totalMatches, int? totalDinners}) async {
+    if (totalMatches != null) {
+      updateUserStatsCalls[uid] = (updateUserStatsCalls[uid] ?? 0) + totalMatches;
+    }
+  }
+}
+
+class FakeChatService extends Fake implements ChatService {
+  Future<String> Function(String, String)? createChatRoomStub;
+
+  @override
+  Future<String> createChatRoom(String user1Id, String user2Id) async {
+    if (createChatRoomStub != null) {
+      return createChatRoomStub!(user1Id, user2Id);
+    }
+    return 'default_chat_room';
+  }
+}
+
+class FakeFirebaseFunctions extends Fake implements FirebaseFunctions {
+  final FakeHttpsCallable callable = FakeHttpsCallable();
+
+  @override
+  HttpsCallable httpsCallable(String? name, {HttpsCallableOptions? options}) {
+    if (name == 'notifyMatch') {
+      return callable;
+    }
+    throw UnimplementedError('Unexpected function call: $name');
+  }
+}
+
+class FakeHttpsCallable extends Fake implements HttpsCallable {
+  bool called = false;
+  dynamic capturedData;
+
+  @override
+  Future<HttpsCallableResult<T>> call<T>([dynamic data]) async {
+    called = true;
+    capturedData = data;
+    return FakeHttpsCallableResult<T>();
+  }
+}
+
+class FakeHttpsCallableResult<T> extends Fake implements HttpsCallableResult<T> {
+  @override
+  T get data => throw UnimplementedError();
 }
