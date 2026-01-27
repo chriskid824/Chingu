@@ -59,6 +59,16 @@ class MatchingService {
           continue;
         }
 
+        // 排除已封鎖或封鎖我的用戶
+        if (currentUser.blockedUserIds.contains(candidate.uid)) {
+          print('跳過: 已封鎖 (${candidate.name})');
+          continue;
+        }
+        if (candidate.blockedUserIds.contains(currentUser.uid)) {
+          print('跳過: 被封鎖 (${candidate.name})');
+          continue;
+        }
+
         // 排除已滑過的
         if (swipedIds.contains(candidate.uid)) {
           print('跳過: 已滑過 (${candidate.name})');
@@ -157,8 +167,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
