@@ -1,13 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 
-class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
-  
+class UserDetailScreen extends StatefulWidget {
+  final UserModel? user;
+  const UserDetailScreen({super.key, this.user});
+
+  @override
+  State<UserDetailScreen> createState() => _UserDetailScreenState();
+}
+
+class _UserDetailScreenState extends State<UserDetailScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  bool _isToggling = false;
+
+  Future<void> _toggleFavorite(BuildContext context, UserModel currentUser, UserModel targetUser) async {
+    if (_isToggling) return;
+
+    setState(() {
+      _isToggling = true;
+    });
+
+    try {
+      final isFavorite = currentUser.favoriteUserIds.contains(targetUser.uid);
+
+      if (isFavorite) {
+        await _firestoreService.removeFavorite(currentUser.uid, targetUser.uid);
+      } else {
+        await _firestoreService.addFavorite(currentUser.uid, targetUser.uid);
+      }
+
+      // Refresh local user data to update UI
+      if (mounted) {
+        await context.read<AuthProvider>().refreshUserData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失敗: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isToggling = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // Use passed user or mock data for backward compatibility
+    final user = widget.user;
+    final isMock = user == null;
+
+    // Mock data values (if user is null)
+    final name = isMock ? '陳大明' : user!.name;
+    final age = isMock ? 30 : user!.age;
+    final job = isMock ? '軟體工程師' : user!.job;
+    final city = isMock ? '台北市' : user!.city;
+    final district = isMock ? '信義區' : user!.district;
+    final budget = isMock ? 'NT\$ 500-800' : user!.budgetRangeText;
+    final matchType = isMock ? '異性配對' : user!.preferredMatchTypeText;
+    final bio = isMock
+        ? '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。'
+        : (user!.bio ?? '這個人很懶，什麼都沒寫...');
+    final interests = isMock
+        ? ['科技', '美食', '運動', '旅遊', '攝影']
+        : user!.interests;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -17,6 +84,39 @@ class UserDetailScreen extends StatelessWidget {
             expandedHeight: 320,
             pinned: true,
             backgroundColor: theme.scaffoldBackgroundColor,
+            actions: [
+               if (!isMock) // Only show favorite button for real users
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    final currentUser = authProvider.userModel;
+                    if (currentUser == null) return const SizedBox.shrink();
+
+                    final isFavorite = currentUser.favoriteUserIds.contains(user!.uid);
+
+                    return IconButton(
+                      onPressed: () => _toggleFavorite(context, currentUser, user!),
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor.withOpacity(0.8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: _isToggling
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary)
+                              )
+                            : Icon(
+                                isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                                color: isFavorite ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                              ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+            ],
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
@@ -46,15 +146,24 @@ class UserDetailScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: chinguTheme?.primaryGradient,
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.person,
-                        size: 140,
-                        color: Colors.white,
-                      ),
-                    ),
+                    // Use avatarUrl if available, else icon
+                    child: (!isMock && user!.avatarUrl != null)
+                      ? Image.network(
+                          user!.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.person, size: 140, color: Colors.white),
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.person,
+                            size: 140,
+                            color: Colors.white,
+                          ),
+                        ),
                   ),
-                  // 配對度標籤
+                  // 配對度標籤 (Only show for mock or if calculated)
                   Positioned(
                     top: 60,
                     right: 20,
@@ -112,7 +221,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '$name, $age',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -132,7 +241,7 @@ class UserDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '軟體工程師',
+                              job,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -162,7 +271,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.location_on_rounded,
                     '位置',
-                    '台北市, 信義區',
+                    '$city, $district',
                     theme.colorScheme.primary,
                     theme,
                   ),
@@ -170,7 +279,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800',
+                    budget,
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
@@ -178,7 +287,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.favorite_rounded,
                     '配對類型',
-                    '異性配對',
+                    matchType,
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -213,7 +322,7 @@ class UserDetailScreen extends StatelessWidget {
                       border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                     ),
                     child: Text(
-                      '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
+                      bio,
                       style: TextStyle(
                         fontSize: 15,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -247,13 +356,12 @@ class UserDetailScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
-                      _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
-                      _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
-                      _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
-                      _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
-                    ],
+                    children: interests.map<Widget>((interest) {
+                      // Simple mapping for icon color based on index or hash would be better,
+                      // but here we just cycle or random. For mock, we had specific colors.
+                      // For simplicity, use primary color.
+                      return _buildInterestChip(interest, Icons.star, theme.colorScheme.primary);
+                    }).toList(),
                   ),
                   
                   const SizedBox(height: 32),
