@@ -30,6 +30,7 @@ import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
 import '../../screens/events/event_confirmation_screen.dart';
 import '../../screens/events/event_rating_screen.dart';
+import '../../screens/events/event_history_screen.dart';
 // 聊天模組
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
@@ -83,6 +84,7 @@ class AppRoutes {
   static const String eventDetail = '/event-detail';
   static const String eventConfirmation = '/event-confirmation';
   static const String eventRating = '/event-rating';
+  static const String eventHistory = '/event-history';
   
   // 聊天模組
   static const String chatList = '/chat-list';
@@ -184,13 +186,29 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['eventId'] == null) {
+          return MaterialPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(title: const Text('錯誤')),
+              body: const Center(child: Text('缺少活動 ID')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => EventDetailScreen(
+            eventId: args['eventId'],
+          ),
+        );
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
       
       case AppRoutes.eventRating:
         return MaterialPageRoute(builder: (_) => const EventRatingScreen());
+
+      case AppRoutes.eventHistory:
+        return MaterialPageRoute(builder: (_) => const EventHistoryScreen());
       
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
@@ -291,14 +309,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
