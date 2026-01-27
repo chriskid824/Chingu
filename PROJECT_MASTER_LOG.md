@@ -112,6 +112,11 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **通知系統整合 (Notification System Integration)**:
+  - **iOS 配置**:
+    - 更新 `Info.plist`：新增 `UIBackgroundModes` (fetch, remote-notification) 並設定 `FirebaseAppDelegateProxyEnabled` 為 `false`
+    - 更新 `AppDelegate.swift`：手動配置 Firebase 與註冊 APNs token
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
