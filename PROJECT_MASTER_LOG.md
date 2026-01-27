@@ -72,6 +72,9 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **通知系統基礎 (Notification System Foundation)**:
+  - 創建/更新 `NotificationModel` 包含所有必要欄位 (type, title, message, createdAt, isRead, deeplink)
+  - 建立完整單元測試 (`test/models/notification_model_test.dart`)
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
