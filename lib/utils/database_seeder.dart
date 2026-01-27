@@ -220,6 +220,11 @@ class DatabaseSeeder {
         preferredMatchType: 'any',
         minAge: 18,
         maxAge: 50,
+        enablePushNotifications: true,
+        enableMatchNotifications: true,
+        enableMessageNotifications: true,
+        enableEventNotifications: true,
+        enableMarketingNotifications: true,
       );
 
       await usersCollection.doc(uid).set(user.toMap());

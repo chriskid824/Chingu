@@ -114,6 +114,11 @@ class AuthProvider with ChangeNotifier {
         budgetRange: 1, // 預設值
         createdAt: DateTime.now(),
         lastLogin: DateTime.now(),
+        enablePushNotifications: true,
+        enableMatchNotifications: true,
+        enableMessageNotifications: true,
+        enableEventNotifications: true,
+        enableMarketingNotifications: true,
       );
 
       await _firestoreService.createUser(userModel);
@@ -190,6 +195,11 @@ class AuthProvider with ChangeNotifier {
           budgetRange: 1, // 預設值
           createdAt: DateTime.now(),
           lastLogin: DateTime.now(),
+          enablePushNotifications: true,
+          enableMatchNotifications: true,
+          enableMessageNotifications: true,
+          enableEventNotifications: true,
+          enableMarketingNotifications: true,
         );
 
         await _firestoreService.createUser(userModel);
