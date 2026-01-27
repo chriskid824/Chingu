@@ -59,6 +59,25 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 獲取路由資訊
+  RouteSettings? getRouteInfo(String? actionType, String? actionData, String? actionId) {
+    String action = (actionId != null && actionId != 'default') ? actionId : (actionType ?? '');
+
+    switch (action) {
+      case 'open_chat':
+        return const RouteSettings(name: AppRoutes.chatList);
+      case 'view_event':
+        return const RouteSettings(name: AppRoutes.eventDetail);
+      case 'match_history':
+        return const RouteSettings(name: AppRoutes.matchesList);
+      default:
+        if (action.isNotEmpty) {
+           return const RouteSettings(name: AppRoutes.notifications);
+        }
+        return null;
+    }
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
@@ -70,7 +89,7 @@ class RichNotificationService {
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,23 +97,23 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  void performAction(String action, String? data, NavigatorState navigator) {
     switch (action) {
       case 'open_chat':
         if (data != null) {

@@ -12,6 +12,14 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/notification_service.dart';
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -31,11 +39,19 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 註冊後台訊息處理
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // 初始化通知服務 (FCM)
+  final initialNotificationData = await NotificationService().initialize();
+
+  runApp(ChinguApp(initialNotificationData: initialNotificationData));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final Map<String, dynamic>? initialNotificationData;
+
+  const ChinguApp({super.key, this.initialNotificationData});
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +71,22 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRoute) {
+              List<Route<dynamic>> routes = [
+                AppRouter.generateRoute(const RouteSettings(name: AppRoutes.mainNavigation)),
+              ];
+
+              if (initialNotificationData != null) {
+                final actionType = initialNotificationData!['actionType'];
+                final actionData = initialNotificationData!['actionData'];
+                final settings = RichNotificationService().getRouteInfo(actionType, actionData, null);
+
+                if (settings != null) {
+                  routes.add(AppRouter.generateRoute(settings));
+                }
+              }
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
