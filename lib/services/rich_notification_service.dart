@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_ab_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -60,17 +62,29 @@ class RichNotificationService {
   }
 
   /// 處理通知點擊事件
-  void _onNotificationTap(NotificationResponse response) {
+  void _onNotificationTap(NotificationResponse response) async {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? notificationId = data['notificationId'];
+        final String? type = data['type'];
+
+        // 追蹤點擊
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null && notificationId != null) {
+          await NotificationABService().trackNotificationClicked(
+            userId,
+            notificationId,
+            type ?? 'unknown',
+          );
+        }
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -78,7 +92,7 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -186,6 +200,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'type': notification.type,
     };
 
     await _flutterLocalNotificationsPlugin.show(

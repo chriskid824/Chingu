@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Notification A/B Testing Service
 ///
 /// This service is responsible for assigning users to experimental groups (A/B testing)
@@ -26,6 +28,11 @@ class NotificationContent {
 }
 
 class NotificationABService {
+  final FirebaseFirestore _firestore;
+
+  NotificationABService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
   /// Assigns a user to an experiment group based on their user ID.
   ///
   /// This uses a deterministic hash so the user always stays in the same group.
@@ -129,6 +136,38 @@ class NotificationABService {
           title: 'System Notification',
           body: message,
         );
+    }
+  }
+
+  /// Tracks when a notification is sent/displayed to the user.
+  Future<void> trackNotificationSent(String userId, String notificationId, String type) async {
+    final group = getGroup(userId);
+    await _logEvent(userId, notificationId, type, group, 'sent');
+  }
+
+  /// Tracks when a notification is clicked by the user.
+  Future<void> trackNotificationClicked(String userId, String notificationId, String type) async {
+    final group = getGroup(userId);
+    await _logEvent(userId, notificationId, type, group, 'clicked');
+  }
+
+  Future<void> _logEvent(
+      String userId,
+      String notificationId,
+      String type,
+      ExperimentGroup group,
+      String event) async {
+    try {
+      await _firestore.collection('notification_stats').add({
+        'userId': userId,
+        'notificationId': notificationId,
+        'type': type,
+        'variant': group.toString().split('.').last, // 'control' or 'variant'
+        'event': event, // 'sent' or 'clicked'
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error logging notification stat: $e');
     }
   }
 }
