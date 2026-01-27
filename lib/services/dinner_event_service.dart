@@ -111,6 +111,9 @@ class DinnerEventService {
 
   /// 加入活動
   /// 
+  /// 注意：用戶將在活動開始前 24 小時收到提醒通知。
+  /// 這是由後端 Cloud Function `sendEventReminders` 自動處理的。
+  ///
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
   Future<void> joinEvent(String eventId, String userId) async {

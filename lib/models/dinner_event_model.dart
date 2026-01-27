@@ -22,6 +22,7 @@ class DinnerEventModel {
   
   // 活動狀態
   final String status; // 'pending', 'confirmed', 'completed', 'cancelled'
+  final bool isReminderSent; // 是否已發送活動前提醒
   final DateTime createdAt;
   final DateTime? confirmedAt;
   final DateTime? completedAt;
@@ -48,6 +49,7 @@ class DinnerEventModel {
     this.restaurantLocation,
     this.restaurantPhone,
     this.status = 'pending',
+    this.isReminderSent = false,
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
@@ -79,6 +81,7 @@ class DinnerEventModel {
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
       restaurantPhone: map['restaurantPhone'],
       status: map['status'] ?? 'pending',
+      isReminderSent: map['isReminderSent'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       confirmedAt: map['confirmedAt'] != null 
           ? (map['confirmedAt'] as Timestamp).toDate() 
@@ -112,6 +115,7 @@ class DinnerEventModel {
       'restaurantLocation': restaurantLocation,
       'restaurantPhone': restaurantPhone,
       'status': status,
+      'isReminderSent': isReminderSent,
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
@@ -135,6 +139,7 @@ class DinnerEventModel {
     GeoPoint? restaurantLocation,
     String? restaurantPhone,
     String? status,
+    bool? isReminderSent,
     DateTime? confirmedAt,
     DateTime? completedAt,
     List<String>? icebreakerQuestions,
@@ -156,6 +161,7 @@ class DinnerEventModel {
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
       restaurantPhone: restaurantPhone ?? this.restaurantPhone,
       status: status ?? this.status,
+      isReminderSent: isReminderSent ?? this.isReminderSent,
       createdAt: createdAt,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       completedAt: completedAt ?? this.completedAt,
