@@ -8,6 +8,7 @@ import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/providers/matching_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/services/notification_storage_service.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -72,25 +73,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                               ),
                             ),
-                            Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                                  onPressed: () {},
-                                ),
-                                Positioned(
-                                  right: 8,
-                                  top: 8,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: chinguTheme?.error ?? theme.colorScheme.error,
-                                      shape: BoxShape.circle,
+                            StreamBuilder<int>(
+                              stream: NotificationStorageService().watchUnreadCount(),
+                              builder: (context, snapshot) {
+                                final unreadCount = snapshot.data ?? 0;
+                                return Stack(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                                      onPressed: () {
+                                        Navigator.pushNamed(context, AppRoutes.notifications);
+                                      },
                                     ),
-                                  ),
-                                ),
-                              ],
+                                    if (unreadCount > 0)
+                                      Positioned(
+                                        right: 8,
+                                        top: 8,
+                                        child: Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: chinguTheme?.error ?? theme.colorScheme.error,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -495,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           return UserCard(
                             name: candidate.name,
                             age: candidate.age,
-                            job: candidate.job ?? '未填寫職業',
+                            job: candidate.job.isEmpty ? '未填寫職業' : candidate.job,
                             jobIcon: Icons.work_outline_rounded,
                             color: theme.colorScheme.primary,
                             matchScore: 85 + (index * 2), // Simple scoring for now
