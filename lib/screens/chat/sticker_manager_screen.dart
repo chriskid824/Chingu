@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/sticker_pack_model.dart';
 import '../../services/sticker_service.dart';
+import '../../services/analytics_service.dart';
 import '../../widgets/app_icon_button.dart';
 
 class StickerManagerScreen extends StatefulWidget {
@@ -54,6 +55,12 @@ class _StickerManagerScreenState extends State<StickerManagerScreen> {
 
     try {
       await _stickerService.downloadPack(pack.id);
+
+      await AnalyticsService().logEvent(name: 'download_sticker_pack', parameters: {
+        'pack_id': pack.id,
+        'pack_name': pack.name,
+      });
+
       await _loadPacks(); // Reload to update status
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +89,12 @@ class _StickerManagerScreenState extends State<StickerManagerScreen> {
 
     try {
       await _stickerService.deletePack(pack.id);
+
+      await AnalyticsService().logEvent(name: 'delete_sticker_pack', parameters: {
+        'pack_id': pack.id,
+        'pack_name': pack.name,
+      });
+
       await _loadPacks(); // Reload to update status
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,15 +213,15 @@ class _StickerManagerScreenState extends State<StickerManagerScreen> {
                               )
                             else if (pack.isDownloaded)
                               AppIconButton(
-                                icon: Icon(Icons.delete_outline,
-                                    color: theme.colorScheme.error),
+                                icon: Icons.delete_outline,
+                                color: theme.colorScheme.error,
                                 onPressed: () => _deletePack(pack),
                                 tooltip: 'Remove Pack',
                               )
                             else
                               AppIconButton(
-                                icon: Icon(Icons.download,
-                                    color: theme.colorScheme.primary),
+                                icon: Icons.download,
+                                color: theme.colorScheme.primary,
                                 onPressed: () => _downloadPack(pack),
                                 tooltip: 'Download Pack',
                               ),
