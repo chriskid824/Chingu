@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/in_app_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -160,6 +162,67 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+
+            const Divider(height: 32),
+            const Text('In-App Notification Test', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().show(
+                      NotificationModel(
+                        id: DateTime.now().toString(),
+                        userId: 'test_user',
+                        type: 'match',
+                        title: 'New Match!',
+                        message: 'You have matched with Sarah!',
+                        imageUrl: 'https://i.pravatar.cc/150?u=sarah',
+                        actionType: 'match_history',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Match Notif'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().show(
+                      NotificationModel(
+                        id: DateTime.now().toString(),
+                        userId: 'test_user',
+                        type: 'message',
+                        title: 'New Message',
+                        message: 'Hey, are you going to the dinner event?',
+                        actionType: 'open_chat',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Message Notif'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().show(
+                      NotificationModel(
+                        id: DateTime.now().toString(),
+                        userId: 'test_user',
+                        type: 'event',
+                        title: 'Event Reminder',
+                        message: 'Dinner at Italian Place starts in 1 hour.',
+                        actionType: 'view_event',
+                        createdAt: DateTime.now(),
+                      ),
+                    );
+                  },
+                  child: const Text('Event Notif'),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 24),
             Text(
               _status,

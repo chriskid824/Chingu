@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
 
+/// A widget that displays an in-app notification banner at the top of the screen.
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback? onDismiss;
