@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -287,6 +288,52 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 記錄登入歷史
+  Future<void> recordLogin(
+    String userId, {
+    required String deviceInfo,
+    String? location,
+    String? ipAddress,
+  }) async {
+    try {
+      final docRef =
+          _usersCollection.doc(userId).collection('loginHistory').doc();
+
+      final Map<String, dynamic> data = {
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'deviceInfo': deviceInfo,
+        'location': location,
+        'ipAddress': ipAddress,
+      };
+
+      await docRef.set(data);
+    } catch (e) {
+      // 記錄失敗不應影響登入流程，僅打印錯誤
+      print('記錄登入歷史失敗: $e');
+    }
+  }
+
+  /// 獲取登入歷史
+  Future<List<LoginHistoryModel>> getLoginHistory(String userId,
+      {int limit = 20}) async {
+    try {
+      final querySnapshot = await _usersCollection
+          .doc(userId)
+          .collection('loginHistory')
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => LoginHistoryModel.fromMap(
+              doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw Exception('獲取登入歷史失敗: $e');
     }
   }
 }

@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -62,6 +64,8 @@ class AuthService {
         throw Exception('登入失敗，請稍後再試');
       }
 
+      await _recordLogin(userCredential.user!.uid);
+
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -99,6 +103,8 @@ class AuthService {
       if (userCredential.user == null) {
         throw Exception('Google 登入失敗');
       }
+
+      await _recordLogin(userCredential.user!.uid);
 
       return userCredential.user!;
     } catch (e) {
@@ -166,6 +172,28 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       throw Exception('刪除帳號失敗: $e');
+    }
+  }
+
+  /// 記錄登入歷史
+  Future<void> _recordLogin(String userId) async {
+    try {
+      String deviceInfo = kIsWeb
+          ? 'Web'
+          : defaultTargetPlatform.toString().split('.').last;
+
+      // Capitalize
+      if (deviceInfo.isNotEmpty) {
+        deviceInfo =
+            deviceInfo[0].toUpperCase() + deviceInfo.substring(1);
+      }
+
+      await FirestoreService().recordLogin(
+        userId,
+        deviceInfo: deviceInfo,
+      );
+    } catch (e) {
+      print('記錄登入歷史失敗: $e');
     }
   }
 
