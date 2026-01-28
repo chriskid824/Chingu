@@ -154,15 +154,24 @@ class ProfileDetailScreen extends StatelessWidget {
                         const SizedBox(height: 24),
 
                         // 統計資料
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatItem(context, '配對', user.totalMatches),
-                            _buildVerticalDivider(),
-                            _buildStatItem(context, '聚餐', user.totalDinners),
-                            _buildVerticalDivider(),
-                            _buildStatItem(context, '評分', user.averageRating, isRating: true),
-                          ],
+                        InkWell(
+                          onTap: () {
+                            Navigator.pushNamed(context, AppRoutes.statsDashboard);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildStatItem(context, '配對', user.totalMatches),
+                                _buildVerticalDivider(),
+                                _buildStatItem(context, '聚餐', user.totalDinners),
+                                _buildVerticalDivider(),
+                                _buildStatItem(context, '評分', user.averageRating, isRating: true),
+                              ],
+                            ),
+                          ),
                         ),
 
                         const SizedBox(height: 24),
