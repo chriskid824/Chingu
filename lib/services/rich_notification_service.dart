@@ -1,9 +1,18 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+
+class InitialRouteInfo {
+  final int? mainTabIndex;
+  final String? targetRoute;
+  final Object? targetArgs;
+
+  InitialRouteInfo({this.mainTabIndex, this.targetRoute, this.targetArgs});
+}
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +28,53 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+
+  /// 檢查啟動時的初始通知
+  Future<InitialRouteInfo?> checkInitialMessage() async {
+    try {
+      final RemoteMessage? message = await FirebaseMessaging.instance.getInitialMessage();
+      if (message != null) {
+        final data = message.data;
+        final actionType = data['actionType'];
+        final actionData = data['actionData'];
+
+        debugPrint('Initial notification received: type=$actionType, data=$actionData');
+        return _getRouteInfo(actionType, actionData);
+      }
+    } catch (e) {
+      debugPrint('Error checking initial message: $e');
+    }
+    return null;
+  }
+
+  /// 根據操作類型獲取路由信息
+  InitialRouteInfo _getRouteInfo(String? actionType, String? actionData) {
+    switch (actionType) {
+      case 'open_chat':
+        // 導航到聊天列表 tab (index 3)
+        return InitialRouteInfo(mainTabIndex: 3);
+
+      case 'view_event':
+        // 導航到探索 tab (index 2) 並進入活動詳情
+        return InitialRouteInfo(
+          mainTabIndex: 2,
+          targetRoute: AppRoutes.eventDetail,
+          targetArgs: actionData,
+        );
+
+      case 'match_history':
+        // 導航到配對 tab (index 1) 並進入配對列表
+        return InitialRouteInfo(
+          mainTabIndex: 1,
+          targetRoute: AppRoutes.matchesList,
+          targetArgs: actionData,
+        );
+
+      default:
+        // 默認導航到通知頁面
+        return InitialRouteInfo(mainTabIndex: 0, targetRoute: AppRoutes.notifications);
+    }
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {

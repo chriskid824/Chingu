@@ -31,11 +31,19 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 檢查啟動時的初始通知
+  final initialRouteInfo = await RichNotificationService().checkInitialMessage();
+
+  runApp(ChinguApp(initialRouteInfo: initialRouteInfo));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final InitialRouteInfo? initialRouteInfo;
+
+  const ChinguApp({
+    super.key,
+    this.initialRouteInfo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +63,31 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRoute) {
+              final List<Route<dynamic>> routes = [];
+
+              // 基礎路由：主頁面
+              routes.add(AppRouter.generateRoute(
+                RouteSettings(
+                  name: AppRoutes.mainNavigation,
+                  arguments: {
+                    'initialIndex': initialRouteInfo?.mainTabIndex ?? 0
+                  },
+                ),
+              ));
+
+              // 如果有目標路由，則添加到堆疊頂部
+              if (initialRouteInfo?.targetRoute != null) {
+                routes.add(AppRouter.generateRoute(
+                  RouteSettings(
+                    name: initialRouteInfo!.targetRoute,
+                    arguments: initialRouteInfo!.targetArgs,
+                  ),
+                ));
+              }
+
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
