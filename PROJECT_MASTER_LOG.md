@@ -112,6 +112,11 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **通知服務 (Notification Service)**:
+  - 創建 `NotificationService` 處理 FCM Token 管理與消息接收
+  - 整合 `RichNotificationService` 實現前台通知顯示與後台點擊導航
+  - 實現 Token 自動保存至 Firestore 與登入狀態監聽
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
