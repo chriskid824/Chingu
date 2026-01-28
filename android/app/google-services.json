@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "chingu-98387",
+    "storage_bucket": "chingu-98387.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+        "android_client_info": {
+          "package_name": "com.chingu.chingu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDummyKey_REPLACE_WITH_REAL_FILE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1",
+  "_comment": "THIS IS A PLACEHOLDER FILE. PLEASE REPLACE IT WITH THE REAL google-services.json FROM FIREBASE CONSOLE."
+}
