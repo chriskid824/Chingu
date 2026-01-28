@@ -39,6 +39,7 @@ import '../../screens/chat/sticker_manager_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
 import '../../screens/settings/privacy_settings_screen.dart';
+import '../../screens/settings/privacy_mode_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
@@ -94,6 +95,7 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
   static const String privacySettings = '/privacy-settings';
+  static const String privacyMode = '/privacy-mode';
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
@@ -217,6 +219,9 @@ class AppRouter {
       
       case AppRoutes.privacySettings:
         return MaterialPageRoute(builder: (_) => const PrivacySettingsScreen());
+
+      case AppRoutes.privacyMode:
+        return MaterialPageRoute(builder: (_) => const PrivacyModeScreen());
       
       case AppRoutes.notificationSettings:
         return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
