@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/event_status.dart';
 
 class EventCard extends StatefulWidget {
   final String title;
@@ -8,6 +9,8 @@ class EventCard extends StatefulWidget {
   final String budget;
   final String location;
   final bool isUpcoming;
+  final EventStatus? status;
+  final bool isWaitlisted;
   final VoidCallback? onTap;
 
   const EventCard({
@@ -18,6 +21,8 @@ class EventCard extends StatefulWidget {
     required this.budget,
     required this.location,
     required this.isUpcoming,
+    this.status,
+    this.isWaitlisted = false,
     this.onTap,
   });
 
@@ -32,6 +37,43 @@ class _EventCardState extends State<EventCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    Color statusColor;
+    String statusText;
+
+    if (widget.isWaitlisted) {
+      statusColor = chinguTheme?.warning ?? Colors.orange;
+      statusText = '候補中';
+    } else if (widget.status != null) {
+      switch (widget.status!) {
+        case EventStatus.pending:
+          statusColor = chinguTheme?.warning ?? Colors.orange;
+          statusText = '配對中';
+          break;
+        case EventStatus.confirmed:
+          statusColor = chinguTheme?.success ?? Colors.green;
+          statusText = '已確認';
+          break;
+        case EventStatus.completed:
+          statusColor = theme.colorScheme.onSurface.withOpacity(0.6);
+          statusText = '已完成';
+          break;
+        case EventStatus.cancelled:
+          statusColor = theme.colorScheme.error;
+          statusText = '已取消';
+          break;
+        case EventStatus.full:
+           statusColor = theme.colorScheme.secondary;
+           statusText = '已額滿';
+           break;
+      }
+    } else {
+      // Fallback to isUpcoming logic
+      statusColor = widget.isUpcoming
+          ? (chinguTheme?.success ?? Colors.green)
+          : theme.colorScheme.onSurface.withOpacity(0.6);
+      statusText = widget.isUpcoming ? '已確認' : '已完成';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -116,17 +158,13 @@ class _EventCardState extends State<EventCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: widget.isUpcoming
-                                ? (chinguTheme?.success ?? Colors.green).withOpacity(0.1)
-                                : theme.colorScheme.surfaceContainerHighest,
+                            color: statusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            widget.isUpcoming ? '已確認' : '已完成',
+                            statusText,
                             style: TextStyle(
-                              color: widget.isUpcoming
-                                  ? (chinguTheme?.success ?? Colors.green)
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: statusColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
