@@ -6,4 +6,5 @@ export 'dinner_event_model.dart';
 export 'chat_message_model.dart';
 export 'notification_model.dart';
 export 'moment_model.dart';
+export 'notification_settings_model.dart';
 
