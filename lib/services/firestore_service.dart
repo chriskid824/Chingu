@@ -268,6 +268,21 @@ class FirestoreService {
     }
   }
 
+  /// 請求匯出用戶資料
+  ///
+  /// [uid] 用戶 ID
+  Future<void> requestDataExport(String uid) async {
+    try {
+      await _firestore.collection('data_export_requests').add({
+        'uid': uid,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('請求匯出資料失敗: $e');
+    }
+  }
+
   /// 提交用戶舉報
   Future<void> submitUserReport({
     required String reporterId,

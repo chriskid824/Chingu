@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/services/auth_service.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
@@ -78,7 +81,44 @@ class PrivacySettingsScreen extends StatelessWidget {
             leading: Icon(Icons.download, color: theme.colorScheme.onSurface.withOpacity(0.7)),
             title: const Text('下載我的資料'),
             trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
-            onTap: () {},
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('下載我的資料'),
+                  content: const Text('您要請求匯出您的個人資料副本嗎？我們會在準備好後寄送給您。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        try {
+                          final user = AuthService().currentUser;
+                          if (user != null) {
+                            await FirestoreService().requestDataExport(user.uid);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('資料匯出請求已發送')),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('請求失敗: $e')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('確認'),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -106,30 +146,7 @@ class PrivacySettingsScreen extends StatelessWidget {
                 ),
                 trailing: Icon(Icons.chevron_right, color: theme.colorScheme.error),
                 onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('刪除帳號'),
-                      content: const Text('您確定要刪除帳號嗎？所有資料將被永久刪除且無法復原。'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('取消'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // TODO: Implement delete account logic
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('功能尚未開放')),
-                            );
-                          },
-                          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                          child: const Text('刪除'),
-                        ),
-                      ],
-                    ),
-                  );
+                  Navigator.of(context).pushNamed(AppRoutes.deleteAccount);
                 },
               ),
             ),
