@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/widgets/app_icon_button.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 import 'package:chingu/providers/auth_provider.dart';
 
 class ReportUserScreen extends StatefulWidget {
@@ -70,6 +71,11 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
         reason: _selectedReason!,
         description: _descriptionController.text.trim(),
       );
+
+      await AnalyticsService().logEvent(name: 'report_user', parameters: {
+        'reported_user_id': widget.reportedUserId,
+        'reason': _selectedReason!,
+      });
 
       if (!mounted) return;
 
@@ -173,7 +179,8 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
               SizedBox(height: 32),
               GradientButton(
                 text: _isSubmitting ? '提交中...' : '提交舉報',
-                onPressed: _isSubmitting ? null : _submitReport,
+                onPressed: () => _submitReport(),
+                isLoading: _isSubmitting,
                 width: double.infinity,
               ),
               if (_isSubmitting)
