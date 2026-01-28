@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
-import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
 
 class MomentCard extends StatefulWidget {
@@ -45,7 +45,7 @@ class _MomentCardState extends State<MomentCard> {
   }
 
   void _toggleLike() {
-    HapticUtils.light();
+    HapticFeedback.lightImpact();
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
