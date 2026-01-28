@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/models/user_model.dart';
 // 認證模組
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -171,7 +172,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final user = settings.arguments as UserModel?;
+        return MaterialPageRoute(builder: (_) => UserDetailScreen(user: user));
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
@@ -184,7 +186,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final eventId = settings.arguments as String?;
+        return MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: eventId));
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());

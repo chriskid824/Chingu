@@ -2,8 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
+import 'firestore_service.dart';
+import 'chat_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -78,50 +83,115 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  Future<void> _handleNavigation(String? actionType, String? actionData, String? actionId) async {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      await _performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      await _performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  Future<void> _performAction(String action, String? data, NavigatorState navigator) async {
     switch (action) {
       case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
+      case 'new_message':
+        await _navigateToChat(data, navigator);
         break;
       case 'view_event':
+      case 'event_update':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: data);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
+        break;
+      case 'match_success':
+      case 'match':
+        await _navigateToMatch(data, navigator);
         break;
       default:
         // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
         break;
+    }
+  }
+
+  Future<void> _navigateToMatch(String? userId, NavigatorState navigator) async {
+    if (userId == null) {
+      navigator.pushNamed(AppRoutes.matchesList);
+      return;
+    }
+    try {
+      final user = await FirestoreService().getUser(userId);
+      if (user != null) {
+        navigator.pushNamed(AppRoutes.userDetail, arguments: user);
+      } else {
+        navigator.pushNamed(AppRoutes.matchesList);
+      }
+    } catch (e) {
+      debugPrint('Error navigating to match: $e');
+      navigator.pushNamed(AppRoutes.matchesList);
+    }
+  }
+
+  Future<void> _navigateToChat(String? data, NavigatorState navigator) async {
+    if (data == null) {
+      navigator.pushNamed(AppRoutes.chatList);
+      return;
+    }
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      String? chatRoomId;
+      UserModel? otherUser;
+
+      // 嘗試將 data 當作 userId
+      final user = await FirestoreService().getUser(data);
+      if (user != null) {
+        otherUser = user;
+        chatRoomId = await ChatService().createChatRoom(currentUser.uid, user.uid);
+      } else {
+        // 如果不是 userId，嘗試當作 chatRoomId
+        final chatRoomDoc = await FirebaseFirestore.instance.collection('chat_rooms').doc(data).get();
+        if (chatRoomDoc.exists) {
+          final roomData = chatRoomDoc.data() as Map<String, dynamic>;
+          final participants = List<String>.from(roomData['participantIds'] ?? []);
+
+          // 找出對方 ID
+          final otherUserId = participants.firstWhere(
+            (id) => id != currentUser.uid,
+            orElse: () => '',
+          );
+
+          if (otherUserId.isNotEmpty) {
+            chatRoomId = data;
+            otherUser = await FirestoreService().getUser(otherUserId);
+          }
+        }
+      }
+
+      if (chatRoomId != null && otherUser != null) {
+        navigator.pushNamed(AppRoutes.chatDetail, arguments: {
+          'chatRoomId': chatRoomId,
+          'otherUser': otherUser,
+        });
+      } else {
+        navigator.pushNamed(AppRoutes.chatList);
+      }
+    } catch (e) {
+      debugPrint('Error navigating to chat: $e');
+      navigator.pushNamed(AppRoutes.chatList);
     }
   }
 
