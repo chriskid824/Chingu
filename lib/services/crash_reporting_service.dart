@@ -9,34 +9,48 @@ class CrashReportingService {
 
   CrashReportingService._internal();
 
-  Future<void> initialize() async {
-    // Pass all uncaught "fatal" errors from the framework to Crashlytics
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  FirebaseCrashlytics? _crashlyticsOverride;
 
-    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
+  FirebaseCrashlytics get _crashlytics => _crashlyticsOverride ?? FirebaseCrashlytics.instance;
+
+  @visibleForTesting
+  set crashlytics(FirebaseCrashlytics value) => _crashlyticsOverride = value;
+
+  Future<void> initialize() async {
+    if (kDebugMode) {
+      // Force disable Crashlytics collection while doing every day development.
+      await _crashlytics.setCrashlyticsCollectionEnabled(false);
+    } else {
+      await _crashlytics.setCrashlyticsCollectionEnabled(true);
+
+      // Pass all uncaught "fatal" errors from the framework to Crashlytics
+      FlutterError.onError = _crashlytics.recordFlutterFatalError;
+
+      // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        _crashlytics.recordError(error, stack, fatal: true);
+        return true;
+      };
+    }
   }
 
   /// Log a message to Crashlytics
   void log(String message) {
-    FirebaseCrashlytics.instance.log(message);
+    _crashlytics.log(message);
   }
 
   /// Record an error to Crashlytics
   void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
-    FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+    _crashlytics.recordError(exception, stack, reason: reason, fatal: fatal);
   }
 
   /// Set a user identifier for crash reports
   Future<void> setUserIdentifier(String identifier) async {
-    await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
+    await _crashlytics.setUserIdentifier(identifier);
   }
 
   /// Set custom keys for crash reports
   Future<void> setCustomKey(String key, Object value) async {
-    await FirebaseCrashlytics.instance.setCustomKey(key, value);
+    await _crashlytics.setCustomKey(key, value);
   }
 }
