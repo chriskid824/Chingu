@@ -61,6 +61,8 @@
   - [x] 實作即時訊息監聽 (Real-time listener)
   - [x] 實作發送訊息功能
   - [x] 修復 AppRouter settings 參數傳遞問題
+- [x] **雙因素認證 (2FA)**
+  - 實作 `TwoFactorAuthService` 支援 SMS 與 Email 驗證碼邏輯
 - [ ] **連接首頁活動資料**
   - [ ] 從 Firestore 載入「即將到來的晚餐」
   - [ ] 在首頁顯示真實活動列表
