@@ -10,4 +10,4 @@ export { sendBroadcast } from "./sendBroadcast";
 // Future exports will be added here:
 // export {createWeeklyEvents} from "./createWeeklyEvents";
 // export {processEventAttendance} from "./processEventAttendance";
-// export {sendEventReminders} from "./sendEventReminders";
+export { sendEventReminders } from "./sendEventReminders";
