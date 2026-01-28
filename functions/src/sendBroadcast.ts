@@ -1,7 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -21,8 +23,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         );
     }
 
-    // TODO: Add admin role verification
-    // For now, we'll check if user is in an 'admins' collection
+    // Check if user is in an 'admins' collection
     const adminDoc = await admin.firestore()
         .collection("admins")
         .doc(context.auth.uid)
@@ -53,18 +54,34 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         );
     }
 
+    // Validate targetCities limit
+    if (targetCities && targetCities.length > 30) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "Cannot target more than 30 cities at once."
+        );
+    }
+
+    // Ensure customData values are strings
+    const formattedData: { [key: string]: string } = {};
+    if (customData) {
+        for (const [key, value] of Object.entries(customData)) {
+            formattedData[key] = String(value);
+        }
+    }
+
     try {
         let targetTokens: string[] = [];
 
         if (targetAll) {
             // Send to all users - use topic subscription
-            const message = {
+            const message: admin.messaging.Message = {
                 notification: {
                     title: title,
                     body: body,
                     ...(imageUrl && { imageUrl }),
                 },
-                data: customData || {},
+                data: formattedData,
                 topic: "all_users",
             };
 
@@ -83,14 +100,15 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
 
             return { success: true, messageId: response, recipients: "all" };
         } else if (targetUserIds && targetUserIds.length > 0) {
-            // Send to specific users
-            const usersSnapshot = await admin.firestore()
-                .collection("users")
-                .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
-                .get();
+            // Send to specific users using getAll to avoid 'in' query limits
+            const userRefs = targetUserIds.map((uid: string) =>
+                admin.firestore().collection("users").doc(uid)
+            );
 
-            targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
+            const userDocs = await admin.firestore().getAll(...userRefs);
+
+            targetTokens = userDocs
+                .map((doc) => doc.data()?.fcmToken)
                 .filter((token) => token); // Remove null/undefined tokens
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
@@ -118,27 +136,45 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         }
 
         // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
+        // Note: tokens list can be up to 500. If more, we need to batch.
+        // sendEachForMulticast handles batching internally if tokens > 500?
+        // No, sendEachForMulticast sends to each token individually but in a batch request.
+        // It accepts up to 500 tokens.
+        // We should implement manual batching if we expect > 500 tokens.
+        // For this task, I will add simple batching logic for robustness.
 
-        const response = await admin.messaging().sendEachForMulticast(message);
+        const BATCH_SIZE = 500;
+        let successCount = 0;
+        let failureCount = 0;
 
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
+        for (let i = 0; i < targetTokens.length; i += BATCH_SIZE) {
+            const batchTokens = targetTokens.slice(i, i + BATCH_SIZE);
+
+            const message: admin.messaging.MulticastMessage = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: formattedData,
+                tokens: batchTokens,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+            successCount += response.successCount;
+            failureCount += response.failureCount;
+
+            if (response.failureCount > 0) {
+                console.log(`Batch ${i / BATCH_SIZE}: Failed to send ${response.failureCount} messages`);
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        console.error(`Error sending to token ${batchTokens[idx]}:`, resp.error);
+                    }
+                });
+            }
         }
+
+        console.log(`Successfully sent ${successCount} messages, failed ${failureCount}`);
 
         // Log the broadcast
         await admin.firestore().collection("broadcast_logs").add({
@@ -148,14 +184,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
             sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount,
+            failureCount,
         });
 
         return {
             success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount,
+            failureCount,
             totalTargets: targetTokens.length,
         };
     } catch (error) {
