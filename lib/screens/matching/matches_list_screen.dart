@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class MatchesListScreen extends StatefulWidget {
   const MatchesListScreen({super.key});
@@ -10,36 +14,25 @@ class MatchesListScreen extends StatefulWidget {
 }
 
 class _MatchesListScreenState extends State<MatchesListScreen> {
-  // 模擬數據
-  final List<Map<String, dynamic>> _mutualMatches = [
-    {
-      'name': '王小華',
-      'age': 28,
-      'job': '行銷專員',
-      'matchScore': 92,
-    },
-    {
-      'name': '李小美',
-      'age': 26,
-      'job': '設計師',
-      'matchScore': 88,
-    },
-  ];
+  late Future<List<UserModel>> _matchesFuture;
+  final FirestoreService _firestoreService = FirestoreService();
 
-  final List<Map<String, dynamic>> _likedMatches = [
-    {
-      'name': '陳大明',
-      'age': 30,
-      'job': '軟體工程師',
-      'matchScore': 95,
-    },
-    {
-      'name': '林小芳',
-      'age': 27,
-      'job': '產品經理',
-      'matchScore': 90,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadMatches();
+  }
+
+  void _loadMatches() {
+    final user = context.read<AuthProvider>().userModel;
+    // Use user city or default if not set
+    final city = user?.city.isNotEmpty == true ? user!.city : '台北市';
+
+    _matchesFuture = _firestoreService.queryMatchingUsers(
+      city: city,
+      limit: 20, // Fetch enough to populate lists
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,47 +67,68 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
           color: theme.colorScheme.onSurface,
         ),
       ),
-      body: DefaultTabController(
-        length: 2,
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TabBar(
-                labelColor: Colors.white,
-                unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
-                indicator: BoxDecoration(
-                  gradient: chinguTheme?.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
+      body: FutureBuilder<List<UserModel>>(
+        future: _matchesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final allMatches = snapshot.data ?? [];
+
+          // Split matches for demo purposes (e.g., first half mutual, second half liked)
+          // In a real app, these would come from different queries or filtered lists.
+          final mid = (allMatches.length / 2).ceil();
+          final mutualMatches = allMatches.take(mid).toList();
+          final likedMatches = allMatches.skip(mid).toList();
+
+          return DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    labelColor: Colors.white,
+                    unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
+                    indicator: BoxDecoration(
+                      gradient: chinguTheme?.primaryGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    tabs: const [
+                      Tab(text: '💕 互相喜歡'),
+                      Tab(text: '👍 我喜歡的'),
+                    ],
+                  ),
                 ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: '💕 互相喜歡'),
-                  Tab(text: '👍 我喜歡的'),
-                ],
-              ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildMatchesList(context, mutualMatches, true, theme, chinguTheme),
+                      _buildMatchesList(context, likedMatches, false, theme, chinguTheme),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildMatchesList(context, _mutualMatches, true, theme, chinguTheme),
-                  _buildMatchesList(context, _likedMatches, false, theme, chinguTheme),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildMatchesList(
-      BuildContext context, List<Map<String, dynamic>> matches, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
+      BuildContext context, List<UserModel> matches, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
     if (matches.isEmpty) {
       return _buildEmptyState(context, theme, chinguTheme);
     }
@@ -123,13 +137,14 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: matches.length,
       itemBuilder: (context, index) {
-        final match = matches[index];
+        final user = matches[index];
+        // Calculate a mock score based on hash if needed, or use a field if available
+        final score = 80 + (user.name.hashCode % 20);
+
         return _buildMatchCard(
           context,
-          match['name'],
-          match['age'],
-          match['job'],
-          match['matchScore'],
+          user,
+          score,
           isMutual,
           theme,
           chinguTheme,
@@ -185,7 +200,6 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
             ),
             child: ElevatedButton(
               onPressed: () {
-                // Navigate to MainScreen and switch to Matching/Swipe tab (Index 1)
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   AppRoutes.mainNavigation,
                   (route) => false,
@@ -222,10 +236,14 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
     );
   }
 
-  Widget _buildMatchCard(BuildContext context, String name, int age, String job, int matchScore, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildMatchCard(BuildContext context, UserModel user, int matchScore, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.userDetail);
+        // Pass the REAL user model
+        Navigator.of(context).pushNamed(
+          AppRoutes.userDetail,
+          arguments: user,
+        );
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -256,11 +274,23 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                     gradient: chinguTheme?.primaryGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 36,
-                    color: Colors.white,
-                  ),
+                  child: user.avatarUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          user.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.person,
+                            size: 36,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        size: 36,
+                        color: Colors.white,
+                      ),
                 ),
                 Positioned(
                   right: 0,
@@ -270,7 +300,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                     decoration: BoxDecoration(
                       color: chinguTheme?.success ?? Colors.green,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2), // Careful: White border on avatar check icon
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: const Icon(
                       Icons.check,
@@ -289,7 +319,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$name, $age',
+                    '${user.name}, ${user.age}',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 17,
@@ -306,7 +336,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        job,
+                        user.job,
                         style: TextStyle(
                           fontSize: 14,
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -351,7 +381,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: theme.scaffoldBackgroundColor, // Using darker color for contrast
+                        color: theme.scaffoldBackgroundColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
