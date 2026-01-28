@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -16,16 +18,28 @@ class ABTestManager {
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
 
+  @visibleForTesting
+  set firestore(FirebaseFirestore instance) => _firestoreInstance = instance;
+
+  @visibleForTesting
+  set auth(FirebaseAuth instance) => _authInstance = instance;
+
   // 本地緩存的測試配置
   Map<String, ABTestConfig> _cachedTests = {};
   
+  // 本地緩存的功能開關
+  Map<String, FeatureConfig> _cachedFeatures = {};
+
   // 用戶的變體分配緩存
   Map<String, String> _userVariants = {};
+
+  StreamSubscription? _authSubscription;
 
   /// 初始化 A/B 測試管理器
   /// 從 Firestore 加載配置
   Future<void> initialize() async {
     try {
+      // 加載測試配置
       final snapshot = await _firestore
           .collection('ab_tests')
           .where('isActive', isEqualTo: true)
@@ -37,11 +51,37 @@ class ABTestManager {
         _cachedTests[config.testId] = config;
       }
 
+      // 加載功能開關
+      final featureSnapshot = await _firestore
+          .collection('feature_flags')
+          .get();
+
+      _cachedFeatures.clear();
+      for (var doc in featureSnapshot.docs) {
+        final config = FeatureConfig.fromFirestore(doc);
+        _cachedFeatures[config.key] = config;
+      }
+
+      // 監聽用戶登錄狀態變化
+      _authSubscription?.cancel();
+      _authSubscription = _auth.authStateChanges().listen((user) {
+        if (user != null) {
+          _loadUserVariants();
+        } else {
+          _userVariants.clear();
+        }
+      });
+
       // 加載用戶的變體分配
       await _loadUserVariants();
     } catch (e) {
       print('Failed to initialize ABTestManager: $e');
     }
+  }
+
+  /// 釋放資源
+  void dispose() {
+    _authSubscription?.cancel();
   }
 
   /// 加載用戶已分配的變體
@@ -140,23 +180,11 @@ class ABTestManager {
     }
 
     // 作為簡單功能開關檢查
-    final config = await _getFeatureConfig(featureKey);
-    return config?.enabled ?? false;
-  }
-
-  /// 獲取功能配置(用於簡單開關)
-  Future<FeatureConfig?> _getFeatureConfig(String featureKey) async {
-    try {
-      final doc = await _firestore
-          .collection('feature_flags')
-          .doc(featureKey)
-          .get();
-
-      if (!doc.exists) return null;
-      return FeatureConfig.fromFirestore(doc);
-    } catch (e) {
-      return null;
+    if (_cachedFeatures.containsKey(featureKey)) {
+      return _cachedFeatures[featureKey]!.enabled;
     }
+
+    return false;
   }
 
   /// 記錄測試事件(用於分析)
@@ -192,6 +220,7 @@ class ABTestManager {
   /// 清除緩存(用於測試)
   void clearCache() {
     _cachedTests.clear();
+    _cachedFeatures.clear();
     _userVariants.clear();
   }
 
