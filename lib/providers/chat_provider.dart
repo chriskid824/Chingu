@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/chat_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -116,6 +117,8 @@ class ChatProvider with ChangeNotifier {
   Future<void> sendMessage({
     required String chatRoomId,
     required String senderId,
+    required String senderName,
+    String? senderAvatarUrl,
     required String text,
     String type = 'text',
   }) async {
@@ -137,6 +140,15 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 發送推送通知
+      // 不等待通知發送完成，以免阻塞 UI
+      ChatService().sendPushNotification(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: senderName,
+        message: type == 'text' ? text : '[${type}]',
+      );
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;
