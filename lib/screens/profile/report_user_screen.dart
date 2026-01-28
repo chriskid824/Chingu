@@ -173,7 +173,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
               SizedBox(height: 32),
               GradientButton(
                 text: _isSubmitting ? '提交中...' : '提交舉報',
-                onPressed: _isSubmitting ? null : _submitReport,
+                onPressed: _isSubmitting ? () {} : () => _submitReport(),
                 width: double.infinity,
               ),
               if (_isSubmitting)
