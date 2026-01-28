@@ -289,6 +289,78 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 添加用戶到收藏
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> addFavorite(String currentUserId, String targetUserId) async {
+    try {
+      await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .set({
+        'uid': targetUserId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('添加收藏失敗: $e');
+    }
+  }
+
+  /// 從收藏移除用戶
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> removeFavorite(String currentUserId, String targetUserId) async {
+    try {
+      await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .delete();
+    } catch (e) {
+      throw Exception('移除收藏失敗: $e');
+    }
+  }
+
+  /// 檢查是否已收藏
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<bool> isFavorite(String currentUserId, String targetUserId) async {
+    try {
+      final doc = await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      throw Exception('檢查收藏狀態失敗: $e');
+    }
+  }
+
+  /// 獲取收藏列表
+  ///
+  /// [currentUserId] 當前用戶 ID
+  Future<List<UserModel>> getFavorites(String currentUserId) async {
+    try {
+      final snapshot = await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      if (snapshot.docs.isEmpty) return [];
+
+      final favoriteIds = snapshot.docs.map((doc) => doc.id).toList();
+      return await getBatchUsers(favoriteIds);
+    } catch (e) {
+      throw Exception('獲取收藏列表失敗: $e');
+    }
+  }
 }
 
 

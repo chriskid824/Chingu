@@ -206,6 +206,52 @@ class ProfileDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 我的收藏入口
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: chinguTheme?.surfaceVariant ??
+                                  theme.dividerColor),
+                          boxShadow: [
+                            BoxShadow(
+                              color: chinguTheme?.shadowLight ?? Colors.black12,
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          onTap: () =>
+                              Navigator.pushNamed(context, AppRoutes.favorites),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: (chinguTheme?.warning ?? Colors.amber)
+                                  .withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.star_rounded,
+                              color: chinguTheme?.warning ?? Colors.amber,
+                            ),
+                          ),
+                          title: Text(
+                            '我的收藏',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          trailing: Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: theme.colorScheme.onSurface.withOpacity(0.3),
+                          ),
+                        ),
+                      ),
+
                       _buildSectionTitle(context, '關於我'),
                       const SizedBox(height: 12),
                       Text(
