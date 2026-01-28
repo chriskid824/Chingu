@@ -1,15 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum NotificationType {
+  match,
+  message,
+  event,
+  system,
+  rating,
+  unknown;
+
+  static NotificationType fromString(String? value) {
+    return NotificationType.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => NotificationType.unknown,
+    );
+  }
+}
+
 /// 通知模型
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final NotificationType type; // 'match', 'event', 'message', 'rating', 'system'
   final String title;
   final String message;
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
+  final String? deeplink;
   final bool isRead;
   final DateTime createdAt;
 
@@ -22,6 +39,7 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.deeplink,
     this.isRead = false,
     required this.createdAt,
   });
@@ -37,12 +55,13 @@ class NotificationModel {
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
-      type: map['type'] ?? 'system',
+      type: NotificationType.fromString(map['type']),
       title: map['title'] ?? '',
       message: map['message'] ?? '',
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      deeplink: map['deeplink'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -52,12 +71,13 @@ class NotificationModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'type': type,
+      'type': type.name,
       'title': title,
       'message': message,
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -65,58 +85,52 @@ class NotificationModel {
 
   /// 複製並標記為已讀
   NotificationModel markAsRead() {
+    return copyWith(isRead: true);
+  }
+
+  /// 複製對象
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    NotificationType? type,
+    String? title,
+    String? message,
+    String? imageUrl,
+    String? actionType,
+    String? actionData,
+    String? deeplink,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
     return NotificationModel(
-      id: id,
-      userId: userId,
-      type: type,
-      title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
-      isRead: true,
-      createdAt: createdAt,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
+      actionType: actionType ?? this.actionType,
+      actionData: actionData ?? this.actionData,
+      deeplink: deeplink ?? this.deeplink,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
   /// 獲取通知圖標
   String get iconName {
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return 'favorite';
-      case 'event':
+      case NotificationType.event:
         return 'event';
-      case 'message':
+      case NotificationType.message:
         return 'message';
-      case 'rating':
+      case NotificationType.rating:
         return 'star';
-      case 'system':
+      case NotificationType.system:
       default:
         return 'notifications';
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
