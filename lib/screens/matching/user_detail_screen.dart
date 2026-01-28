@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 class UserDetailScreen extends StatelessWidget {
   const UserDetailScreen({super.key});
@@ -38,6 +42,33 @@ class UserDetailScreen extends StatelessWidget {
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (value) => _handleAction(context, value),
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'report',
+                    child: Text('檢舉用戶'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'block',
+                    child: Text('封鎖用戶', style: TextStyle(color: Colors.red)),
+                  ),
+                ],
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor.withOpacity(0.8),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.more_vert,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -427,6 +458,80 @@ class UserDetailScreen extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: color,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleAction(BuildContext context, String value) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    // 嘗試從參數中獲取 UserModel，支持直接傳遞 UserModel 或 Map
+    UserModel? user;
+    if (args is UserModel) {
+      user = args;
+    } else if (args is Map && args.containsKey('user')) {
+      user = args['user'] as UserModel?;
+    }
+
+    if (value == 'block') {
+      if (user != null) {
+        _showBlockConfirmation(context, user.uid);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('無法獲取用戶資訊，僅為預覽模式')),
+        );
+      }
+    } else if (value == 'report') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('檢舉功能開發中')),
+      );
+    }
+  }
+
+  void _showBlockConfirmation(BuildContext context, String targetUid) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('封鎖用戶'),
+        content: const Text('確定要封鎖此用戶嗎？封鎖後將不再看到對方的資訊。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // 關閉對話框
+
+              final authProvider = context.read<AuthProvider>();
+              final currentUid = authProvider.uid;
+
+              if (currentUid == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('請先登入')),
+                );
+                return;
+              }
+
+              try {
+                await UserBlockService().blockUser(currentUid, targetUid);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已封鎖用戶')),
+                  );
+                  Navigator.of(context).pop(); // 退出詳情頁
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('封鎖失敗: $e')),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('封鎖'),
           ),
         ],
       ),
