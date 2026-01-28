@@ -94,6 +94,14 @@ class RichNotificationService {
     }
   }
 
+  /// 公開方法執行操作 (例如從通知中心)
+  void performAction(String? actionType, String? actionData, [NavigatorState? navigator]) {
+    final nav = navigator ?? AppRouter.navigatorKey.currentState;
+    if (nav == null || actionType == null) return;
+
+    _performAction(actionType, actionData, nav);
+  }
+
   void _performAction(String action, String? data, NavigatorState navigator) {
     switch (action) {
       case 'open_chat':
