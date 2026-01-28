@@ -79,22 +79,23 @@ class RichNotificationService {
 
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
-    final navigator = AppRouter.navigatorKey.currentState;
-    if (navigator == null) return;
-
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      performAction(actionId, actionData);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      performAction(actionType, actionData);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  /// 執行導航動作 (Public method for external use)
+  void performAction(String action, String? data) {
+    final navigator = AppRouter.navigatorKey.currentState;
+    if (navigator == null) return;
+
     switch (action) {
       case 'open_chat':
         if (data != null) {
