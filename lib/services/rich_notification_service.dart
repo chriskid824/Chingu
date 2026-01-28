@@ -20,6 +20,9 @@ class RichNotificationService {
 
   bool _isInitialized = false;
 
+  // 點擊回調
+  Function(String notificationId, String? actionType, String? actionData, String? type)? onNotificationClick;
+
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -66,6 +69,13 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? notificationId = data['notificationId'];
+        final String? type = data['type'];
+
+        // 觸發回調
+        if (notificationId != null) {
+          onNotificationClick?.call(notificationId, actionType, actionData, type);
+        }
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
@@ -186,6 +196,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'type': notification.type,
     };
 
     await _flutterLocalNotificationsPlugin.show(
