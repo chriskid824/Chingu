@@ -73,6 +73,23 @@ class ChatService {
     }
   }
 
+  /// 獲取用戶參與的聊天室數量
+  ///
+  /// [userId] 用戶 ID
+  Future<int> getUserChatCount(String userId) async {
+    try {
+      final aggregateQuery = await _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .count()
+          .get();
+
+      return aggregateQuery.count ?? 0;
+    } catch (e) {
+      print('獲取聊天室數量失敗: $e');
+      return 0;
+    }
+  }
+
   /// 發送訊息
   Future<void> sendMessage({
     required String chatRoomId,
