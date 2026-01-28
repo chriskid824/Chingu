@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
@@ -20,6 +21,13 @@ class NotificationStorageService {
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+
+  @visibleForTesting
+  set firestoreInstance(FirebaseFirestore instance) =>
+      _firestoreInstance = instance;
+
+  @visibleForTesting
+  set authInstance(FirebaseAuth instance) => _authInstance = instance;
 
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
@@ -206,12 +214,12 @@ class NotificationStorageService {
   }
 
   /// 按類型獲取通知
-  Future<List<NotificationModel>> getNotificationsByType(String type) async {
+  Future<List<NotificationModel>> getNotificationsByType(NotificationType type) async {
     final userId = _currentUserId;
     if (userId == null) return [];
 
     final snapshot = await _notificationsRef(userId)
-        .where('type', isEqualTo: type)
+        .where('type', isEqualTo: type.name)
         .orderBy('createdAt', descending: true)
         .get();
 
@@ -234,7 +242,7 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
       userId: userId,
-      type: 'system',
+      type: NotificationType.system,
       title: title,
       message: message,
       imageUrl: imageUrl,
@@ -259,7 +267,7 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'match',
+      type: NotificationType.match,
       title: '新配對成功! 🎉',
       message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
@@ -285,7 +293,7 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'event',
+      type: NotificationType.event,
       title: eventTitle,
       message: message,
       imageUrl: imageUrl,
@@ -311,7 +319,7 @@ class NotificationStorageService {
     final notification = NotificationModel(
       id: '',
       userId: userId,
-      type: 'message',
+      type: NotificationType.message,
       title: senderName,
       message: messagePreview,
       imageUrl: senderPhotoUrl,

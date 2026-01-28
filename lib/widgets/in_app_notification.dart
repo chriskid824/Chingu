@@ -164,19 +164,19 @@ class InAppNotification extends StatelessWidget {
     }
   }
 
-  Color _getIconColor(String type, ChinguTheme? chinguTheme, ThemeData theme) {
+  Color _getIconColor(NotificationType type, ChinguTheme? chinguTheme, ThemeData theme) {
     if (chinguTheme == null) return theme.colorScheme.primary;
 
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return chinguTheme.error; // Pink/Red for love/match
-      case 'event':
+      case NotificationType.event:
         return theme.colorScheme.primary;
-      case 'message':
+      case NotificationType.message:
         return chinguTheme.info;
-      case 'rating':
+      case NotificationType.rating:
         return chinguTheme.warning;
-      case 'system':
+      case NotificationType.system:
       default:
         return chinguTheme.success; // Or primary
     }
