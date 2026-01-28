@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -21,6 +23,13 @@ class NotificationStorageService {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
 
+  @visibleForTesting
+  set firestoreInstance(FirebaseFirestore instance) =>
+      _firestoreInstance = instance;
+
+  @visibleForTesting
+  set authInstance(FirebaseAuth instance) => _authInstance = instance;
+
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
 
@@ -32,11 +41,51 @@ class NotificationStorageService {
         .collection('notifications');
   }
 
+  /// 檢查是否應該發送通知 (根據用戶偏好)
+  Future<bool> _shouldSendNotification(String userId, String type) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (!doc.exists) return false;
+
+      final user = UserModel.fromFirestore(doc);
+      final settings = user.notificationSettings;
+
+      if (!settings.pushEnabled) return false;
+
+      switch (type) {
+        case 'match':
+          // 這裡統稱 match，具體細分可能需要更細的 type 或檢查內容
+          // 暫時同時檢查 newMatch 和 matchSuccess，只要有一個開啟就允許
+          // 未來可以細分 type 為 'match_new' 和 'match_success'
+          return settings.matchSuccess || settings.newMatch;
+        case 'message':
+          return settings.newMessage;
+        case 'event':
+          return settings.eventReminder || settings.eventChange;
+        case 'marketing':
+          return settings.marketingPromotion || settings.marketingNewsletter;
+        case 'system':
+          return true;
+        default:
+          return true;
+      }
+    } catch (e) {
+      print('Error checking notification settings: $e');
+      // 發生錯誤時預設允許發送，避免重要通知遺失
+      return true;
+    }
+  }
+
   /// 儲存新通知
   Future<String> saveNotification(NotificationModel notification) async {
-    final userId = _currentUserId;
-    if (userId == null) {
-      throw Exception('User not authenticated');
+    final userId = notification.userId;
+    if (userId.isEmpty) {
+      throw Exception('Notification userId is required');
+    }
+
+    // 檢查用戶偏好
+    if (!await _shouldSendNotification(userId, notification.type)) {
+      return ''; // 用戶已關閉此類通知
     }
 
     final docRef = await _notificationsRef(userId).add(notification.toMap());
@@ -45,15 +94,31 @@ class NotificationStorageService {
 
   /// 批量儲存通知 (用於同步)
   Future<void> saveNotifications(List<NotificationModel> notifications) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
+    if (notifications.isEmpty) return;
+
+    // 假設同一批通知通常屬於同一個用戶，或者混合
+    // 為了安全起見，我們逐個檢查或分組檢查
+    // 這裡簡單實現為逐個檢查並添加到 batch
 
     final batch = _firestore.batch();
+    bool hasUpdates = false;
+
     for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
-      batch.set(docRef, notification.toMap());
+      if (notification.userId.isEmpty) continue;
+
+      // 這裡如果逐個 await _shouldSendNotification 會有效能問題
+      // 但考慮到批量通常不大，暫時接受
+      // 優化：可以先 fetch user settings cached
+      if (await _shouldSendNotification(notification.userId, notification.type)) {
+        final docRef = _notificationsRef(notification.userId).doc(notification.id.isEmpty ? null : notification.id);
+        batch.set(docRef, notification.toMap());
+        hasUpdates = true;
+      }
     }
-    await batch.commit();
+
+    if (hasUpdates) {
+      await batch.commit();
+    }
   }
 
   /// 獲取所有通知 (分頁)
@@ -222,13 +287,14 @@ class NotificationStorageService {
 
   /// 創建系統通知
   Future<void> createSystemNotification({
+    String? targetUserId,
     required String title,
     required String message,
     String? imageUrl,
     String? actionType,
     String? actionData,
   }) async {
-    final userId = _currentUserId;
+    final userId = targetUserId ?? _currentUserId;
     if (userId == null) return;
 
     final notification = NotificationModel(
@@ -244,16 +310,17 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await saveNotification(notification);
   }
 
   /// 創建配對通知
   Future<void> createMatchNotification({
+    String? targetUserId,
     required String matchedUserName,
     required String matchedUserId,
     String? matchedUserPhotoUrl,
   }) async {
-    final userId = _currentUserId;
+    final userId = targetUserId ?? _currentUserId;
     if (userId == null) return;
 
     final notification = NotificationModel(
@@ -269,17 +336,18 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await saveNotification(notification);
   }
 
   /// 創建活動通知
   Future<void> createEventNotification({
+    String? targetUserId,
     required String eventId,
     required String eventTitle,
     required String message,
     String? imageUrl,
   }) async {
-    final userId = _currentUserId;
+    final userId = targetUserId ?? _currentUserId;
     if (userId == null) return;
 
     final notification = NotificationModel(
@@ -295,17 +363,18 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await saveNotification(notification);
   }
 
   /// 創建消息通知
   Future<void> createMessageNotification({
+    String? targetUserId,
     required String senderName,
     required String senderId,
     required String messagePreview,
     String? senderPhotoUrl,
   }) async {
-    final userId = _currentUserId;
+    final userId = targetUserId ?? _currentUserId;
     if (userId == null) return;
 
     final notification = NotificationModel(
@@ -321,6 +390,6 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await saveNotification(notification);
   }
 }
