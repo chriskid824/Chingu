@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -160,6 +161,30 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('Crashlytics 測試', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => throw Exception('測試 Dart 異常 (Test Dart Exception)'),
+                  icon: const Icon(Icons.error_outline),
+                  label: const Text('觸發 Dart 異常'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => FirebaseCrashlytics.instance.crash(),
+                  icon: const Icon(Icons.bug_report),
+                  label: const Text('觸發原生崩潰 (Native Crash)'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
