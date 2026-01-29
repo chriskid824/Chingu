@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -22,6 +23,33 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 獲取初始訊息 (如果 App 是從通知啟動的)
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  String initialRoute = AppRoutes.mainNavigation;
+  Object? initialRouteArgs;
+
+  if (initialMessage != null) {
+    // 解析通知資料
+    final data = initialMessage.data;
+    final actionType = data['actionType'];
+
+    // 將所有通知資料作為參數傳遞
+    initialRouteArgs = data;
+
+    // 根據 actionType 決定目標頁面
+    switch (actionType) {
+      case 'open_chat':
+        initialRoute = AppRoutes.chatList;
+        break;
+      case 'view_event':
+        initialRoute = AppRoutes.eventDetail;
+        break;
+      case 'match_history':
+        initialRoute = AppRoutes.matchesList;
+        break;
+    }
+  }
+
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
@@ -31,11 +59,21 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  runApp(ChinguApp(
+    initialRoute: initialRoute,
+    initialRouteArgs: initialRouteArgs,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String initialRoute;
+  final Object? initialRouteArgs;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute = AppRoutes.mainNavigation,
+    this.initialRouteArgs,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +93,24 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            initialRoute: initialRoute,
+            onGenerateInitialRoutes: (String routeName) {
+              final List<Route<dynamic>> routes = [];
+
+              // 始終先加入 Splash 頁面作為底層
+              routes.add(AppRouter.generateRoute(
+                const RouteSettings(name: AppRoutes.splash)
+              ));
+
+              // 如果目標不是 Splash，則加入目標頁面並帶上參數
+              if (routeName != AppRoutes.splash) {
+                routes.add(AppRouter.generateRoute(
+                  RouteSettings(name: routeName, arguments: initialRouteArgs)
+                ));
+              }
+
+              return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
