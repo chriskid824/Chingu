@@ -10,8 +10,10 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者
+  final int maxParticipants;
   final List<String> participantIds; // 用戶 UID 列表
+  final List<String> waitingListIds; // 候補名單 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
   
   // 餐廳資訊（系統推薦後確認）
@@ -41,7 +43,9 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
     required this.participantIds,
+    this.waitingListIds = const [],
     required this.participantStatus,
     this.restaurantName,
     this.restaurantAddress,
@@ -72,7 +76,9 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
       participantIds: List<String>.from(map['participantIds'] ?? []),
+      waitingListIds: List<String>.from(map['waitingListIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
@@ -105,7 +111,9 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
       'participantIds': participantIds,
+      'waitingListIds': waitingListIds,
       'participantStatus': participantStatus,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
@@ -128,7 +136,9 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
     List<String>? participantIds,
+    List<String>? waitingListIds,
     Map<String, String>? participantStatus,
     String? restaurantName,
     String? restaurantAddress,
@@ -149,7 +159,9 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
       participantIds: participantIds ?? this.participantIds,
+      waitingListIds: waitingListIds ?? this.waitingListIds,
       participantStatus: participantStatus ?? this.participantStatus,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
@@ -197,8 +209,8 @@ class DinnerEventModel {
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  /// 檢查是否已滿
+  bool get isFull => participantIds.length >= maxParticipants;
 
   /// 獲取已確認人數
   int get confirmedCount {
@@ -220,6 +232,12 @@ class DinnerEventModel {
   }
 }
 
+enum EventRegistrationStatus {
+  registered,
+  waitlist,
+  cancelled,
+  unknown,
+}
 
 
 
