@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
@@ -156,7 +157,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
@@ -169,7 +170,7 @@ class InAppNotification extends StatelessWidget {
 
     switch (type) {
       case 'match':
-        return chinguTheme.error; // Pink/Red for love/match
+        return chinguTheme.error;
       case 'event':
         return theme.colorScheme.primary;
       case 'message':
@@ -178,7 +179,137 @@ class InAppNotification extends StatelessWidget {
         return chinguTheme.warning;
       case 'system':
       default:
-        return chinguTheme.success; // Or primary
+        return chinguTheme.success;
     }
+  }
+}
+
+class InAppNotificationUtils {
+  static OverlayEntry? _overlayEntry;
+
+  /// 顯示應用內通知
+  static void show(
+    BuildContext context,
+    NotificationModel notification, {
+    VoidCallback? onTap,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    // 如果已有通知，先移除 (無動畫，直接替換)
+    _removeCurrentNotification();
+
+    final overlayState = Overlay.of(context, rootOverlay: true);
+
+    if (overlayState == null) return;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => _InAppNotificationContainer(
+        notification: notification,
+        duration: duration,
+        onTap: () {
+          _removeCurrentNotification();
+          onTap?.call();
+        },
+        onDismiss: _removeCurrentNotification,
+      ),
+    );
+
+    overlayState.insert(_overlayEntry!);
+  }
+
+  /// 移除當前通知
+  static void _removeCurrentNotification() {
+    if (_overlayEntry != null) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+  }
+}
+
+class _InAppNotificationContainer extends StatefulWidget {
+  final NotificationModel notification;
+  final Duration duration;
+  final VoidCallback onDismiss;
+  final VoidCallback? onTap;
+
+  const _InAppNotificationContainer({
+    required this.notification,
+    required this.duration,
+    required this.onDismiss,
+    this.onTap,
+  });
+
+  @override
+  State<_InAppNotificationContainer> createState() => _InAppNotificationContainerState();
+}
+
+class _InAppNotificationContainerState extends State<_InAppNotificationContainer> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _timer;
+  bool _isDismissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    ));
+
+    _controller.forward();
+
+    // 啟動自動消失計時器
+    _timer = Timer(widget.duration, _dismiss);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _dismiss() {
+    if (_isDismissing) return;
+    _isDismissing = true;
+    _timer?.cancel();
+    _controller.reverse().then((_) {
+      if (mounted) {
+        widget.onDismiss();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Dismissible(
+            key: UniqueKey(),
+            direction: DismissDirection.up,
+            onDismissed: (_) => widget.onDismiss(),
+            child: InAppNotification(
+              notification: widget.notification,
+              onDismiss: _dismiss,
+              onTap: widget.onTap,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/widgets/in_app_notification.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,76 +106,130 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  void _showNotification(String type) {
+    final notification = NotificationModel(
+      id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+      userId: 'test_user',
+      type: type,
+      title: '測試通知 - $type',
+      message: '這是一則 $type 類型的測試通知，時間: ${DateTime.now().toString().split('.')[0]}',
+      createdAt: DateTime.now(),
+      imageUrl: type == 'match' ? 'https://picsum.photos/200' : null,
+      actionType: 'test',
+    );
+
+    InAppNotificationUtils.show(
+      context,
+      notification,
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('點擊了通知: ${notification.title}')),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('開發者工具')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 24),
-            const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 24),
+              const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              const Text(
                 '點擊下方按鈕將生成 6 個測試用戶和 1 個測試活動到您的 Firestore 資料庫中。',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey),
               ),
-            ),
-            const SizedBox(height: 32),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton.icon(
-                onPressed: _runSeeder,
-                icon: const Icon(Icons.add_to_photos_rounded),
-                label: const Text('生成測試數據 (Seeder)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              const SizedBox(height: 32),
+              if (_isLoading)
+                const CircularProgressIndicator()
+              else ...[
+                ElevatedButton.icon(
+                  onPressed: _runSeeder,
+                  icon: const Icon(Icons.add_to_photos_rounded),
+                  label: const Text('生成測試數據 (Seeder)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _generateMatchTestData,
+                  icon: const Icon(Icons.favorite_rounded),
+                  label: const Text('生成配對測試數據'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.pink,
+                    side: const BorderSide(color: Colors.pink),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _clearData,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('清除所有數據'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+
+              const Divider(height: 48),
+
+              const Text('應用內通知測試', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _generateMatchTestData,
-                icon: const Icon(Icons.favorite_rounded),
-                label: const Text('生成配對測試數據'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.pink,
-                  side: const BorderSide(color: Colors.pink),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _showNotification('match'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.pink.shade100, foregroundColor: Colors.pink),
+                    child: const Text('Match 通知'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _showNotification('event'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade100, foregroundColor: Colors.orange),
+                    child: const Text('Event 通知'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _showNotification('message'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade100, foregroundColor: Colors.blue),
+                    child: const Text('Message 通知'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _showNotification('system'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade200, foregroundColor: Colors.black),
+                    child: const Text('System 通知'),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+              Text(
+                _status,
+                style: TextStyle(
+                  color: _status.startsWith('❌') ? Colors.red : Colors.green,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _clearData,
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('清除所有數據'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
-            const SizedBox(height: 24),
-            Text(
-              _status,
-              style: TextStyle(
-                color: _status.startsWith('❌') ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-
-
