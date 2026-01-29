@@ -119,12 +119,34 @@ export const inactivityTest: NotificationCopyTest = {
     ],
 };
 
+// A/B 測試: 每日配對提醒 (Task 170)
+export const dailyMatchReminderTest: NotificationCopyTest = {
+    testId: 'daily_match_reminder_v1',
+    notificationType: 'daily_match_reminder',
+    defaultVariantId: 'control',
+    variants: [
+        {
+            variantId: 'control',
+            title: '查看今日配對',
+            body: '你有新的配對等待查看',
+            emoji: '📅',
+        },
+        {
+            variantId: 'benefit',
+            title: '尋找你的完美對象',
+            body: '別錯過今天認識新朋友的機會',
+            emoji: '💖',
+        },
+    ],
+};
+
 // 所有測試配置
 export const allNotificationTests: NotificationCopyTest[] = [
     matchSuccessTest,
     newMessageTest,
     eventReminderTest,
     inactivityTest,
+    dailyMatchReminderTest,
 ];
 
 /**
@@ -165,4 +187,56 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * Simple deterministic hash function for strings
+ */
+function _hashString(str: string): number {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * Assign a variant to a user deterministically based on User ID
+ * @param userId User ID
+ * @param testId Test ID
+ */
+export function assignUserVariant(userId: string, testId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || !test.variants.length) {
+        return 'control';
+    }
+
+    // Hash combination of userId and testId to ensure different assignments for different tests
+    const hash = _hashString(`${userId}_${testId}`);
+    const index = hash % test.variants.length;
+
+    return test.variants[index].variantId;
+}
+
+/**
+ * Get notification content for a specific user, handling variant assignment automatically
+ * @param testId Test ID
+ * @param userId User ID
+ * @param params Replacement parameters
+ */
+export function getNotificationContentForUser(
+    testId: string,
+    userId: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string } {
+    const variantId = assignUserVariant(userId, testId);
+    const content = getNotificationCopy(testId, variantId, params);
+
+    return {
+        ...content,
+        variantId,
+    };
 }
