@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -17,6 +18,8 @@ class RichNotificationService {
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   bool _isInitialized = false;
 
@@ -57,6 +60,26 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+  }
+
+  /// 訂閱主題
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await _firebaseMessaging.subscribeToTopic(topic);
+      debugPrint('已訂閱主題: $topic');
+    } catch (e) {
+      debugPrint('訂閱主題失敗: $e');
+    }
+  }
+
+  /// 取消訂閱主題
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await _firebaseMessaging.unsubscribeFromTopic(topic);
+      debugPrint('已取消訂閱主題: $topic');
+    } catch (e) {
+      debugPrint('取消訂閱主題失敗: $e');
+    }
   }
 
   /// 處理通知點擊事件
