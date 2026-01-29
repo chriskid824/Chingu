@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -57,6 +60,77 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+  }
+
+  /// 啟動 FCM 服務
+  Future<void> startFCM(String userId) async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+
+      // 請求權限
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // iOS 需等待 APNS token
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          await messaging.getAPNSToken();
+        }
+
+        // 獲取並儲存 token
+        final token = await messaging.getToken();
+        if (token != null) {
+          await _saveTokenToFirestore(userId, token);
+        }
+
+        // 監聽 token 刷新
+        messaging.onTokenRefresh.listen((newToken) {
+          _saveTokenToFirestore(userId, newToken);
+        });
+
+        // 監聽前景訊息
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          _handleForegroundMessage(message);
+        });
+      }
+    } catch (e) {
+      debugPrint('FCM 初始化失敗: $e');
+    }
+  }
+
+  /// 儲存 token 到 Firestore
+  Future<void> _saveTokenToFirestore(String userId, String token) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('儲存 FCM token 失敗: $e');
+    }
+  }
+
+  /// 處理前景訊息
+  void _handleForegroundMessage(RemoteMessage message) {
+    if (message.notification != null) {
+      final notification = NotificationModel(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        type: message.data['type'] ?? 'general',
+        title: message.notification!.title ?? '',
+        message: message.notification!.body ?? '',
+        createdAt: DateTime.now(),
+        isRead: false,
+        imageUrl: message.notification!.android?.imageUrl ??
+                 message.notification!.apple?.imageUrl,
+        actionType: message.data['actionType'],
+        actionData: message.data['actionData'],
+      );
+
+      showNotification(notification);
+    }
   }
 
   /// 處理通知點擊事件

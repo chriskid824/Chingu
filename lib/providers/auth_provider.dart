@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -47,6 +48,10 @@ class AuthProvider with ChangeNotifier {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
+
+      // 初始化 FCM
+      await RichNotificationService().startFCM(firebaseUser.uid);
+
       _status = AuthStatus.authenticated;
     }
     notifyListeners();
