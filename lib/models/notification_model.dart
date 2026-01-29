@@ -6,24 +6,26 @@ class NotificationModel {
   final String userId;
   final String type; // 'match', 'event', 'message', 'rating', 'system'
   final String title;
-  final String message;
+  final String content;
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
+  final String? deeplink;
   final bool isRead;
-  final DateTime createdAt;
+  final DateTime timestamp;
 
   NotificationModel({
     required this.id,
     required this.userId,
     required this.type,
     required this.title,
-    required this.message,
+    required this.content,
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.deeplink,
     this.isRead = false,
-    required this.createdAt,
+    required this.timestamp,
   });
 
   /// 從 Firestore 文檔創建 NotificationModel
@@ -39,12 +41,13 @@ class NotificationModel {
       userId: map['userId'] ?? '',
       type: map['type'] ?? 'system',
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
+      content: map['content'] ?? map['message'] ?? '',
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      deeplink: map['deeplink'],
       isRead: map['isRead'] ?? false,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      timestamp: ((map['timestamp'] ?? map['createdAt'] ?? Timestamp.now()) as Timestamp).toDate(),
     );
   }
 
@@ -54,12 +57,13 @@ class NotificationModel {
       'userId': userId,
       'type': type,
       'title': title,
-      'message': message,
+      'message': content, // Keep as message for DB compatibility
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': Timestamp.fromDate(timestamp), // Keep as createdAt for DB compatibility
     };
   }
 
@@ -70,12 +74,13 @@ class NotificationModel {
       userId: userId,
       type: type,
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: true,
-      createdAt: createdAt,
+      timestamp: timestamp,
     );
   }
 
@@ -96,27 +101,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
