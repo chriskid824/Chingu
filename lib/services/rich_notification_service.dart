@@ -20,6 +20,9 @@ class RichNotificationService {
 
   bool _isInitialized = false;
 
+  /// Callback for notification clicks, exposes payload
+  Function(Map<String, dynamic> payload)? onNotificationClick;
+
   /// 初始化通知服務
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -64,6 +67,10 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
+
+        // Notify listener if set
+        onNotificationClick?.call(data);
+
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
 
@@ -126,7 +133,7 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification, {Map<String, dynamic>? extraPayload}) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +193,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      if (extraPayload != null) ...extraPayload,
     };
 
     await _flutterLocalNotificationsPlugin.show(
