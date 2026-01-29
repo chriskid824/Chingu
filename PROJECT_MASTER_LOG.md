@@ -111,6 +111,10 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **通知生命週期整合 (Notification Lifecycle Integration)**:
+  - 實作 `RichNotificationService` 中的 FCM 處理邏輯，包含 Foreground, Background, Terminated 狀態。
+  - 在 `main.dart` 中將 `ChinguApp` 轉換為 `StatefulWidget` 並在 `initState` 中監聽初始訊息以處理 App 被通知喚醒的情況。
+  - 確保在 `main()` 中正確初始化 Notification Service。
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
