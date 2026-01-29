@@ -58,6 +58,9 @@ class AuthProvider with ChangeNotifier {
       _userModel = await _firestoreService.getUser(uid);
 
       if (_userModel != null) {
+        // 更新本地通知服務設定
+        RichNotificationService().updateSettings(_userModel!.notificationSettings);
+
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
       } else {

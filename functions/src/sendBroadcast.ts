@@ -43,6 +43,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         targetCities = [],
         targetUserIds = [],
         imageUrl,
+        requiredSetting, // e.g., 'marketing_promo', 'event_reminder'
     } = data;
 
     // Validate required fields
@@ -56,8 +57,23 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
     try {
         let targetTokens: string[] = [];
 
+        // Helper to check settings
+        const shouldSendToUser = (userData: any): boolean => {
+            const settings = userData.notificationSettings || {};
+
+            // Check global push setting (default to true if missing)
+            if (settings.push_enabled === false) return false;
+
+            // Check specific setting if required
+            if (requiredSetting && settings[requiredSetting] === false) return false;
+
+            return true;
+        };
+
         if (targetAll) {
             // Send to all users - use topic subscription
+            // Note: Topic messaging does not respect individual Firestore settings!
+            // Client side should manage topic subscription based on settings.
             const message = {
                 notification: {
                     title: title,
@@ -90,6 +106,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .get();
 
             targetTokens = usersSnapshot.docs
+                .filter(doc => shouldSendToUser(doc.data()))
                 .map((doc) => doc.data().fcmToken)
                 .filter((token) => token); // Remove null/undefined tokens
         } else if (targetCities && targetCities.length > 0) {
@@ -101,6 +118,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .get();
 
             targetTokens = usersSnapshot.docs
+                .filter(doc => shouldSendToUser(doc.data()))
                 .map((doc) => doc.data().fcmToken)
                 .filter((token) => token);
         } else {
