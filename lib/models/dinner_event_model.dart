@@ -25,6 +25,7 @@ class DinnerEventModel {
   final DateTime createdAt;
   final DateTime? confirmedAt;
   final DateTime? completedAt;
+  final DateTime? reminderSentAt;
   
   // 破冰問題
   final List<String> icebreakerQuestions;
@@ -51,6 +52,7 @@ class DinnerEventModel {
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
+    this.reminderSentAt,
     this.icebreakerQuestions = const [],
     this.ratings,
     this.reviews,
@@ -86,6 +88,9 @@ class DinnerEventModel {
       completedAt: map['completedAt'] != null 
           ? (map['completedAt'] as Timestamp).toDate() 
           : null,
+      reminderSentAt: map['reminderSentAt'] != null
+          ? (map['reminderSentAt'] as Timestamp).toDate()
+          : null,
       icebreakerQuestions: List<String>.from(map['icebreakerQuestions'] ?? []),
       ratings: map['ratings'] != null 
           ? Map<String, double>.from(map['ratings']) 
@@ -115,6 +120,7 @@ class DinnerEventModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'reminderSentAt': reminderSentAt != null ? Timestamp.fromDate(reminderSentAt!) : null,
       'icebreakerQuestions': icebreakerQuestions,
       'ratings': ratings,
       'reviews': reviews,
@@ -137,6 +143,7 @@ class DinnerEventModel {
     String? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
+    DateTime? reminderSentAt,
     List<String>? icebreakerQuestions,
     Map<String, double>? ratings,
     Map<String, String>? reviews,
@@ -159,6 +166,7 @@ class DinnerEventModel {
       createdAt: createdAt,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       completedAt: completedAt ?? this.completedAt,
+      reminderSentAt: reminderSentAt ?? this.reminderSentAt,
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
       ratings: ratings ?? this.ratings,
       reviews: reviews ?? this.reviews,
