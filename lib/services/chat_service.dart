@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
@@ -84,6 +85,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -114,6 +116,23 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推播通知
+      if (recipientId != null) {
+        final preview = message.length > 20 ? '${message.substring(0, 20)}...' : message;
+        final body = type == 'text' ? preview : '[$type]';
+
+        // Don't await to avoid blocking UI
+        NotificationService().sendNotification(
+          recipientId: recipientId,
+          title: senderName,
+          body: body,
+          data: {
+            'actionType': 'open_chat',
+            'actionData': chatRoomId,
+          },
+        );
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
