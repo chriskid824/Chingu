@@ -3,18 +3,21 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
   uninitialized, // 未初始化
   authenticated, // 已認證
   unauthenticated, // 未認證
+  requiresTwoFactor, // 需要 2FA 驗證
 }
 
 /// 認證 Provider - 管理用戶認證狀態
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final TwoFactorAuthService _twoFactorAuthService = TwoFactorAuthService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -47,7 +50,13 @@ class AuthProvider with ChangeNotifier {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
-      _status = AuthStatus.authenticated;
+
+      // 檢查是否啟用 2FA
+      if (_userModel?.isTwoFactorEnabled == true) {
+        _status = AuthStatus.requiresTwoFactor;
+      } else {
+        _status = AuthStatus.authenticated;
+      }
     }
     notifyListeners();
   }
@@ -271,6 +280,44 @@ class AuthProvider with ChangeNotifier {
         _userModel!.gender.isNotEmpty &&
         _userModel!.job.isNotEmpty &&
         _userModel!.city.isNotEmpty;
+  }
+
+  /// 請求 2FA 驗證碼
+  Future<String?> requestTwoFactorCode() async {
+    try {
+      if (_userModel == null) return null;
+      _setLoading(true);
+      final demoCode = await _twoFactorAuthService.sendCode(_userModel!.twoFactorMethod);
+      _setLoading(false);
+      return demoCode;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  /// 驗證 2FA 驗證碼
+  Future<bool> verifyTwoFactor(String code) async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      await _twoFactorAuthService.verifyCode(code);
+
+      // 驗證成功
+      _status = AuthStatus.authenticated;
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
   }
 
   /// 刷新用戶資料

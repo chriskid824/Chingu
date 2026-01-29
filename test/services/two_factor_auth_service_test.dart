@@ -17,10 +17,8 @@ void main() {
 
       // We check if the class is instantiable and methods exist
       expect(service, isNotNull);
-      expect(service.sendVerificationCode, isNotNull);
+      expect(service.sendCode, isNotNull);
       expect(service.verifyCode, isNotNull);
-      expect(service.enableTwoFactor, isNotNull);
-      expect(service.disableTwoFactor, isNotNull);
     });
   });
 }

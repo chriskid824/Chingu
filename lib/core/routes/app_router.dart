@@ -5,6 +5,7 @@ import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/email_verification_screen.dart';
+import '../../screens/auth/two_factor_verification_screen.dart';
 // 主導航
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
@@ -40,6 +41,7 @@ import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
 import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
+import '../../screens/settings/two_factor_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
@@ -55,6 +57,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String emailVerification = '/email-verification';
+  static const String twoFactorVerification = '/two-factor-verification';
   
   // 主導航
   static const String mainNavigation = '/main';
@@ -95,6 +98,7 @@ class AppRoutes {
   static const String editProfile = '/edit-profile';
   static const String privacySettings = '/privacy-settings';
   static const String notificationSettings = '/notification-settings';
+  static const String twoFactorSettings = '/two-factor-settings';
   static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
@@ -125,6 +129,9 @@ class AppRouter {
       
       case AppRoutes.emailVerification:
         return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
+
+      case AppRoutes.twoFactorVerification:
+        return MaterialPageRoute(builder: (_) => const TwoFactorVerificationScreen());
       
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
@@ -220,6 +227,9 @@ class AppRouter {
       
       case AppRoutes.notificationSettings:
         return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
+
+      case AppRoutes.twoFactorSettings:
+        return MaterialPageRoute(builder: (_) => const TwoFactorSettingsScreen());
       
       case AppRoutes.notificationPreview:
         return MaterialPageRoute(builder: (_) => const NotificationPreviewScreen());
