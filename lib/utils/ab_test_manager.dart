@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -15,6 +18,12 @@ class ABTestManager {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
+
+  @visibleForTesting
+  void setDependencies(FirebaseFirestore firestore, FirebaseAuth auth) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
 
   // 本地緩存的測試配置
   Map<String, ABTestConfig> _cachedTests = {};
@@ -58,7 +67,8 @@ class ABTestManager {
 
       _userVariants.clear();
       for (var doc in snapshot.docs) {
-        _userVariants[doc.id] = doc.data()['variant'] as String;
+        final data = Map<String, dynamic>.from(doc.data() as Map);
+        _userVariants[doc.id] = data['variant'] as String;
       }
     } catch (e) {
       print('Failed to load user variants: $e');
@@ -79,27 +89,40 @@ class ABTestManager {
       return 'control'; // 默認返回對照組
     }
 
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      return config.variants.isNotEmpty ? config.variants.first.name : 'control';
+    }
+
     // 分配新變體
-    final variant = _assignVariant(config);
+    final variant = _assignVariant(config, userId);
     await _saveVariantAssignment(testId, variant);
     
     _userVariants[testId] = variant;
     return variant;
   }
 
-  /// 分配變體(基於權重)
-  String _assignVariant(ABTestConfig config) {
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
-    var cumulative = 0.0;
+  /// 分配變體(基於權重和雜湊)
+  /// 使用 SHA-256 確保確定性分配 (同一個 UserID 對同一個 TestID 總是得到相同的結果)
+  String _assignVariant(ABTestConfig config, String userId) {
+    final input = '${config.testId}_$userId';
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
 
+    // 取前8位字節轉換為整數
+    // 使用 16 進制解析，取前 8 個字符 (32 bits)
+    final hashInt = int.parse(digest.toString().substring(0, 8), radix: 16);
+    final normalized = hashInt % 100;
+
+    var cumulative = 0.0;
     for (var variant in config.variants) {
       cumulative += variant.weight;
-      if (random < cumulative) {
+      if (normalized < cumulative) {
         return variant.name;
       }
     }
 
-    return config.variants.first.name;
+    return config.variants.isNotEmpty ? config.variants.first.name : 'control';
   }
 
   /// 保存用戶的變體分配到 Firestore
@@ -222,7 +245,7 @@ class ABTestConfig {
   });
 
   factory ABTestConfig.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = Map<String, dynamic>.from(doc.data() as Map);
     
     return ABTestConfig(
       testId: doc.id,
@@ -230,7 +253,7 @@ class ABTestConfig {
       description: data['description'] ?? '',
       isActive: data['isActive'] ?? false,
       variants: (data['variants'] as List<dynamic>? ?? [])
-          .map((v) => ABTestVariant.fromMap(v as Map<String, dynamic>))
+          .map((v) => ABTestVariant.fromMap(Map<String, dynamic>.from(v as Map)))
           .toList(),
       startDate: (data['startDate'] as Timestamp?)?.toDate(),
       endDate: (data['endDate'] as Timestamp?)?.toDate(),
@@ -265,7 +288,7 @@ class ABTestVariant {
     return ABTestVariant(
       name: map['name'] ?? '',
       weight: (map['weight'] ?? 50.0).toDouble(),
-      config: map['config'] ?? {},
+      config: (map['config'] as Map?)?.cast<String, dynamic>() ?? {},
     );
   }
 
@@ -291,12 +314,12 @@ class FeatureConfig {
   });
 
   factory FeatureConfig.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = Map<String, dynamic>.from(doc.data() as Map);
     
     return FeatureConfig(
       key: doc.id,
       enabled: data['enabled'] ?? false,
-      config: data['config'] ?? {},
+      config: (data['config'] as Map?)?.cast<String, dynamic>() ?? {},
     );
   }
 
