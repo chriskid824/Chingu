@@ -98,25 +98,41 @@ class RichNotificationService {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
+          String? chatRoomId;
+          try {
+            // 嘗試解析 JSON
+            final parsed = json.decode(data);
+            if (parsed is Map && parsed.containsKey('chatRoomId')) {
+              chatRoomId = parsed['chatRoomId'];
+            } else if (parsed is String) {
+              chatRoomId = parsed;
+            }
+          } catch (_) {
+            // 如果解析失敗，假設 data 本身就是 ID
+            chatRoomId = data;
+          }
+
+          if (chatRoomId != null) {
+            navigator.pushNamed(
+              AppRoutes.chatDetail,
+              arguments: {'chatRoomId': chatRoomId},
+            );
+          } else {
+            navigator.pushNamed(AppRoutes.chatList);
+          }
         } else {
           navigator.pushNamed(AppRoutes.chatList);
         }
         break;
       case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
+        navigator.pushNamed(AppRoutes.eventDetail);
+        break;
+      case 'match':
+      case 'view_match':
+        navigator.pushNamed(AppRoutes.userDetail);
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
