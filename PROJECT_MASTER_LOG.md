@@ -111,6 +111,11 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **A/B 測試框架 (A/B Test Manager)**:
+  - 實作 `ABTestManager` 單例類別 (`lib/utils/ab_test_manager.dart`)
+  - 使用 `crypto` 套件 (SHA-256) 實作確定性變體分配 (Deterministic Variant Assignment)，確保用戶始終分配到相同變體
+  - 支援功能開關 (Feature Toggles) 與變體測試 (Variant Testing)
+  - 完善的單元測試 (`test/utils/ab_test_manager_test.dart`) 驗證分配邏輯、權重分佈與 Firestore 集成
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
