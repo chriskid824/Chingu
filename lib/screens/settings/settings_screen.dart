@@ -106,6 +106,16 @@ class SettingsScreen extends StatelessWidget {
             Navigator.of(context).pushNamed(AppRoutes.about);
           }, trailing: 'v1.0.0'),
           const Divider(),
+          _buildListTile(
+            context,
+            Icons.delete_forever_outlined,
+            '刪除帳號',
+            () {
+              Navigator.of(context).pushNamed(AppRoutes.deleteAccount);
+            },
+            textColor: theme.colorScheme.error,
+            iconColor: theme.colorScheme.error,
+          ),
           // Logout
           _buildListTile(
             context,

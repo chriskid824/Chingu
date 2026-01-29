@@ -281,6 +281,38 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 刪除帳號
+  Future<bool> deleteAccount() async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      final uid = _firebaseUser!.uid;
+
+      // 1. 刪除 Firestore 資料
+      await _firestoreService.deleteUser(uid);
+
+      // 2. 刪除 Auth 帳號
+      await _authService.deleteAccount();
+
+      // 3. 清除本地狀態
+      _status = AuthStatus.unauthenticated;
+      _firebaseUser = null;
+      _userModel = null;
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 設置載入狀態
   void _setLoading(bool value) {
     _isLoading = value;
