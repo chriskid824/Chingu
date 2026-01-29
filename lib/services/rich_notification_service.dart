@@ -84,17 +84,17 @@ class RichNotificationService {
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
+  void performAction(String action, String? data, NavigatorState navigator) {
     switch (action) {
       case 'open_chat':
         if (data != null) {
