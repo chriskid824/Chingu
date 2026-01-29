@@ -23,6 +23,8 @@ void main() {
     email: 'current@test.com',
     name: 'Current User',
     gender: 'male',
+    job: 'Engineer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -31,7 +33,8 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -39,6 +42,8 @@ void main() {
     email: 'candidate@test.com',
     name: 'Candidate User',
     gender: 'female',
+    job: 'Designer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -47,7 +52,8 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
@@ -82,8 +88,8 @@ void main() {
       // Budget: same = 20
       // Location: same city, same district = 20
       // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Total: 73 -> 63 (Updated logic: Interest 12.5 + Loc 30 + Age 10 + Budget 10 = 62.5 -> 63)
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {

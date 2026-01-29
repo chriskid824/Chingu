@@ -236,6 +236,44 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 切換收藏狀態
+  ///
+  /// [targetUserId] 目標用戶 ID
+  Future<bool> toggleFavorite(String targetUserId) async {
+    try {
+      if (_firebaseUser == null || _userModel == null) return false;
+
+      final currentFavorites = List<String>.from(_userModel!.favoriteIds);
+      final isAdding = !currentFavorites.contains(targetUserId);
+
+      // 樂觀更新 (Optimistic Update)
+      if (isAdding) {
+        currentFavorites.add(targetUserId);
+      } else {
+        currentFavorites.remove(targetUserId);
+      }
+
+      // 更新本地狀態
+      _userModel = _userModel!.copyWith(favoriteIds: currentFavorites);
+      notifyListeners();
+
+      // 調用後端
+      await _firestoreService.toggleFavorite(
+        _firebaseUser!.uid,
+        targetUserId,
+        isAdding,
+      );
+
+      return true;
+    } catch (e) {
+      // 如果失敗，回滾狀態
+      await _loadUserData(_firebaseUser!.uid);
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// 更新用戶資料
   /// 
   /// [data] 要更新的資料
