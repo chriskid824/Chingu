@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/utils/haptic_utils.dart';
+import 'package:flutter/services.dart';
 
 class AppIconButton extends StatelessWidget {
   final IconData icon;
@@ -32,7 +32,7 @@ class AppIconButton extends StatelessWidget {
         icon: Icon(icon, size: iconSize),
         color: color,
         onPressed: () {
-          HapticUtils.selection();
+          HapticFeedback.selectionClick();
           onPressed();
         },
         padding: EdgeInsets.zero,
