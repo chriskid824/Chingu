@@ -34,8 +34,22 @@ void main() async {
   runApp(const ChinguApp());
 }
 
-class ChinguApp extends StatelessWidget {
+class ChinguApp extends StatefulWidget {
   const ChinguApp({super.key});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    // 監聽並處理初始通知 (Terminated -> Open)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RichNotificationService().checkAndConsumeInitialMessage();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
