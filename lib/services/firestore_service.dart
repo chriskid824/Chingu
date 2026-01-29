@@ -162,6 +162,27 @@ class FirestoreService {
     }
   }
 
+  /// 切換用戶收藏狀態
+  ///
+  /// [currentUserId] 當前用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  /// [isAdding] 是否為新增收藏
+  Future<void> toggleFavorite(String currentUserId, String targetUserId, bool isAdding) async {
+    try {
+      if (isAdding) {
+        await _usersCollection.doc(currentUserId).update({
+          'favoriteIds': FieldValue.arrayUnion([targetUserId]),
+        });
+      } else {
+        await _usersCollection.doc(currentUserId).update({
+          'favoriteIds': FieldValue.arrayRemove([targetUserId]),
+        });
+      }
+    } catch (e) {
+      throw Exception('更新收藏狀態失敗: $e');
+    }
+  }
+
   /// 批次獲取用戶資料
   /// 
   /// [uids] 用戶 ID 列表

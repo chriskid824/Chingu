@@ -158,7 +158,7 @@ class MatchingService {
 
       if (query.docs.isNotEmpty) {
         // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 注意：這裡只檢查，副作用由調用者處理
         return true;
       }
       return false;
