@@ -10,6 +10,7 @@ import 'providers/dinner_event_provider.dart';
 import 'providers/matching_provider.dart';
 import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
+import 'services/analytics_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
 
@@ -54,6 +55,9 @@ class ChinguApp extends StatelessWidget {
             title: 'Chingu - 6人晚餐社交',
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
+            navigatorObservers: [
+              AnalyticsService().observer,
+            ],
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
