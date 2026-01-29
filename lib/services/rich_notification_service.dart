@@ -19,6 +19,13 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  Map<String, bool>? _cachedSettings;
+
+  /// 更新緩存的通知設定
+  void updateSettings(Map<String, bool> settings) {
+    _cachedSettings = settings;
+    debugPrint('RichNotificationService settings updated: $_cachedSettings');
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -126,7 +133,52 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  /// [settings] 用戶通知設定，若提供則會根據設定決定是否顯示
+  Future<void> showNotification(NotificationModel notification, {Map<String, bool>? settings}) async {
+    // 使用傳入的設定或緩存的設定
+    final effectiveSettings = settings ?? _cachedSettings;
+
+    // 檢查通知設定
+    if (effectiveSettings != null) {
+      // 全局推播開關
+      if (effectiveSettings['push_enabled'] == false) {
+        debugPrint('Notification suppressed by push_enabled setting');
+        return;
+      }
+
+      // 根據類型檢查
+      bool shouldShow = true;
+      switch (notification.type) {
+        case 'match':
+          // 這裡假設是新配對，若有區分配對成功則需更多資訊，暫時使用 match_new 覆蓋大部分情況
+          // 如果標題包含 "成功"，則檢查 match_success
+          if (notification.title.contains('成功') || notification.message.contains('成功')) {
+             shouldShow = effectiveSettings['match_success'] ?? true;
+          } else {
+             shouldShow = effectiveSettings['match_new'] ?? true;
+          }
+          break;
+        case 'message':
+          shouldShow = effectiveSettings['message_new'] ?? true;
+          break;
+        case 'event':
+          // 類似地，區分提醒和變更
+          if (notification.title.contains('變更') || notification.message.contains('變更')) {
+            shouldShow = effectiveSettings['event_change'] ?? true;
+          } else {
+            shouldShow = effectiveSettings['event_reminder'] ?? true;
+          }
+          break;
+        // system 類型通常是重要通知或行銷
+        // 暫時不過濾 system，除非我們增加更細的類型
+      }
+
+      if (!shouldShow) {
+        debugPrint('Notification suppressed by ${notification.type} setting');
+        return;
+      }
+    }
+
     // Android 通知詳情
     StyleInformation? styleInformation;
 
