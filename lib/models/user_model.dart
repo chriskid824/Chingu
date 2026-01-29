@@ -33,6 +33,11 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 通知設定
+  final bool notificationMatch;
+  final bool notificationMessage;
+  final bool notificationEvent;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,6 +68,9 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.notificationMatch = true,
+    this.notificationMessage = true,
+    this.notificationEvent = true,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +109,9 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      notificationMatch: map['notificationMatch'] ?? true,
+      notificationMessage: map['notificationMessage'] ?? true,
+      notificationEvent: map['notificationEvent'] ?? true,
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +144,9 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'notificationMatch': notificationMatch,
+      'notificationMessage': notificationMessage,
+      'notificationEvent': notificationEvent,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +177,9 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? notificationMatch,
+    bool? notificationMessage,
+    bool? notificationEvent,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +209,9 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      notificationMatch: notificationMatch ?? this.notificationMatch,
+      notificationMessage: notificationMessage ?? this.notificationMessage,
+      notificationEvent: notificationEvent ?? this.notificationEvent,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
