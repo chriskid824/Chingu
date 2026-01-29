@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -93,6 +94,10 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
 
+      // 追蹤註冊事件
+      await AnalyticsService().setUserId(firebaseUser.uid);
+      await AnalyticsService().logSignUp(method: 'email');
+
       // 2. 更新顯示名稱
       await _authService.updateDisplayName(name);
 
@@ -149,6 +154,13 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
 
+      // 追蹤登入事件
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await AnalyticsService().setUserId(user.uid);
+        await AnalyticsService().logLogin(method: 'email');
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -166,6 +178,10 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = null;
 
       final firebaseUser = await _authService.signInWithGoogle();
+
+      // 追蹤登入事件 (如果是新用戶，或許也該算 sign_up，但這裡只簡單區分為 login)
+      await AnalyticsService().setUserId(firebaseUser.uid);
+      await AnalyticsService().logLogin(method: 'google');
 
       // 檢查是否為新用戶
       final exists = await _firestoreService.userExists(firebaseUser.uid);
@@ -210,6 +226,7 @@ class AuthProvider with ChangeNotifier {
     try {
       _setLoading(true);
       await _authService.signOut();
+      await AnalyticsService().setUserId(null);
       _setLoading(false);
     } catch (e) {
       _errorMessage = e.toString();
