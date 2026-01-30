@@ -58,7 +58,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
         text: text,
+        recipientId: _otherUser?.uid,
       );
       if (!mounted) return;
       if (_scrollController.hasClients) {
@@ -89,8 +91,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
         text: url,
         type: 'image',
+        recipientId: _otherUser?.uid,
       );
       if (!mounted) return;
       if (_scrollController.hasClients) {
