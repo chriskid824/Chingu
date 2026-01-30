@@ -1,9 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:flutter/foundation.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final FirebaseFunctions? _functions;
+
+  ChatService({
+    FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _functions = functions;
+
+  FirebaseFunctions get _cloudFunctions =>
+      _functions ?? FirebaseFunctions.instance;
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
@@ -63,6 +75,7 @@ class ChatService {
         },
         'lastMessage': null,
         'lastMessageTime': FieldValue.serverTimestamp(),
+        'lastMessageAt': FieldValue.serverTimestamp(), // Compatibility
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -84,6 +97,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -94,10 +108,11 @@ class ChatService {
         'senderId': senderId,
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
-        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'message': message,
+        'text': message, // Compatibility for ChatProvider/UI that expects 'text'
         'type': type,
         'timestamp': timestamp,
-        'readBy': [], // Empty list for readBy
+        'readBy': [],
         'isForwarded': isForwarded,
         'originalSenderId': originalSenderId,
         'originalSenderName': originalSenderName,
@@ -107,13 +122,28 @@ class ChatService {
       await _chatRoomsCollection.doc(chatRoomId).update({
         'lastMessage': type == 'text' ? message : '[${type}]',
         'lastMessageTime': timestamp,
+        'lastMessageAt': timestamp, // Compatibility
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      if (recipientId != null) {
+        final preview = message.length > 20 ? '${message.substring(0, 20)}...' : message;
+        // Fire and forget - use catchError to handle async errors
+        _cloudFunctions.httpsCallable('sendNotification').call({
+          'recipientId': recipientId,
+          'title': senderName,
+          'body': preview,
+          'data': {
+            'actionType': 'open_chat',
+            'actionData': chatRoomId,
+            'senderId': senderId,
+          }
+        }).catchError((e) {
+          debugPrint('發送推送通知失敗: $e');
+        });
+      }
+
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
