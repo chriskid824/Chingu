@@ -31,6 +31,9 @@ class DatabaseSeeder {
       
       print('步驟 3/3: 生成配對和聊天數據...');
       await _seedTestMatchesAndChats();
+
+      print('步驟 4/4: 生成動態數據...');
+      await _seedMoments();
       
       print('測試數據生成完成！');
     } catch (e) {
@@ -68,7 +71,7 @@ class DatabaseSeeder {
       print('已清空測試用戶（保留當前用戶）');
       
       // 2. 清空其他集合
-      final collections = ['dinner_events', 'swipes', 'chat_rooms', 'messages'];
+      final collections = ['dinner_events', 'swipes', 'chat_rooms', 'messages', 'moments'];
       
       for (var collection in collections) {
         final snapshot = await _firestore.collection(collection).get();
@@ -421,6 +424,80 @@ class DatabaseSeeder {
       print('錯誤堆疊: ${StackTrace.current}');
       // 不拋出異常，允許其他數據生成繼續
     }
+  }
+
+  Future<void> _seedMoments() async {
+    print('=== 開始生成動態資料 ===');
+    final momentsCollection = _firestore.collection('moments');
+
+    // Find test user (prioritize current user or test@gmail.com)
+    String? userId;
+    String userName = 'Test User';
+    String? userAvatar;
+
+    // 1. 嘗試當前用戶
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      userId = currentUser.uid;
+      final doc = await _firestore.collection('users').doc(userId).get();
+      userName = doc.data()?['name'] ?? 'Current User';
+      userAvatar = doc.data()?['avatarUrl'];
+    }
+
+    // 2. 如果沒有當前用戶，找 test@gmail.com
+    if (userId == null) {
+      final testUserQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: 'test@gmail.com')
+          .limit(1)
+          .get();
+
+      if (testUserQuery.docs.isNotEmpty) {
+        final doc = testUserQuery.docs.first;
+        userId = doc.id;
+        userName = doc.data()['name'] ?? 'Test User';
+        userAvatar = doc.data()['avatarUrl'];
+      }
+    }
+
+    if (userId == null) {
+      print('找不到用戶生成動態');
+      return;
+    }
+
+    final moments = [
+      '今天天氣真好！去公園散步了一圈。',
+      '剛看完一部超好看的電影，強烈推薦！',
+      '有人想一起去吃火鍋嗎？最近發現一家不錯的店。',
+      '終於把專案趕完了，好想放假啊～',
+      '台北的夜景真的很美。',
+    ];
+
+    for (var i = 0; i < moments.length; i++) {
+      final momentId = _uuid.v4();
+      await momentsCollection.doc(momentId).set({
+        'userId': userId,
+        'userName': userName,
+        'userAvatar': userAvatar,
+        'content': moments[i],
+        'imageUrl': i % 2 == 0 ? 'https://picsum.photos/seed/$momentId/400/300' : null,
+        'createdAt': DateTime.now().subtract(Duration(days: i, hours: _random.nextInt(12))),
+        'likeCount': _random.nextInt(20),
+        'commentCount': 0,
+      });
+
+      // Seed some likes
+      if (_random.nextBool()) {
+        await momentsCollection.doc(momentId).collection('likes').doc('dummy_liker_${i}').set({
+            'userId': 'dummy_liker_${i}',
+            'likedAt': FieldValue.serverTimestamp(),
+        });
+        await momentsCollection.doc(momentId).update({'likeCount': FieldValue.increment(1)});
+      }
+
+      print('生成動態: ${moments[i]}');
+    }
+    print('已生成 ${moments.length} 則動態');
   }
 }
 
