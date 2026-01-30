@@ -135,6 +135,43 @@ class MockDinnerEventService implements DinnerEventService {
         district: district
     );
   }
+
+  @override
+  Future<bool> checkTimeConflict(String userId, DateTime newEventTime) async {
+    return false;
+  }
+
+  @override
+  Future<void> registerForEvent(String eventId, String userId) async {
+    if (shouldThrow) throw Exception('Mock Error');
+    final index = _mockEvents.indexWhere((e) => e.id == eventId);
+    if (index != -1) {
+      final event = _mockEvents[index];
+      final newParticipants = List<String>.from(event.participantIds)..add(userId);
+      final newStatus = Map<String, String>.from(event.participantStatus)..[userId] = 'confirmed';
+      _mockEvents[index] = event.copyWith(
+        participantIds: newParticipants,
+        participantStatus: newStatus,
+        currentParticipants: event.currentParticipants + 1,
+      );
+    }
+  }
+
+  @override
+  Future<void> unregisterFromEvent(String eventId, String userId) async {
+    if (shouldThrow) throw Exception('Mock Error');
+    final index = _mockEvents.indexWhere((e) => e.id == eventId);
+    if (index != -1) {
+      final event = _mockEvents[index];
+      final newParticipants = List<String>.from(event.participantIds)..remove(userId);
+      final newStatus = Map<String, String>.from(event.participantStatus)..remove(userId);
+      _mockEvents[index] = event.copyWith(
+        participantIds: newParticipants,
+        participantStatus: newStatus,
+        currentParticipants: event.currentParticipants - 1,
+      );
+    }
+  }
 }
 
 void main() {

@@ -30,6 +30,7 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   String? get uid => _firebaseUser?.uid;
+  UserModel? get user => _userModel;
 
   AuthProvider() {
     // 監聽認證狀態變化
@@ -293,6 +294,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
