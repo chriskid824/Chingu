@@ -212,6 +212,62 @@ class DinnerEventProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 獲取活動即時更新流
+  Stream<DinnerEventModel?> getEventStream(String eventId) {
+    return _dinnerEventService.getEventStream(eventId);
+  }
+
+  /// 報名活動 (registerForEvent)
+  Future<bool> registerForEvent(String eventId, String userId) async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      // 檢查時間衝突
+      final event = await _dinnerEventService.getEvent(eventId);
+      if (event != null) {
+        final hasConflict = await _dinnerEventService.checkTimeConflict(userId, event.dateTime);
+        if (hasConflict) {
+          throw Exception('時間衝突：您已在該時段有其他活動');
+        }
+      }
+
+      await _dinnerEventService.registerForEvent(eventId, userId);
+
+      // 刷新列表
+      await fetchMyEvents(userId);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 取消報名 (unregisterFromEvent)
+  Future<bool> unregisterFromEvent(String eventId, String userId) async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      await _dinnerEventService.unregisterFromEvent(eventId, userId);
+
+      // 刷新列表
+      await fetchMyEvents(userId);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
 }
 
 

@@ -10,6 +10,12 @@ class EventCard extends StatefulWidget {
   final bool isUpcoming;
   final VoidCallback? onTap;
 
+  // New optional fields for dynamic data
+  final int? currentParticipants;
+  final int? maxParticipants;
+  final String? statusText;
+  final Color? statusColor;
+
   const EventCard({
     super.key,
     required this.title,
@@ -19,6 +25,10 @@ class EventCard extends StatefulWidget {
     required this.location,
     required this.isUpcoming,
     this.onTap,
+    this.currentParticipants,
+    this.maxParticipants,
+    this.statusText,
+    this.statusColor,
   });
 
   @override
@@ -32,6 +42,34 @@ class _EventCardState extends State<EventCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // Determine status text and color
+    String displayStatusText;
+    Color displayStatusColor;
+    Color displayStatusBgColor;
+
+    if (widget.statusText != null) {
+      displayStatusText = widget.statusText!;
+      displayStatusColor = widget.statusColor ?? (chinguTheme?.success ?? Colors.green);
+      displayStatusBgColor = displayStatusColor.withOpacity(0.1);
+    } else {
+      // Fallback legacy logic
+      displayStatusText = widget.isUpcoming ? '已確認' : '已完成';
+      displayStatusColor = widget.isUpcoming
+          ? (chinguTheme?.success ?? Colors.green)
+          : theme.colorScheme.onSurface.withOpacity(0.6);
+      displayStatusBgColor = widget.isUpcoming
+          ? displayStatusColor.withOpacity(0.1)
+          : theme.colorScheme.surfaceContainerHighest;
+    }
+
+    // Determine participants text
+    String participantsText;
+    if (widget.currentParticipants != null && widget.maxParticipants != null) {
+      participantsText = '${widget.currentParticipants} / ${widget.maxParticipants} 人';
+    } else {
+      participantsText = '6 人';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -103,7 +141,7 @@ class _EventCardState extends State<EventCard> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '6 人',
+                                    participantsText,
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                                     ),
@@ -116,17 +154,13 @@ class _EventCardState extends State<EventCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: widget.isUpcoming
-                                ? (chinguTheme?.success ?? Colors.green).withOpacity(0.1)
-                                : theme.colorScheme.surfaceContainerHighest,
+                            color: displayStatusBgColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            widget.isUpcoming ? '已確認' : '已完成',
+                            displayStatusText,
                             style: TextStyle(
-                              color: widget.isUpcoming
-                                  ? (chinguTheme?.success ?? Colors.green)
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: displayStatusColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
