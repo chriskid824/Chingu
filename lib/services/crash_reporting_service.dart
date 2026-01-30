@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:ui';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,15 @@ class CrashReportingService {
   CrashReportingService._internal();
 
   Future<void> initialize() async {
+    // Control Crashlytics collection based on build mode
+    if (kDebugMode) {
+      // Disable in debug mode to avoid polluting production data
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    } else {
+      // Enable in release mode
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    }
+
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
@@ -18,6 +28,16 @@ class CrashReportingService {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
+
+    // Catch errors that happen outside of the Flutter context
+    Isolate.current.addErrorListener(RawReceivePort((pair) async {
+      final List<dynamic> errorAndStacktrace = pair;
+      await FirebaseCrashlytics.instance.recordError(
+        errorAndStacktrace.first,
+        errorAndStacktrace.last,
+        fatal: true,
+      );
+    }).sendPort);
   }
 
   /// Log a message to Crashlytics
