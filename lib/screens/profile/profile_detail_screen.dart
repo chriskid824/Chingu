@@ -166,7 +166,37 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-                        // Debug Button
+
+                        // My Moments Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pushNamed(context, AppRoutes.userMoments);
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.filter_frames_outlined, size: 20, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '我的動態牆',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
                         // Debug Button
                         Container(
                           decoration: BoxDecoration(
