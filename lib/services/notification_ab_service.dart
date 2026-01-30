@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+
 /// Notification A/B Testing Service
 ///
 /// This service is responsible for assigning users to experimental groups (A/B testing)
@@ -26,6 +29,11 @@ class NotificationContent {
 }
 
 class NotificationABService {
+  final FirebaseFirestore _firestore;
+
+  NotificationABService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
   /// Assigns a user to an experiment group based on their user ID.
   ///
   /// This uses a deterministic hash so the user always stays in the same group.
@@ -129,6 +137,36 @@ class NotificationABService {
           title: 'System Notification',
           body: message,
         );
+    }
+  }
+
+  /// 追蹤通知發送 (Track Notification Send)
+  Future<void> trackSend(String userId, String type, String variant) async {
+    try {
+      await _firestore.collection('notification_stats').add({
+        'userId': userId,
+        'type': type,
+        'variant': variant,
+        'action': 'send',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error tracking notification send: $e');
+    }
+  }
+
+  /// 追蹤通知點擊 (Track Notification Click)
+  Future<void> trackClick(String userId, String type, String variant) async {
+    try {
+      await _firestore.collection('notification_stats').add({
+        'userId': userId,
+        'type': type,
+        'variant': variant,
+        'action': 'click',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error tracking notification click: $e');
     }
   }
 }
