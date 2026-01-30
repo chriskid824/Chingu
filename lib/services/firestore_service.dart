@@ -169,12 +169,42 @@ class FirestoreService {
     try {
       if (uids.isEmpty) return [];
 
+      List<UserModel> allUsers = [];
+      List<String> realUids = [];
+
+      // Separate dummy IDs to support mock data testing
+      for (var uid in uids) {
+        if (uid.startsWith('dummy')) {
+           allUsers.add(UserModel(
+             uid: uid,
+             name: '模擬用戶 ${uid.hashCode % 100}',
+             email: 'dummy@example.com',
+             age: 25 + (uid.hashCode % 10),
+             gender: 'female',
+             job: '模擬職位',
+             interests: ['測試'],
+             country: 'Taiwan',
+             city: '台北市',
+             district: '中正區',
+             preferredMatchType: 'any',
+             minAge: 18,
+             maxAge: 50,
+             budgetRange: 1,
+             createdAt: DateTime.now(),
+             lastLogin: DateTime.now(),
+             isActive: true,
+           ));
+        } else {
+           realUids.add(uid);
+        }
+      }
+
+      if (realUids.isEmpty) return allUsers;
+
       // Firestore 的 'in' 查詢最多支持 10 個元素
       // 如果超過 10 個，需要分批查詢
-      List<UserModel> allUsers = [];
-
-      for (int i = 0; i < uids.length; i += 10) {
-        final batchUids = uids.skip(i).take(10).toList();
+      for (int i = 0; i < realUids.length; i += 10) {
+        final batchUids = realUids.skip(i).take(10).toList();
 
         final querySnapshot = await _usersCollection
             .where(FieldPath.documentId, whereIn: batchUids)

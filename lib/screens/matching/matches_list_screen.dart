@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/models/user_model.dart';
 
 class MatchesListScreen extends StatefulWidget {
   const MatchesListScreen({super.key});
@@ -225,7 +226,31 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
   Widget _buildMatchCard(BuildContext context, String name, int age, String job, int matchScore, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.userDetail);
+        // Create dummy user for navigation
+        final dummyUser = UserModel(
+          uid: 'dummy_${name.hashCode}',
+          name: name,
+          email: 'dummy@example.com',
+          age: age,
+          gender: name.contains('明') ? 'male' : 'female',
+          job: job,
+          interests: ['科技', '美食', '旅遊'],
+          country: 'Taiwan',
+          city: '台北市',
+          district: '信義區',
+          bio: '這是一個模擬用戶',
+          preferredMatchType: 'any',
+          minAge: 18,
+          maxAge: 50,
+          budgetRange: 1,
+          createdAt: DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+
+        Navigator.of(context).pushNamed(
+          AppRoutes.userDetail,
+          arguments: {'userModel': dummyUser},
+        );
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
