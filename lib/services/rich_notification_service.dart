@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +23,9 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  OverlayEntry? _currentOverlayEntry;
+  Timer? _dismissTimer;
+  StreamSubscription<RemoteMessage>? _messageSubscription;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -56,7 +63,85 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    _setupFirebaseMessaging();
+
     _isInitialized = true;
+  }
+
+  void dispose() {
+    _messageSubscription?.cancel();
+    _removeCurrentNotification();
+  }
+
+  void _setupFirebaseMessaging() {
+    _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // 構建 NotificationModel
+      final notification = NotificationModel(
+        id: message.messageId ?? UniqueKey().toString(),
+        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        type: message.data['type'] ?? 'system',
+        title: message.notification?.title ?? message.data['title'] ?? 'New Notification',
+        message: message.notification?.body ?? message.data['body'] ?? message.data['message'] ?? '',
+        imageUrl: message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl ?? message.data['imageUrl'],
+        actionType: message.data['actionType'],
+        actionData: message.data['actionData'],
+        createdAt: message.sentTime ?? DateTime.now(),
+      );
+
+      // 顯示應用內通知
+      showInAppNotification(notification);
+    });
+  }
+
+  void showInAppNotification(NotificationModel notification) {
+    // 移除現有通知
+    _removeCurrentNotification();
+
+    final overlayState = AppRouter.navigatorKey.currentState?.overlay;
+    if (overlayState == null) return;
+
+    _currentOverlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: -150.0, end: 0.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Transform.translate(
+              offset: Offset(0, value),
+              child: child,
+            );
+          },
+          child: InAppNotification(
+            notification: notification,
+            onDismiss: _removeCurrentNotification,
+            onTap: () {
+              _removeCurrentNotification();
+              _handleNavigation(
+                notification.actionType,
+                notification.actionData,
+                null,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    overlayState.insert(_currentOverlayEntry!);
+
+    // Auto dismiss after 4 seconds
+    _dismissTimer = Timer(const Duration(seconds: 4), _removeCurrentNotification);
+  }
+
+  void _removeCurrentNotification() {
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+    _currentOverlayEntry?.remove();
+    _currentOverlayEntry = null;
   }
 
   /// 處理通知點擊事件
