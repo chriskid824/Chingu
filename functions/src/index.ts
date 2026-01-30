@@ -1,3 +1,7 @@
+import * as admin from "firebase-admin";
+
+admin.initializeApp();
+
 /**
  * Firebase Cloud Functions Entry Point
  * 
