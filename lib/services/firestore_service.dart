@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/models.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -276,15 +276,15 @@ class FirestoreService {
     required String description,
   }) async {
     try {
-      await _firestore.collection('reports').add({
-        'reporterId': reporterId,
-        'reportedUserId': reportedUserId,
-        'reason': reason,
-        'description': description,
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'pending', // pending, reviewed, resolved
-        'type': 'user_report',
-      });
+      final report = ReportModel(
+        reporterId: reporterId,
+        reportedUserId: reportedUserId,
+        reason: reason,
+        description: description,
+        createdAt: DateTime.now(),
+      );
+
+      await _firestore.collection('reports').add(report.toMap());
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
     }

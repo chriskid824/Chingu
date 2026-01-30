@@ -151,7 +151,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
                   )),
               SizedBox(height: 24),
               Text(
-                '詳細描述 (選填)',
+                _selectedReason == '其他' ? '詳細描述 (必填)' : '詳細描述 (選填)',
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -161,6 +161,12 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
+                validator: (value) {
+                  if (_selectedReason == '其他' && (value == null || value.trim().isEmpty)) {
+                    return '選擇「其他」時，請填寫詳細描述';
+                  }
+                  return null;
+                },
                 decoration: InputDecoration(
                   hintText: '請描述具體情況，幫助我們更快處理...',
                   border: OutlineInputBorder(
