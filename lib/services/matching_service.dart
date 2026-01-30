@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -9,14 +10,17 @@ class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final FirebaseFunctions _functions;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    FirebaseFunctions? functions,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _functions = functions ?? FirebaseFunctions.instance;
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -157,8 +161,8 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
+        // 注意：不再此處調用 _handleMatchSuccess，改由 recordSwipe 調用
         return true;
       }
       return false;
@@ -180,7 +184,74 @@ class MatchingService {
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送推送通知
+    await _sendMatchNotifications(user1Id, user2Id, chatRoomId);
+
+    return chatRoomId;
+  }
+
+  /// 發送配對通知給雙方
+  Future<void> _sendMatchNotifications(String user1Id, String user2Id, String chatRoomId) async {
+    try {
+      // 獲取雙方資料以取得名稱
+      final user1 = await _firestoreService.getUser(user1Id);
+      final user2 = await _firestoreService.getUser(user2Id);
+
+      if (user1 == null || user2 == null) {
+        print('無法發送配對通知：找不到用戶資料');
+        return;
+      }
+
+      // 通知 User 1
+      await _sendNotification(
+        recipientId: user1Id,
+        title: '配對成功! 🎉',
+        body: '你與 ${user2.name} 配對成功！',
+        data: {
+          'type': 'match',
+          'matchId': chatRoomId,
+          'userId': user2Id, // Navigate to partner profile
+        },
+      );
+
+      // 通知 User 2
+      await _sendNotification(
+        recipientId: user2Id,
+        title: '配對成功! 🎉',
+        body: '你與 ${user1.name} 配對成功！',
+        data: {
+          'type': 'match',
+          'matchId': chatRoomId,
+          'userId': user1Id, // Navigate to partner profile
+        },
+      );
+
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+      // 不拋出異常，以免影響配對流程
+    }
+  }
+
+  /// 調用 Cloud Function 發送通知
+  Future<void> _sendNotification({
+    required String recipientId,
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await _functions.httpsCallable('sendNotification').call({
+        'recipientId': recipientId,
+        'title': title,
+        'body': body,
+        'data': data,
+      });
+    } catch (e) {
+      print('調用 sendNotification 失敗: $e');
+      rethrow;
+    }
   }
 
   /// 獲取已滑過的用戶 ID 列表
@@ -282,4 +353,3 @@ class MatchingService {
     }
   }
 }
-
