@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_ab_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -64,17 +66,36 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
-        final String? actionType = data['actionType'];
-        final String? actionData = data['actionData'];
 
-        // 如果是點擊按鈕，actionId 會是按鈕的 ID
-        final String? actionId = response.actionId;
+        // 如果是點擊按鈕，把 actionId 加入 data 以便處理
+        if (response.actionId != null) {
+          data['actionId'] = response.actionId;
+        }
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigationFromPayload(data);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
     }
+  }
+
+  /// 公開方法：處理來自 Payload 的導航和追蹤 (供 NotificationService 使用)
+  Future<void> handleNavigationFromPayload(Map<String, dynamic> payload) async {
+    final String? actionType = payload['actionType'];
+    final String? actionData = payload['actionData'];
+    final String? actionId = payload['actionId'];
+    final String? variant = payload['variant'];
+    final String? notificationType = payload['notificationType'];
+
+    // 追蹤點擊
+    if (variant != null && notificationType != null) {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        await NotificationABService().trackClick(userId, notificationType, variant);
+      }
+    }
+
+    _handleNavigation(actionType, actionData, actionId);
   }
 
   /// 處理導航邏輯
@@ -99,8 +120,6 @@ class RichNotificationService {
       case 'open_chat':
         if (data != null) {
           // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
           // 暫時導航到聊天列表
           navigator.pushNamed(AppRoutes.chatList);
         } else {
@@ -109,14 +128,12 @@ class RichNotificationService {
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
+           // 導航到活動詳情
           navigator.pushNamed(AppRoutes.eventDetail);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
@@ -126,7 +143,11 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(
+    NotificationModel notification, {
+    String? variant,
+    String? notificationType,
+  }) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +207,8 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'variant': variant,
+      'notificationType': notificationType,
     };
 
     await _flutterLocalNotificationsPlugin.show(
