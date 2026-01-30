@@ -9,6 +9,7 @@ admin.initializeApp();
  * 
  * Usage:
  * - Global broadcast: targetAll = true
+ * - Topic broadcast: targetTopic = "region_taipei"
  * - City-specific: targetCities = ["taipei", "taichung"]
  * - User-specific: targetUserIds = ["uid1", "uid2"]
  */
@@ -40,6 +41,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         body,
         data: customData,
         targetAll = false,
+        targetTopic,
         targetCities = [],
         targetUserIds = [],
         imageUrl,
@@ -82,6 +84,33 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             });
 
             return { success: true, messageId: response, recipients: "all" };
+        } else if (targetTopic) {
+            // Send to specific topic
+            const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                topic: targetTopic,
+            };
+
+            const response = await admin.messaging().send(message);
+            console.log(`Successfully sent broadcast to topic ${targetTopic}:`, response);
+
+            // Log the broadcast
+            await admin.firestore().collection("broadcast_logs").add({
+                title,
+                body,
+                targetType: "topic",
+                targetTopic,
+                sentBy: context.auth.uid,
+                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                messageId: response,
+            });
+
+            return { success: true, messageId: response, recipients: `topic:${targetTopic}` };
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
             const usersSnapshot = await admin.firestore()
@@ -106,7 +135,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         } else {
             throw new functions.https.HttpsError(
                 "invalid-argument",
-                "Must specify targetAll, targetUserIds, or targetCities."
+                "Must specify targetAll, targetTopic, targetUserIds, or targetCities."
             );
         }
 
