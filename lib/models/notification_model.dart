@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 /// 通知模型
 class NotificationModel {
@@ -45,6 +46,23 @@ class NotificationModel {
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+    );
+  }
+
+  /// 從 RemoteMessage 創建 NotificationModel (用於 FCM)
+  factory NotificationModel.fromRemoteMessage(RemoteMessage message) {
+    final data = message.data;
+    return NotificationModel(
+      id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: data['recipientId'] ?? '',
+      type: data['type'] ?? 'system',
+      title: message.notification?.title ?? data['title'] ?? '',
+      message: message.notification?.body ?? data['body'] ?? '',
+      imageUrl: message.notification?.android?.imageUrl ?? data['imageUrl'],
+      actionType: data['actionType'],
+      actionData: data['actionData'],
+      isRead: false,
+      createdAt: message.sentTime ?? DateTime.now(),
     );
   }
 
