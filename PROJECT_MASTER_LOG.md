@@ -111,6 +111,11 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **個人統計儀表板 (StatsDashboardScreen)**:
+  - 實作 `StatsDashboardScreen` 顯示個人數據
+  - 更新 `ChatService` 新增 `getChatRoomCount` 方法 (使用 Firestore Aggregation)
+  - 更新 `DinnerEventService` 新增 `getEventCount` 方法 (使用 Firestore Aggregation)
+  - 整合 `AuthProvider` 顯示配對總數 (`totalMatches`)
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。

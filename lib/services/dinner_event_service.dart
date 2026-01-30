@@ -244,6 +244,24 @@ class DinnerEventService {
     }
   }
 
+  /// 獲取用戶參與的活動數量
+  ///
+  /// [userId] 用戶 ID
+  Future<int> getEventCount(String userId) async {
+    try {
+      final query = _eventsCollection
+          .where('participantIds', arrayContains: userId);
+
+      final countQuery = query.count();
+      final aggregateQuerySnapshot = await countQuery.get();
+
+      return aggregateQuerySnapshot.count ?? 0;
+    } catch (e) {
+      print('獲取活動數量失敗: $e');
+      return 0;
+    }
+  }
+
   /// 監聽單個活動更新
   ///
   /// [eventId] 活動 ID
