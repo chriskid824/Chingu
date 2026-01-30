@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -17,25 +19,88 @@ void main() async {
   // 確保 Flutter 綁定已初始化
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 Firebase
+  // 啟動並行初始化 (非 Firebase 依賴)
+  final richNotificationInit = RichNotificationService().initialize();
+  final dateFormattingInit = initializeDateFormatting('zh_TW', null);
+
+  // 初始化 Firebase (關鍵依賴)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 初始化 Crashlytics
-  await CrashReportingService().initialize();
+  // 啟動 Firebase 相關初始化 (並行)
+  final crashReportingInit = CrashReportingService().initialize();
+  final fcmInitialMessageFuture = FirebaseMessaging.instance.getInitialMessage();
 
-  // 初始化日期格式化
-  await initializeDateFormatting('zh_TW', null);
+  // 等待所有初始化完成
+  await Future.wait([
+    richNotificationInit,
+    dateFormattingInit,
+    crashReportingInit,
+  ]);
 
-  // 初始化豐富通知服務
-  await RichNotificationService().initialize();
+  // 獲取通知啟動數據
+  final initialMessage = await fcmInitialMessageFuture;
+  final localLaunchDetails = await RichNotificationService().getNotificationAppLaunchDetails();
 
-  runApp(const ChinguApp());
+  // 解析通知目標
+  RouteSettings? initialNotificationRoute;
+
+  if (initialMessage != null) {
+    // 來自 FCM 啟動
+    final data = initialMessage.data;
+    if (data.isNotEmpty) {
+       final actionType = data['actionType'];
+       final actionData = data['actionData'];
+
+       if (actionType != null) {
+          initialNotificationRoute = _getRouteSettings(actionType, actionData);
+       }
+    }
+  } else if (localLaunchDetails?.didNotificationLaunchApp == true) {
+    // 來自本地通知啟動
+    final payload = localLaunchDetails?.notificationResponse?.payload;
+    if (payload != null) {
+      try {
+        final Map<String, dynamic> data = json.decode(payload);
+        final actionType = data['actionType'];
+        final actionData = data['actionData'];
+         if (actionType != null) {
+          initialNotificationRoute = _getRouteSettings(actionType, actionData);
+       }
+      } catch (e) {
+        debugPrint('Error parsing launch payload: $e');
+      }
+    }
+  }
+
+  runApp(ChinguApp(initialNotificationRoute: initialNotificationRoute));
+}
+
+RouteSettings? _getRouteSettings(String actionType, String? actionData) {
+    // 嘗試將 actionData 封裝為參數，以便未來擴展或特定頁面使用
+    // 注意：需確保目標頁面的 AppRouter 處理邏輯兼容此參數類型
+    final args = actionData != null ? {'id': actionData} : null;
+
+    switch (actionType) {
+      case 'open_chat':
+        return RouteSettings(name: AppRoutes.chatList, arguments: args);
+      case 'view_event':
+        return RouteSettings(name: AppRoutes.eventDetail, arguments: args);
+      case 'match_history':
+        return RouteSettings(name: AppRoutes.matchesList, arguments: args);
+      default:
+        return const RouteSettings(name: AppRoutes.notifications);
+    }
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final RouteSettings? initialNotificationRoute;
+
+  const ChinguApp({
+    super.key,
+    this.initialNotificationRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +120,15 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: (initialRouteName) {
+               List<Route<dynamic>> routes = [
+                 AppRouter.generateRoute(const RouteSettings(name: AppRoutes.mainNavigation)),
+               ];
+               if (initialNotificationRoute != null) {
+                 routes.add(AppRouter.generateRoute(initialNotificationRoute!));
+               }
+               return routes;
+            },
             onGenerateRoute: AppRouter.generateRoute,
           );
         },

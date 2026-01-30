@@ -59,6 +59,11 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 獲取通知啟動詳情
+  Future<NotificationAppLaunchDetails?> getNotificationAppLaunchDetails() async {
+    return await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
