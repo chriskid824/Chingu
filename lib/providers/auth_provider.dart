@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -47,6 +48,14 @@ class AuthProvider with ChangeNotifier {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
+
+      // 註冊推送通知 Token
+      try {
+        await NotificationService().registerToken(firebaseUser.uid);
+      } catch (e) {
+        debugPrint('註冊通知 Token 失敗: $e');
+      }
+
       _status = AuthStatus.authenticated;
     }
     notifyListeners();
