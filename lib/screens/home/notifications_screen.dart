@@ -20,6 +20,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: '王小華 喜歡了您的個人資料',
       message: '王小華 喜歡了您的個人資料',
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      deeplink: '/profile/user1',
       isRead: false,
     ),
     NotificationModel(
@@ -29,6 +30,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: '李小美 傳送了一則訊息給您',
       message: '李小美 傳送了一則訊息給您',
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+      deeplink: '/chat/detail',
       isRead: false,
     ),
     NotificationModel(
@@ -38,6 +40,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: '您與 陳大明 的晚餐預約已確認',
       message: '您與 陳大明 的晚餐預約已確認',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      deeplink: '/event/detail',
       isRead: true,
     ),
     NotificationModel(
@@ -47,6 +50,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: '恭喜！您獲得了新的成就徽章',
       message: '恭喜！您獲得了新的成就徽章',
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      deeplink: '/profile/achievements',
       isRead: true,
     ),
     // 為了區分 "喜歡" 和 "配對請求"，這裡我們可能需要更細的類型，但目前暫用 match
@@ -59,6 +63,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: '林小芳 想要與您配對',
       message: '林小芳 想要與您配對',
       createdAt: DateTime.now().subtract(const Duration(days: 3)),
+      deeplink: '/match/requests',
       isRead: true,
     ),
     NotificationModel(
@@ -68,6 +73,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       title: '本週三晚餐報名即將截止',
       message: '本週三晚餐報名即將截止',
       createdAt: DateTime.now().subtract(const Duration(days: 4)),
+      deeplink: '/event/list',
       isRead: true,
     ),
   ];
