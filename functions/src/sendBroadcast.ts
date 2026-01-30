@@ -1,8 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
-
 /**
  * Cloud Function for sending broadcast notifications
  * Can be called by admin to send global or targeted notifications
@@ -94,10 +92,9 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .filter((token) => token); // Remove null/undefined tokens
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
-            const citiesLower = targetCities.map((city: string) => city.toLowerCase());
             const usersSnapshot = await admin.firestore()
                 .collection("users")
-                .where("city", "in", citiesLower)
+                .where("city", "in", targetCities)
                 .get();
 
             targetTokens = usersSnapshot.docs
