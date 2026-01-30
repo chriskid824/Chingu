@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'dart:convert';
+import 'package:chingu/services/rich_notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,17 +106,45 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  void _testChatNavigation() {
+    final payload = json.encode({
+      'actionType': 'open_chat',
+      'actionData': json.encode({
+        'chatRoomId': 'test_room_id',
+        'otherUserId': 'test_user_id',
+      }),
+    });
+    RichNotificationService().handleNotificationPayload(payload);
+  }
+
+  void _testEventNavigation() {
+    final payload = json.encode({
+      'actionType': 'view_event',
+      'actionData': 'event_123',
+    });
+    RichNotificationService().handleNotificationPayload(payload);
+  }
+
+  void _testMatchNavigation() {
+    final payload = json.encode({
+      'actionType': 'match_history',
+    });
+    RichNotificationService().handleNotificationPayload(payload);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('開發者工具')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 24),
-            const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 32),
+              Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 24),
+              const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 32),
@@ -160,15 +190,40 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
-            const SizedBox(height: 24),
-            Text(
-              _status,
-              style: TextStyle(
-                color: _status.startsWith('❌') ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 24),
+              const Divider(),
+              const Text('通知導航測試', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _testChatNavigation,
+                    child: const Text('測試聊天跳轉'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _testEventNavigation,
+                    child: const Text('測試活動跳轉'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _testMatchNavigation,
+                    child: const Text('測試配對跳轉'),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Text(
+                _status,
+                style: TextStyle(
+                  color: _status.startsWith('❌') ? Colors.red : Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );
