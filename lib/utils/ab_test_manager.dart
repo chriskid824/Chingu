@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import '../services/crash_reporting_service.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -16,11 +18,34 @@ class ABTestManager {
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
 
+  CrashReportingService? _crashReportingService;
+  CrashReportingService get _crashReporter =>
+      _crashReportingService ?? CrashReportingService();
+
+  // Dependency Injection for testing
+  @visibleForTesting
+  void setFirestore(FirebaseFirestore firestore) {
+    _firestoreInstance = firestore;
+  }
+
+  @visibleForTesting
+  void setAuth(FirebaseAuth auth) {
+    _authInstance = auth;
+  }
+
+  @visibleForTesting
+  void setCrashReportingService(CrashReportingService service) {
+    _crashReportingService = service;
+  }
+
   // 本地緩存的測試配置
-  Map<String, ABTestConfig> _cachedTests = {};
+  final Map<String, ABTestConfig> _cachedTests = {};
   
   // 用戶的變體分配緩存
-  Map<String, String> _userVariants = {};
+  final Map<String, String> _userVariants = {};
+
+  // Session ID for anonymous users (persists for app lifecycle)
+  final String _sessionId = DateTime.now().microsecondsSinceEpoch.toString();
 
   /// 初始化 A/B 測試管理器
   /// 從 Firestore 加載配置
@@ -39,8 +64,12 @@ class ABTestManager {
 
       // 加載用戶的變體分配
       await _loadUserVariants();
-    } catch (e) {
-      print('Failed to initialize ABTestManager: $e');
+    } catch (e, stack) {
+      _crashReporter.recordError(
+        e,
+        stack,
+        reason: 'Failed to initialize ABTestManager'
+      );
     }
   }
 
@@ -60,36 +89,75 @@ class ABTestManager {
       for (var doc in snapshot.docs) {
         _userVariants[doc.id] = doc.data()['variant'] as String;
       }
-    } catch (e) {
-      print('Failed to load user variants: $e');
+    } catch (e, stack) {
+      _crashReporter.recordError(
+        e,
+        stack,
+        reason: 'Failed to load user variants'
+      );
     }
   }
 
   /// 獲取用戶在特定測試中的變體
   /// 如果用戶尚未分配變體,則自動分配
   Future<String> getVariant(String testId) async {
-    // 檢查緩存
-    if (_userVariants.containsKey(testId)) {
-      return _userVariants[testId]!;
-    }
+    try {
+      // 檢查緩存
+      if (_userVariants.containsKey(testId)) {
+        return _userVariants[testId]!;
+      }
 
-    // 檢查測試配置
-    final config = _cachedTests[testId];
-    if (config == null) {
-      return 'control'; // 默認返回對照組
-    }
+      // 檢查測試配置
+      final config = _cachedTests[testId];
+      if (config == null) {
+        return 'control'; // 默認返回對照組
+      }
 
-    // 分配新變體
-    final variant = _assignVariant(config);
-    await _saveVariantAssignment(testId, variant);
-    
-    _userVariants[testId] = variant;
-    return variant;
+      // 分配新變體
+      final variant = _assignVariant(config);
+
+      // 異步保存，不阻塞UI
+      _saveVariantAssignment(testId, variant).catchError((e, stack) {
+        _crashReporter.recordError(
+          e,
+          stack,
+          reason: 'Failed to save variant assignment background task'
+        );
+      });
+
+      _userVariants[testId] = variant;
+      return variant;
+    } catch (e, stack) {
+      _crashReporter.recordError(
+        e,
+        stack,
+        reason: 'Error getting variant for $testId'
+      );
+      return 'control';
+    }
   }
 
-  /// 分配變體(基於權重)
+  /// DJB2 Hash algorithm for string
+  int _djb2(String s) {
+    var hash = 5381;
+    for (var i = 0; i < s.length; i++) {
+      hash = ((hash << 5) + hash) + s.codeUnitAt(i); /* hash * 33 + c */
+    }
+    return hash;
+  }
+
+  /// 分配變體(基於權重和用戶ID的確定性哈希)
   String _assignVariant(ABTestConfig config) {
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
+    // Use sessionId for anonymous users to ensure distribution
+    final userId = _auth.currentUser?.uid ?? _sessionId;
+    // Use userId + testId for deterministic hash so user always gets same variant
+    // even if local cache is cleared (assuming config weights don't change drastically)
+    final hashInput = '$userId:${config.testId}';
+    final hash = _djb2(hashInput);
+
+    // Normalize to 0-99
+    final random = hash.abs() % 100;
+
     var cumulative = 0.0;
 
     for (var variant in config.variants) {
@@ -99,7 +167,7 @@ class ABTestManager {
       }
     }
 
-    return config.variants.first.name;
+    return config.variants.isNotEmpty ? config.variants.first.name : 'control';
   }
 
   /// 保存用戶的變體分配到 Firestore
@@ -118,8 +186,13 @@ class ABTestManager {
         'assignedAt': FieldValue.serverTimestamp(),
         'testId': testId,
       });
-    } catch (e) {
-      print('Failed to save variant assignment: $e');
+    } catch (e, stack) {
+      _crashReporter.recordError(
+        e,
+        stack,
+        reason: 'Failed to save variant assignment'
+      );
+      // Don't rethrow, just log
     }
   }
 
@@ -129,19 +202,28 @@ class ABTestManager {
     String featureKey, {
     String? specificVariant,
   }) async {
-    // 嘗試作為 A/B 測試
-    if (_cachedTests.containsKey(featureKey)) {
-      final variant = await getVariant(featureKey);
-      if (specificVariant != null) {
-        return variant == specificVariant;
+    try {
+      // 嘗試作為 A/B 測試
+      if (_cachedTests.containsKey(featureKey)) {
+        final variant = await getVariant(featureKey);
+        if (specificVariant != null) {
+          return variant == specificVariant;
+        }
+        // 默認: 非 control 變體返回 true
+        return variant != 'control';
       }
-      // 默認: 非 control 變體返回 true
-      return variant != 'control';
-    }
 
-    // 作為簡單功能開關檢查
-    final config = await _getFeatureConfig(featureKey);
-    return config?.enabled ?? false;
+      // 作為簡單功能開關檢查
+      final config = await _getFeatureConfig(featureKey);
+      return config?.enabled ?? false;
+    } catch (e, stack) {
+      _crashReporter.recordError(
+        e,
+        stack,
+        reason: 'Error checking feature enabled: $featureKey'
+      );
+      return false; // Fail safe to disabled
+    }
   }
 
   /// 獲取功能配置(用於簡單開關)
@@ -155,6 +237,7 @@ class ABTestManager {
       if (!doc.exists) return null;
       return FeatureConfig.fromFirestore(doc);
     } catch (e) {
+      // Allow silent failure for feature flags lookup as it might not exist
       return null;
     }
   }
@@ -179,8 +262,12 @@ class ABTestManager {
         'properties': properties ?? {},
         'timestamp': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
-      print('Failed to track event: $e');
+    } catch (e, stack) {
+      _crashReporter.recordError(
+        e,
+        stack,
+        reason: 'Failed to track event'
+      );
     }
   }
 
