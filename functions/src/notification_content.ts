@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 /// 通知文案 A/B 測試配置
 /// 用於測試不同通知文案對用戶參與度的影響
 export interface NotificationCopyVariant {
@@ -165,4 +167,60 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * Deterministically assigns a variant to a user based on their user ID and the test ID.
+ * Uses SHA-256 to ensure consistent assignment.
+ *
+ * @param userId The user ID
+ * @param testId The test ID
+ * @param variants The list of available variants
+ * @returns The assigned variantId
+ */
+export function assignVariant(
+    userId: string,
+    testId: string,
+    variants: NotificationCopyVariant[]
+): string {
+    if (!variants || variants.length === 0) {
+        return 'control';
+    }
+
+    const hash = crypto.createHash('sha256');
+    hash.update(`${userId}_${testId}`);
+    const hashValue = hash.digest('hex');
+
+    // Take the first 8 characters of the hash and convert to integer
+    const intValue = parseInt(hashValue.substring(0, 8), 16);
+
+    // Modulo by the number of variants to get the index
+    const index = intValue % variants.length;
+
+    return variants[index].variantId;
+}
+
+/**
+ * Gets the notification content for a specific user, automatically assigning them to a variant.
+ *
+ * @param userId The user ID
+ * @param notificationType The type of notification (e.g., 'match_success')
+ * @param params Parameters to replace in the copy
+ * @returns The localized title and body, and the assigned variantId
+ */
+export function getNotificationContentForUser(
+    userId: string,
+    notificationType: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string } {
+    const test = allNotificationTests.find((t) => t.notificationType === notificationType);
+
+    if (!test) {
+        return { title: 'Notification', body: '', variantId: 'none' };
+    }
+
+    const variantId = assignVariant(userId, test.testId, test.variants);
+    const content = getNotificationCopy(test.testId, variantId, params);
+
+    return { ...content, variantId };
 }
