@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "123456789012",
+    "project_id": "chingu-demo",
+    "storage_bucket": "chingu-demo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890abcdef",
+        "android_client_info": {
+          "package_name": "com.chingu.chingu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDemoKeyForAndroidPlatform_ChangeThis"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1
+        },
+        "ads_service": {
+          "status": 1,
+          "test_advertising_id_status": 1
+        },
+        "maps_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
