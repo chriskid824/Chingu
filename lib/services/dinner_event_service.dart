@@ -3,7 +3,10 @@ import 'package:chingu/models/dinner_event_model.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  DinnerEventService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
@@ -42,6 +45,9 @@ class DinnerEventService {
         '你最喜歡的旅行經歷是什麼？',
       ];
 
+      // 預設報名截止時間：活動前24小時
+      final registrationDeadline = dateTime.subtract(const Duration(hours: 24));
+
       final event = DinnerEventModel(
         id: docRef.id,
         creatorId: creatorId,
@@ -52,7 +58,9 @@ class DinnerEventService {
         notes: notes,
         participantIds: participantIds,
         participantStatus: participantStatus,
-        status: 'pending', // 等待配對
+        waitingListIds: [],
+        registrationDeadline: registrationDeadline,
+        status: EventStatus.pending, // 等待配對
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
       );
@@ -85,21 +93,51 @@ class DinnerEventService {
   /// 
   /// [userId] 用戶 ID
   /// [status] 活動狀態過濾（可選）
-  Future<List<DinnerEventModel>> getUserEvents(String userId, {String? status}) async {
+  Future<List<DinnerEventModel>> getUserEvents(String userId, {EventStatus? status}) async {
     try {
-      Query query = _eventsCollection
-          .where('participantIds', arrayContains: userId);
+      Query query = _eventsCollection;
+
+      // 這裡無法同時查詢 participantIds 和 waitingListIds 的 array-contains-any
+      // 且 array-contains 只能用一次。
+      // 所以我們先查 participantIds，這涵蓋大部分情況。
+      // 如果要同時查 waitlist，可能需要兩次查詢或在 client 端過濾。
+      // 暫時只查 participantIds
+
+      // 使用 whereIn 處理狀態過濾 (如果有的話)
+      // 但因為 status 是 String，我們需要傳入 name
 
       if (status != null) {
-        query = query.where('status', isEqualTo: status);
+         query = query.where('status', isEqualTo: status.name);
       }
 
-      final querySnapshot = await query.get();
+      // Filter by user participation
+      query = query.where('participantIds', arrayContains: userId);
 
-      final events = querySnapshot.docs
+      final querySnapshot = await query.get();
+      var events = querySnapshot.docs
           .map((doc) => DinnerEventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+
+      // 補充查詢：Waitlist
+      // 注意：這會消耗額外的讀取
+      Query waitlistQuery = _eventsCollection.where('waitingListIds', arrayContains: userId);
+      if (status != null) {
+        waitlistQuery = waitlistQuery.where('status', isEqualTo: status.name);
+      }
       
+      final waitlistSnapshot = await waitlistQuery.get();
+      final waitlistEvents = waitlistSnapshot.docs
+          .map((doc) => DinnerEventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      // 合併並去重
+      final allEventIds = events.map((e) => e.id).toSet();
+      for (var e in waitlistEvents) {
+        if (!allEventIds.contains(e.id)) {
+          events.add(e);
+        }
+      }
+
       // 在內存中排序
       events.sort((a, b) => b.dateTime.compareTo(a.dateTime));
       
@@ -109,7 +147,7 @@ class DinnerEventService {
     }
   }
 
-  /// 加入活動
+  /// 加入活動 (或加入候補名單)
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
@@ -125,32 +163,48 @@ class DinnerEventService {
         }
 
         final data = snapshot.data() as Map<String, dynamic>;
+
+        // 1. 檢查截止時間
+        final registrationDeadlineTimestamp = data['registrationDeadline'] as Timestamp?;
+        if (registrationDeadlineTimestamp != null) {
+          final deadline = registrationDeadlineTimestamp.toDate();
+          if (DateTime.now().isAfter(deadline)) {
+            throw Exception('報名已截止');
+          }
+        }
+
         final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final waitingListIds = List<String>.from(data['waitingListIds'] ?? []);
         
+        // 2. 檢查是否已加入
         if (participantIds.contains(userId)) {
           throw Exception('您已加入此活動');
         }
-
-        if (participantIds.length >= 6) {
-          throw Exception('活動人數已滿');
+        if (waitingListIds.contains(userId)) {
+           throw Exception('您已在候補名單中');
         }
 
-        // 更新參與者列表
-        participantIds.add(userId);
-        
-        // 更新參與者狀態
+        final updates = <String, dynamic>{};
         final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
 
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
+        // 3. 判斷加入 參與者列表 還是 候補名單
+        if (participantIds.length < MAX_PARTICIPANTS) {
+          // 加入參與者
+          participantIds.add(userId);
+          participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
 
-        // 如果人數達到 6 人，自動確認活動
-        if (participantIds.length == 6) {
-          updates['status'] = 'confirmed';
-          updates['confirmedAt'] = FieldValue.serverTimestamp();
+          updates['participantIds'] = participantIds;
+          updates['participantStatus'] = participantStatus;
+
+          // 如果人數達到 6 人，自動確認活動
+          if (participantIds.length == MAX_PARTICIPANTS) {
+            updates['status'] = EventStatus.confirmed.name;
+            updates['confirmedAt'] = FieldValue.serverTimestamp();
+          }
+        } else {
+          // 加入候補名單
+          waitingListIds.add(userId);
+          updates['waitingListIds'] = waitingListIds;
         }
 
         transaction.update(docRef, updates);
@@ -160,7 +214,7 @@ class DinnerEventService {
     }
   }
 
-  /// 退出活動
+  /// 退出活動 (或退出候補名單)
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
@@ -176,31 +230,52 @@ class DinnerEventService {
 
         final data = snapshot.data() as Map<String, dynamic>;
         final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final waitingListIds = List<String>.from(data['waitingListIds'] ?? []);
+        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
+        final updates = <String, dynamic>{};
         
-        if (!participantIds.contains(userId)) {
+        bool isParticipant = participantIds.contains(userId);
+        bool isWaitlisted = waitingListIds.contains(userId);
+
+        if (!isParticipant && !isWaitlisted) {
           throw Exception('您未加入此活動');
         }
 
-        // 移除參與者
-        participantIds.remove(userId);
-        
-        // 移除狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus.remove(userId);
+        if (isWaitlisted) {
+          // 從候補名單移除
+          waitingListIds.remove(userId);
+          updates['waitingListIds'] = waitingListIds;
+        } else if (isParticipant) {
+          // 從參與者移除
+          participantIds.remove(userId);
+          participantStatus.remove(userId);
 
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
+          // 檢查是否有候補可以遞補
+          if (waitingListIds.isNotEmpty) {
+             // 取出第一位候補
+             final nextUserId = waitingListIds.removeAt(0);
 
-        // 如果活動人數少於 6 人且狀態為已確認，可能需要處理（暫時簡單處理：變回 pending）
-        if (data['status'] == 'confirmed' && participantIds.length < 6) {
-          updates['status'] = 'pending';
-        }
+             // 加入參與者列表
+             participantIds.add(nextUserId);
+             participantStatus[nextUserId] = 'confirmed';
 
-        // 如果沒有參與者了，可以考慮刪除活動或標記為取消
-        if (participantIds.isEmpty) {
-          updates['status'] = 'cancelled';
+             updates['waitingListIds'] = waitingListIds;
+          }
+
+          updates['participantIds'] = participantIds;
+          updates['participantStatus'] = participantStatus;
+
+          // 狀態更新邏輯
+          final currentStatus = data['status'];
+          // 如果原本是已確認(滿員)，現在有人退出且沒有候補遞補(不滿員)，變回 pending
+          if (currentStatus == EventStatus.confirmed.name && participantIds.length < MAX_PARTICIPANTS) {
+            updates['status'] = EventStatus.pending.name;
+          }
+
+          // 如果沒有參與者了，標記為取消
+          if (participantIds.isEmpty) {
+            updates['status'] = EventStatus.cancelled.name;
+          }
         }
 
         transaction.update(docRef, updates);
@@ -225,7 +300,7 @@ class DinnerEventService {
       Query query = _eventsCollection
           .where('city', isEqualTo: city)
           .where('budgetRange', isEqualTo: budgetRange)
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: EventStatus.pending.name)
           .orderBy('dateTime') // 按時間排序
           .limit(20);
 
@@ -318,7 +393,7 @@ class DinnerEventService {
       
       final querySnapshot = await _eventsCollection
           .where('city', isEqualTo: city)
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: EventStatus.pending.name)
           .get();
           
       String? targetEventId;
@@ -369,6 +444,3 @@ class DinnerEventService {
     }
   }
 }
-
-
-
