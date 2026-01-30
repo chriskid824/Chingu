@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/models/user_model.dart';
 // 認證模組
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -16,6 +17,7 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/favorites_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -62,7 +64,7 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String search = '/search';
   
-  // 個人資料設置流程
+  // 個人資料流程
   static const String profileSetup = '/profile-setup';
   static const String interestsSelection = '/interests-selection';
   static const String preferences = '/preferences';
@@ -70,6 +72,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String favorites = '/favorites';
   
   // 配對模組
   static const String matching = '/matching';
@@ -166,12 +169,27 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final args = settings.arguments;
+        String? userId;
+        UserModel? userModel;
+
+        if (args is Map<String, dynamic>) {
+          userId = args['userId'] as String?;
+          userModel = args['userModel'] as UserModel?;
+        }
+
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => UserDetailScreen(userId: userId, userModel: userModel),
+        );
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
@@ -291,14 +309,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

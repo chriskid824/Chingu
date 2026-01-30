@@ -74,6 +74,9 @@ class SettingsScreen extends StatelessWidget {
           _buildListTile(context, Icons.person_outline, '個人資料', () {
             Navigator.of(context).pushNamed(AppRoutes.editProfile);
           }),
+          _buildListTile(context, Icons.favorite_border_rounded, '我的收藏', () {
+            Navigator.of(context).pushNamed(AppRoutes.favorites);
+          }),
           _buildListTile(context, Icons.favorite_outline, '配對偏好', () {
             Navigator.of(context).pushNamed(AppRoutes.preferences);
           }),
