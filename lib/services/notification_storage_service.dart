@@ -194,6 +194,16 @@ class NotificationStorageService {
             .toList());
   }
 
+  /// 監聽通知變化事件 (用於觸發本地通知)
+  Stream<List<DocumentChange<Map<String, dynamic>>>> watchNotificationChanges(
+      String userId) {
+    return _notificationsRef(userId)
+        .orderBy('createdAt', descending: true)
+        .limit(10) // 只監聽最近的通知
+        .snapshots()
+        .map((snapshot) => snapshot.docChanges);
+  }
+
   /// 監聽未讀通知數量
   Stream<int> watchUnreadCount() {
     final userId = _currentUserId;
