@@ -112,6 +112,12 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+### 2026-01-30：iOS Firebase Messaging 整合
+- [x] **iOS 配置更新**
+  - 更新 `ios/Runner/Info.plist` 新增 `UIBackgroundModes` (fetch, remote-notification)
+  - 更新 `ios/Runner/AppDelegate.swift` 註冊 FCM (設定 `UNUserNotificationCenter` delegate 與呼叫 `registerForRemoteNotifications`)
+  - 修復 `AppDelegate.swift` 缺少 `UserNotifications` import 的問題
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
