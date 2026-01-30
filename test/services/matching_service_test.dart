@@ -2,19 +2,28 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([
+  FirestoreService,
+  ChatService,
+  FirebaseFunctions,
+  HttpsCallable,
+  HttpsCallableResult
+])
 import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockFirebaseFunctions mockFirebaseFunctions;
+  late MockHttpsCallable mockHttpsCallable;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -31,7 +40,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    job: 'Developer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -47,18 +59,28 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    job: 'Designer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockFirebaseFunctions = MockFirebaseFunctions();
+    mockHttpsCallable = MockHttpsCallable();
     fakeFirestore = FakeFirebaseFirestore();
+
+    // Mock Firebase Functions setup
+    when(mockFirebaseFunctions.httpsCallable(any)).thenReturn(mockHttpsCallable);
+    when(mockHttpsCallable.call(any)).thenAnswer((_) async => MockHttpsCallableResult());
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      functions: mockFirebaseFunctions,
     );
   });
 
@@ -78,12 +100,12 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Location: same city, same district = 30
+      // Age: diff 1 = 10
+      // Budget: same = 10
+      // Total: 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -143,7 +165,7 @@ void main() {
       expect(result['isMatch'], false); // No mutual like yet
     });
 
-    test('should detect match when mutual like exists', () async {
+    test('should detect match when mutual like exists and send notifications', () async {
       // Arrange: Candidate already liked current user
       await fakeFirestore.collection('swipes').add({
         'userId': candidateUser.uid,
@@ -160,6 +182,12 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      // Mock getting users for notifications
+      when(mockFirestoreService.getUser(currentUser.uid))
+          .thenAnswer((_) async => currentUser);
+      when(mockFirestoreService.getUser(candidateUser.uid))
+          .thenAnswer((_) async => candidateUser);
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -174,6 +202,11 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notifications sent
+      verify(mockFirebaseFunctions.httpsCallable('sendNotification')).called(2);
+      verify(mockHttpsCallable.call(argThat(containsPair('recipientId', currentUser.uid)))).called(1);
+      verify(mockHttpsCallable.call(argThat(containsPair('recipientId', candidateUser.uid)))).called(1);
     });
   });
 }
