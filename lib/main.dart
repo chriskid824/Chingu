@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -31,11 +32,16 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  runApp(ChinguApp(analyticsService: AnalyticsService()));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final AnalyticsService analyticsService;
+
+  const ChinguApp({
+    super.key,
+    required this.analyticsService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +63,9 @@ class ChinguApp extends StatelessWidget {
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
+            navigatorObservers: [
+              analyticsService.getAnalyticsObserver(),
+            ],
           );
         },
       ),
