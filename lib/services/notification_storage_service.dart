@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
@@ -16,6 +17,12 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+
+  @visibleForTesting
+  set firestore(FirebaseFirestore instance) => _firestoreInstance = instance;
+
+  @visibleForTesting
+  set auth(FirebaseAuth instance) => _authInstance = instance;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
