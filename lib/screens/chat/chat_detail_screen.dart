@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -22,6 +23,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _hasError = false;
 
   @override
   void didChangeDependencies() {
@@ -30,9 +32,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
-        _otherUser = args['otherUser'];
+        if (args['otherUser'] != null) {
+          _otherUser = args['otherUser'];
+        } else if (args['otherUserId'] != null) {
+          _fetchOtherUser(args['otherUserId']);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String userId) async {
+    try {
+      final user = await FirestoreService().getUser(userId);
+      if (mounted) {
+        setState(() {
+          _otherUser = user;
+          if (_otherUser == null) {
+            _hasError = true;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+        });
+        debugPrint('Error fetching user: $e');
+      }
     }
   }
 
@@ -128,6 +155,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
+    if (_hasError) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+           backgroundColor: theme.scaffoldBackgroundColor,
+           leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(
+          child: Text('無法加載用戶資料', style: TextStyle(color: theme.colorScheme.error)),
+        ),
+      );
+    }
+
     if (_chatRoomId == null || _otherUser == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -153,7 +196,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
               child: Center(
                 child: Text(
-                  _otherUser!.name[0].toUpperCase(),
+                  _otherUser!.name.isNotEmpty ? _otherUser!.name[0].toUpperCase() : '?',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
