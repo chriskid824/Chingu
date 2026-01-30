@@ -227,6 +227,7 @@ class NotificationStorageService {
     String? imageUrl,
     String? actionType,
     String? actionData,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -240,6 +241,7 @@ class NotificationStorageService {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
