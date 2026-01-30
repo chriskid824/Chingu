@@ -45,7 +45,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _chatRoomId == null) return;
+    if (text.isEmpty || _chatRoomId == null || _otherUser == null) return;
 
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.userModel;
@@ -58,6 +58,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        recipientId: _otherUser!.uid,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
         text: text,
       );
       if (!mounted) return;
@@ -78,7 +81,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _sendGifMessage(String url) async {
-    if (_chatRoomId == null) return;
+    if (_chatRoomId == null || _otherUser == null) return;
 
     final authProvider = context.read<AuthProvider>();
     final currentUser = authProvider.userModel;
@@ -89,6 +92,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        recipientId: _otherUser!.uid,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
         text: url,
         type: 'image',
       );
