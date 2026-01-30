@@ -8,6 +8,8 @@ class EventCard extends StatefulWidget {
   final String budget;
   final String location;
   final bool isUpcoming;
+  final String? statusText;
+  final Color? statusColor;
   final VoidCallback? onTap;
 
   const EventCard({
@@ -18,6 +20,8 @@ class EventCard extends StatefulWidget {
     required this.budget,
     required this.location,
     required this.isUpcoming,
+    this.statusText,
+    this.statusColor,
     this.onTap,
   });
 
@@ -32,6 +36,15 @@ class _EventCardState extends State<EventCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    final defaultStatusColor = widget.isUpcoming
+        ? (chinguTheme?.success ?? Colors.green)
+        : theme.colorScheme.onSurface.withOpacity(0.6);
+
+    final displayStatusColor = widget.statusColor ?? defaultStatusColor;
+
+    final defaultStatusText = widget.isUpcoming ? '已確認' : '已完成';
+    final displayStatusText = widget.statusText ?? defaultStatusText;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -116,17 +129,13 @@ class _EventCardState extends State<EventCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: widget.isUpcoming
-                                ? (chinguTheme?.success ?? Colors.green).withOpacity(0.1)
-                                : theme.colorScheme.surfaceContainerHighest,
+                            color: displayStatusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            widget.isUpcoming ? '已確認' : '已完成',
+                            displayStatusText,
                             style: TextStyle(
-                              color: widget.isUpcoming
-                                  ? (chinguTheme?.success ?? Colors.green)
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: displayStatusColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
