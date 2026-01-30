@@ -7,6 +7,9 @@ import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
 import 'package:chingu/widgets/animated_counter.dart';
+import 'package:chingu/models/moment_model.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:chingu/widgets/moment_card.dart';
 
 class ProfileDetailScreen extends StatelessWidget {
   const ProfileDetailScreen({super.key});
@@ -236,6 +239,41 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
                       _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
                       
+                      const SizedBox(height: 32),
+
+                      _buildSectionTitle(context, '動態'),
+                      const SizedBox(height: 12),
+                      StreamBuilder<List<MomentModel>>(
+                        stream: MomentService().getMoments(user.uid),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Center(child: Text('載入失敗: ${snapshot.error}'));
+                          }
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          final moments = snapshot.data ?? [];
+                          if (moments.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Center(
+                                child: Text(
+                                  '還沒有發布動態',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            children: moments.map((moment) => MomentCard(moment: moment)).toList(),
+                          );
+                        },
+                      ),
+
                       const SizedBox(height: 40),
                       
                       // 登出按鈕
