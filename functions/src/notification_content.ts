@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 /// 通知文案 A/B 測試配置
 /// 用於測試不同通知文案對用戶參與度的影響
 export interface NotificationCopyVariant {
@@ -165,4 +167,27 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * Get the variant ID for a user based on their ID and the test ID.
+ * This ensures the user always sees the same variant for a given test.
+ * @param userId User ID
+ * @param testId Test ID or Notification Type
+ */
+export function getVariantForUser(userId: string, testId: string): string {
+    // Try to find test by testId, or if it matches notificationType
+    const test = allNotificationTests.find((t) => t.testId === testId || t.notificationType === testId);
+
+    if (!test || !test.variants.length) {
+        return 'control'; // Fallback
+    }
+
+    // Create a deterministic hash
+    const hash = crypto.createHash('md5').update(`${userId}_${test.testId}`).digest('hex');
+    // Convert first 8 characters to integer
+    const hashInt = parseInt(hash.substring(0, 8), 16);
+
+    const variantIndex = hashInt % test.variants.length;
+    return test.variants[variantIndex].variantId;
 }
