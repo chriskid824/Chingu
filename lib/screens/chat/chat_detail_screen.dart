@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -22,6 +23,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -30,9 +32,37 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
-        _otherUser = args['otherUser'];
+        if (args['otherUser'] != null) {
+          _otherUser = args['otherUser'];
+        } else if (args['otherUserId'] != null) {
+          _fetchOtherUser(args['otherUserId']);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String userId) async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final user = await FirestoreService().getUser(userId);
+      if (mounted) {
+        setState(() {
+          _otherUser = user;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load user: $e')),
+        );
+      }
     }
   }
 
