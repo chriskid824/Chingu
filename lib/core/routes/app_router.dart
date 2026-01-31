@@ -8,7 +8,7 @@ import '../../screens/auth/email_verification_screen.dart';
 // 主導航
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
-import '../../screens/home/notifications_screen.dart';
+import '../../screens/notifications/notification_center_screen.dart';
 import '../../screens/home/search_screen.dart';
 // 個人資料模組
 import '../../screens/profile/profile_setup_screen.dart';
@@ -139,7 +139,7 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       
       case AppRoutes.notifications:
-        return MaterialPageRoute(builder: (_) => const NotificationsScreen());
+        return MaterialPageRoute(builder: (_) => const NotificationCenterScreen());
       
       case AppRoutes.search:
         return MaterialPageRoute(builder: (_) => const SearchScreen());
@@ -175,9 +175,19 @@ class AppRouter {
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
-      
+
       case AppRoutes.filter:
         return MaterialPageRoute(builder: (_) => const FilterScreen());
+
+      case AppRoutes.matchSuccess:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => MatchSuccessScreen(
+            currentUser: args['currentUser'],
+            partner: args['partner'],
+            chatRoomId: args['chatRoomId'],
+          ),
+        );
       
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
@@ -291,14 +301,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

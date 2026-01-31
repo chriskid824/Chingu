@@ -1,76 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/notification_storage_service.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
-class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+class NotificationCenterScreen extends StatefulWidget {
+  const NotificationCenterScreen({super.key});
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
+  State<NotificationCenterScreen> createState() => _NotificationCenterScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
-  // 暫時使用本地數據，後續可改為從 Provider 或 API 獲取
-  // 將此列表設為空即可測試空狀態
-  List<NotificationModel> _notifications = [
-    NotificationModel(
-      id: '1',
-      userId: 'current_user',
-      type: 'match',
-      title: '王小華 喜歡了您的個人資料',
-      message: '王小華 喜歡了您的個人資料',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      isRead: false,
-    ),
-    NotificationModel(
-      id: '2',
-      userId: 'current_user',
-      type: 'message',
-      title: '李小美 傳送了一則訊息給您',
-      message: '李小美 傳送了一則訊息給您',
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-      isRead: false,
-    ),
-    NotificationModel(
-      id: '3',
-      userId: 'current_user',
-      type: 'event',
-      title: '您與 陳大明 的晚餐預約已確認',
-      message: '您與 陳大明 的晚餐預約已確認',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      isRead: true,
-    ),
-    NotificationModel(
-      id: '4',
-      userId: 'current_user',
-      type: 'rating',
-      title: '恭喜！您獲得了新的成就徽章',
-      message: '恭喜！您獲得了新的成就徽章',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      isRead: true,
-    ),
-    // 為了區分 "喜歡" 和 "配對請求"，這裡我們可能需要更細的類型，但目前暫用 match
-    // 並依賴 title 或 message 來區分在實際後端邏輯中應該是不同的 type
-    // 為了演示目的，這裡保持使用 match，但在 UI 渲染時我們會根據上下文處理
-    NotificationModel(
-      id: '5',
-      userId: 'current_user',
-      type: 'match',
-      title: '林小芳 想要與您配對',
-      message: '林小芳 想要與您配對',
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      isRead: true,
-    ),
-    NotificationModel(
-      id: '6',
-      userId: 'current_user',
-      type: 'event',
-      title: '本週三晚餐報名即將截止',
-      message: '本週三晚餐報名即將截止',
-      createdAt: DateTime.now().subtract(const Duration(days: 4)),
-      isRead: true,
-    ),
-  ];
+class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
+  final NotificationStorageService _storageService = NotificationStorageService();
 
   @override
   Widget build(BuildContext context) {
@@ -95,28 +37,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: theme.colorScheme.onSurface,
         ),
         actions: [
-          if (_notifications.isNotEmpty)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  // 標記所有為已讀
-                  // 這裡只是模擬，實際應呼叫 API
-                  _notifications =
-                      _notifications.map((n) => n.markAsRead()).toList();
-                });
-              },
-              child: Text(
-                '全部已讀',
-                style: TextStyle(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+          StreamBuilder<int>(
+            stream: _storageService.watchUnreadCount(),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+              if (unreadCount > 0) {
+                return TextButton(
+                  onPressed: () {
+                    _storageService.markAllAsRead();
+                  },
+                  child: Text(
+                    '全部已讀',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ],
       ),
-      body: _notifications.isEmpty
-          ? Center(
+      body: StreamBuilder<List<NotificationModel>>(
+        stream: _storageService.watchNotifications(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final notifications = snapshot.data ?? [];
+
+          if (notifications.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -126,8 +80,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          theme.colorScheme.primary.withOpacity(0.2),
-                          theme.colorScheme.primary.withOpacity(0.1),
+                          theme.colorScheme.primary.withValues(alpha: 0.2),
+                          theme.colorScheme.primary.withValues(alpha: 0.1),
                         ],
                       ),
                       shape: BoxShape.circle,
@@ -151,45 +105,75 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     '您目前沒有任何通知消息',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                   ),
                 ],
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: _notifications.map((notification) {
-                return _buildNotificationItem(
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              final notification = notifications[index];
+              return Dismissible(
+                key: Key(notification.id),
+                background: Container(
+                  color: theme.colorScheme.error,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.onError,
+                  ),
+                ),
+                direction: DismissDirection.endToStart,
+                onDismissed: (direction) {
+                  _storageService.deleteNotification(notification.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('通知已刪除'),
+                      action: SnackBarAction(
+                        label: '復原',
+                        onPressed: () {
+                          // Note: To support undo properly, we would need to save the item and re-add it.
+                          // For now, we just delete.
+                        },
+                      ),
+                    ),
+                  );
+                },
+                child: _buildNotificationItem(
                   context,
                   notification,
-                );
-              }).toList(),
-            ),
+                  chinguTheme,
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
-  
+
   Widget _buildNotificationItem(
     BuildContext context,
     NotificationModel notification,
+    ChinguTheme? chinguTheme,
   ) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     // 根據類型決定圖標和顏色
     IconData icon;
     Color color;
 
-    // 簡單映射，實際專案應定義更多 type
     switch (notification.type) {
       case 'match':
         icon = Icons.favorite_rounded;
         color = theme.colorScheme.error;
-        break;
-      case 'match_request': // 假設新增此類型對應 "想要與您配對"
-        icon = Icons.person_add_rounded;
-        color = chinguTheme?.secondary ?? Colors.purple;
         break;
       case 'message':
         icon = Icons.chat_bubble_rounded;
@@ -199,16 +183,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         icon = Icons.event_available_rounded;
         color = chinguTheme?.success ?? Colors.green;
         break;
-      case 'event_reminder': // 假設新增此類型對應 "晚餐報名截止"
-        icon = Icons.restaurant_rounded;
-        color = theme.colorScheme.primary;
-        break;
       case 'rating':
         icon = Icons.stars_rounded;
         color = chinguTheme?.warning ?? Colors.amber;
         break;
       default:
-        // 如果是 match 但 title 包含 "配對" (fallback for existing data)
+        // 如果是 match 但 title 包含 "配對"
         if (notification.type == 'match' && notification.title.contains('配對')) {
           icon = Icons.person_add_rounded;
           color = chinguTheme?.secondary ?? Colors.purple;
@@ -222,12 +202,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }
     }
 
-    // 格式化時間 (簡單模擬)
+    // 格式化時間
     final diff = DateTime.now().difference(notification.createdAt);
     String timeStr;
     if (diff.inHours < 24) {
       timeStr = '${diff.inHours} 小時前';
-      if (diff.inHours == 0) timeStr = '${diff.inMinutes} 分鐘前';
+      if (diff.inHours == 0) {
+        timeStr = '${diff.inMinutes} 分鐘前';
+        if (diff.inMinutes == 0) {
+          timeStr = '剛剛';
+        }
+      }
     } else {
       timeStr = '${diff.inDays} 天前';
       if (diff.inDays == 1) timeStr = '昨天';
@@ -236,11 +221,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: !notification.isRead ? theme.colorScheme.primary.withOpacity(0.05) : theme.cardColor,
+        color: !notification.isRead
+            ? theme.colorScheme.primary.withValues(alpha: 0.05)
+            : theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: !notification.isRead
-              ? theme.colorScheme.primary.withOpacity(0.2)
+              ? theme.colorScheme.primary.withValues(alpha: 0.2)
               : chinguTheme?.surfaceVariant ?? theme.dividerColor,
           width: 1,
         ),
@@ -252,8 +239,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                color.withOpacity(0.2),
-                color.withOpacity(0.1),
+                color.withValues(alpha: 0.2),
+                color.withValues(alpha: 0.1),
               ],
             ),
             shape: BoxShape.circle,
@@ -274,7 +261,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             timeStr,
             style: TextStyle(
               fontSize: 13,
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -288,6 +275,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               )
             : null,
+        onTap: () async {
+          // 標記為已讀
+          if (!notification.isRead) {
+            await _storageService.markAsRead(notification.id);
+          }
+
+          // 處理導航
+          if (mounted) {
+            RichNotificationService().handleNavigation(
+              notification.actionType,
+              notification.actionData,
+              null,
+            );
+          }
+        },
       ),
     );
   }
