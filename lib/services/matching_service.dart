@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final UserBlockService _userBlockService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    UserBlockService? userBlockService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _userBlockService = userBlockService ?? UserBlockService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -49,6 +53,16 @@ class MatchingService {
       final swipedIds = await _getSwipedUserIds(currentUser.uid);
       print('已滑過 ${swipedIds.length} 個用戶');
 
+      // 獲取封鎖名單 (主動封鎖 + 被封鎖)
+      final blockedResults = await Future.wait([
+        _userBlockService.getBlockedUserIds(currentUser.uid),
+        _userBlockService.getBlockedByUserIds(currentUser.uid),
+      ]);
+      final blockedIds = blockedResults[0];
+      final blockedByIds = blockedResults[1];
+      final excludedIds = {...swipedIds, ...blockedIds, ...blockedByIds};
+      print('排除 ID (滑過+封鎖): ${excludedIds.length}');
+
       // 3. 過濾和評分
       List<Map<String, dynamic>> scoredMatches = [];
 
@@ -59,9 +73,9 @@ class MatchingService {
           continue;
         }
 
-        // 排除已滑過的
-        if (swipedIds.contains(candidate.uid)) {
-          print('跳過: 已滑過 (${candidate.name})');
+        // 排除已滑過或封鎖的
+        if (excludedIds.contains(candidate.uid)) {
+          print('跳過: 已排除 (${candidate.name})');
           continue;
         }
 
