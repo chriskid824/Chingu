@@ -3,6 +3,7 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
@@ -122,6 +123,13 @@ class MatchingService {
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
           
+          // 記錄滑動事件 (Match)
+          await AnalyticsService().logEvent('swipe', parameters: {
+            'is_like': isLike,
+            'is_match': true,
+            'target_user_id': targetUserId,
+          });
+
           return {
             'isMatch': true,
             'chatRoomId': chatRoomId,
@@ -130,6 +138,13 @@ class MatchingService {
         }
       }
       
+      // 記錄滑動事件 (No Match)
+      await AnalyticsService().logEvent('swipe', parameters: {
+        'is_like': isLike,
+        'is_match': false,
+        'target_user_id': targetUserId,
+      });
+
       return {
         'isMatch': false,
         'chatRoomId': null,
