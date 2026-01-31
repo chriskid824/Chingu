@@ -1,118 +1,54 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:chingu/utils/ab_test_manager.dart';
 
+@GenerateMocks([FirebaseRemoteConfig])
+import 'ab_test_manager_test.mocks.dart';
+
 void main() {
-  group('ABTestVariant', () {
-    test('should create variant from map', () {
-      final map = {
-        'name': 'variant_a',
-        'weight': 30.0,
-        'config': {'color': 'blue'},
-      };
+  late ABTestManager abTestManager;
+  late MockFirebaseRemoteConfig mockRemoteConfig;
 
-      final variant = ABTestVariant.fromMap(map);
-      expect(variant.name, 'variant_a');
-      expect(variant.weight, 30.0);
-      expect(variant.config['color'], 'blue');
-    });
-
-    test('should convert variant to map', () {
-      final variant = ABTestVariant(
-        name: 'variant_b',
-        weight: 70.0,
-        config: {'size': 'large'},
-      );
-
-      final map = variant.toMap();
-      expect(map['name'], 'variant_b');
-      expect(map['weight'], 70.0);
-      expect(map['config']['size'], 'large');
-    });
-
-    test('should handle default values', () {
-      final variant = ABTestVariant.fromMap({});
-      expect(variant.name, '');
-      expect(variant.weight, 50.0);
-      expect(variant.config, isEmpty);
-    });
+  setUp(() {
+    abTestManager = ABTestManager();
+    mockRemoteConfig = MockFirebaseRemoteConfig();
+    abTestManager.setRemoteConfigForTesting(mockRemoteConfig);
   });
 
-  group('ABTestConfig', () {
-    test('should create config and convert to map', () {
-      final config = ABTestConfig(
-        testId: 'test_1',
-        name: 'Test Experiment',
-        description: 'Test Description',
-        isActive: true,
-        variants: [
-          ABTestVariant(name: 'control', weight: 50.0),
-          ABTestVariant(name: 'variant_a', weight: 50.0),
-        ],
-      );
+  test('initialize sets defaults and fetches', () async {
+    // Arrange
+    when(mockRemoteConfig.setConfigSettings(any)).thenAnswer((_) async {});
+    when(mockRemoteConfig.setDefaults(any)).thenAnswer((_) async {});
+    when(mockRemoteConfig.fetchAndActivate()).thenAnswer((_) async => true);
+    when(mockRemoteConfig.lastFetchStatus).thenReturn(RemoteConfigFetchStatus.success);
 
-      final result = config.toMap();
-      expect(result['name'], 'Test Experiment');
-      expect(result['description'], 'Test Description');
-      expect(result['isActive'], true);
-      expect(result['variants'], hasLength(2));
-    });
+    // Act
+    await abTestManager.initialize(defaults: {'test': true});
 
-    test('should handle optional dates', () {
-      final now = DateTime.now();
-      final config = ABTestConfig(
-        testId: 'test_2',
-        name: 'Dated Test',
-        description: 'With dates',
-        isActive: true,
-        variants: [ABTestVariant(name: 'control', weight: 100.0)],
-        startDate: now,
-        endDate: now.add(const Duration(days: 7)),
-      );
-
-      final map = config.toMap();
-      expect(map.containsKey('startDate'), true);
-      expect(map.containsKey('endDate'), true);
-    });
+    // Assert
+    verify(mockRemoteConfig.setConfigSettings(any)).called(1);
+    verify(mockRemoteConfig.setDefaults(any)).called(1);
+    verify(mockRemoteConfig.fetchAndActivate()).called(1);
   });
 
-  group('FeatureConfig', () {
-    test('should create config with default values', () {
-      final config = FeatureConfig(
-        key: 'new_feature',
-        enabled: true,
-      );
+  test('isFeatureEnabled returns bool from config', () {
+    when(mockRemoteConfig.getBool('feature_x')).thenReturn(true);
 
-      expect(config.key, 'new_feature');
-      expect(config.enabled, true);
-      expect(config.config, isEmpty);
-    });
+    expect(abTestManager.isFeatureEnabled('feature_x'), true);
+    verify(mockRemoteConfig.getBool('feature_x')).called(1);
+  });
 
-    test('should convert to map correctly', () {
-      final config = FeatureConfig(
-        key: 'feature_1',
-        enabled: false,
-        config: const {'timeout': 5000},
-      );
+  test('getString returns string from config', () {
+    when(mockRemoteConfig.getString('variant_key')).thenReturn('variant_b');
 
-      final map = config.toMap();
-      expect(map['enabled'], false);
-      expect(map['config']['timeout'], 5000);
-    });
+    expect(abTestManager.getString('variant_key'), 'variant_b');
+  });
 
-    test('should handle custom config', () {
-      final config = FeatureConfig(
-        key: 'advanced_feature',
-        enabled: true,
-        config: const {
-          'maxUsers': 100,
-          'theme': 'dark',
-          'features': ['chat', 'video']
-        },
-      );
+  test('getNumber returns double from config', () {
+    when(mockRemoteConfig.getDouble('price')).thenReturn(99.9);
 
-      expect(config.config['maxUsers'], 100);
-      expect(config.config['theme'], 'dark');
-      expect(config.config['features'], hasLength(2));
-    });
+    expect(abTestManager.getNumber('price'), 99.9);
   });
 }
