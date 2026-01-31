@@ -12,6 +12,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'utils/ab_test_manager.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -30,6 +31,12 @@ void main() async {
 
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
+
+  // 初始化 A/B 測試管理器
+  await ABTestManager().initialize(defaults: {
+    'enable_new_ui': false,
+    'welcome_message_variant': 'default',
+  });
 
   runApp(const ChinguApp());
 }
