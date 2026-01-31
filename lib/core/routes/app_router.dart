@@ -45,6 +45,7 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../screens/profile/user_moments_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -70,6 +71,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String userMoments = '/user-moments';
   
   // 配對模組
   static const String matching = '/matching';
@@ -165,6 +167,22 @@ class AppRouter {
       
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+
+      case AppRoutes.userMoments:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['userId'] == null) {
+           return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Error: Missing arguments for user moments')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => UserMomentsScreen(
+            userId: args['userId'],
+            userName: args['userName'],
+          ),
+        );
 
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
