@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:provider/provider.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../providers/auth_provider.dart';
+import '../models/user_model.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +24,7 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  StreamSubscription<RemoteMessage>? _messageSubscription;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -57,6 +63,98 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+  }
+
+  /// 初始化 Firebase Messaging 監聽器
+  ///
+  /// 必須在 Widget 樹中有 AuthProvider 的地方調用
+  void initFirebaseMessaging(BuildContext context) {
+    _messageSubscription?.cancel();
+    _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _handleForegroundMessage(message, context);
+    });
+  }
+
+  /// 釋放資源
+  void dispose() {
+    _messageSubscription?.cancel();
+  }
+
+  /// 處理前台訊息並根據用戶偏好過濾
+  void _handleForegroundMessage(RemoteMessage message, BuildContext context) {
+    // 獲取當前用戶設定
+    AuthProvider? authProvider;
+    try {
+      // 使用 listen: false 因為我們在 callback 中，不需要監聽變化
+      authProvider = Provider.of<AuthProvider>(context, listen: false);
+    } catch (e) {
+      debugPrint('RichNotificationService: AuthProvider not found in context: $e');
+      return;
+    }
+
+    final user = authProvider.userModel;
+    if (user == null) {
+       debugPrint('RichNotificationService: User not logged in, suppressing notification');
+       return;
+    }
+
+    final data = message.data;
+    // 如果 data['type'] 不存在，嘗試從 notification 標題猜測或預設為 system
+    final type = data['type'] ?? 'system';
+
+    // 根據偏好過濾
+    if (!_shouldShowNotification(user, type, data)) {
+      debugPrint('RichNotificationService: Notification suppressed by user preference (Type: $type)');
+      return;
+    }
+
+    // 構建 NotificationModel
+    final notification = NotificationModel(
+      id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: user.uid,
+      type: type,
+      title: message.notification?.title ?? data['title'] ?? '通知',
+      message: message.notification?.body ?? data['body'] ?? '',
+      imageUrl: data['imageUrl'],
+      actionType: data['actionType'],
+      actionData: data['actionData'],
+      createdAt: DateTime.now(),
+    );
+
+    showNotification(notification);
+  }
+
+  /// 檢查是否應該顯示通知
+  bool _shouldShowNotification(UserModel user, String type, Map<String, dynamic> data) {
+    switch (type) {
+      case 'match':
+        // 嘗試區分新配對和配對成功
+        if (data['subtype'] == 'success' || data['status'] == 'success') {
+          return user.notifyMatchSuccess;
+        }
+        return user.notifyNewMatch;
+
+      case 'message':
+        return user.notifyNewMessage;
+
+      case 'event':
+        // 嘗試區分提醒和變更
+        if (data['subtype'] == 'change' || data['status'] == 'change') {
+          return user.notifyDinnerChanges;
+        }
+        return user.notifyDinnerReminder;
+
+      case 'promotion':
+        return user.notifyPromotions;
+
+      case 'newsletter':
+        return user.notifyNewsletter;
+
+      case 'system':
+      default:
+        // 系統通知預設顯示
+        return true;
+    }
   }
 
   /// 處理通知點擊事件
@@ -98,10 +196,6 @@ class RichNotificationService {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
           navigator.pushNamed(AppRoutes.chatList);
         } else {
           navigator.pushNamed(AppRoutes.chatList);
@@ -109,14 +203,11 @@ class RichNotificationService {
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
           navigator.pushNamed(AppRoutes.eventDetail);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
