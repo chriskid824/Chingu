@@ -197,14 +197,14 @@ class AppTheme {
       
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surfaceVariant.withOpacity(0.3),
+        fillColor: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surfaceVariant.withValues(alpha: 0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: preset == AppThemePreset.minimal ? AppColorsMinimal.surfaceVariant : colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: preset == AppThemePreset.minimal ? AppColorsMinimal.surfaceVariant : colorScheme.outline.withOpacity(0.5)),
+          borderSide: BorderSide(color: preset == AppThemePreset.minimal ? AppColorsMinimal.surfaceVariant : colorScheme.outline.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -213,7 +213,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surface,
         shape: RoundedRectangleBorder(
