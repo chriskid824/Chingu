@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "785159715135",
+    "project_id": "chingu-98387",
+    "storage_bucket": "chingu-98387.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785159715135:android:dummy_id",
+        "android_client_info": {
+          "package_name": "com.chingu.chingu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "dummy_api_key_placeholder"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
