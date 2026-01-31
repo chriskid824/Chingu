@@ -1,21 +1,15 @@
-/// Notification A/B Testing Service
-///
-/// This service is responsible for assigning users to experimental groups (A/B testing)
-/// and serving varied notification content based on the assigned group.
-///
-/// The current implementation uses a deterministic hash of the user ID to assign groups.
+// Notification A/B Testing Service
+//
+// This service is responsible for assigning users to experimental groups (A/B testing)
+// and serving varied notification content based on the assigned group.
+//
+// The current implementation uses a deterministic hash of the user ID to assign groups.
+
+import '../models/notification_model.dart';
 
 enum ExperimentGroup {
   control, // Group A (Default)
   variant, // Group B (Experimental)
-}
-
-enum NotificationType {
-  match,
-  message,
-  event,
-  rating,
-  system,
 }
 
 class NotificationContent {

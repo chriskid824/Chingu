@@ -66,10 +66,20 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        // ignore: unused_local_variable
+        final String? deeplinkRoute = data['deeplinkRoute'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
+        // 優先處理按鈕點擊
+        if (actionId != null && actionId != 'default') {
+             _handleNavigation(actionId, actionData, null); // actionId becomes actionType in _handleNavigation logic if we treat it as such, but here logic is slightly different
+             return;
+        }
+
+        // Use deeplinkRoute if available (future improvement), for now fall back to actionType/actionData logic
+        // But since we didn't change _handleNavigation to use deeplinkRoute yet, we keep using actionType/actionData
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
@@ -139,16 +149,16 @@ class RichNotificationService {
         styleInformation = BigPictureStyleInformation(
           bigPicture,
           contentTitle: notification.title,
-          summaryText: notification.message,
+          summaryText: notification.content,
           hideExpandedLargeIcon: true,
         );
       } catch (e) {
         debugPrint('Error downloading image for notification: $e');
         // 圖片下載失敗則降級為普通通知
-        styleInformation = BigTextStyleInformation(notification.message);
+        styleInformation = BigTextStyleInformation(notification.content);
       }
     } else {
-      styleInformation = BigTextStyleInformation(notification.message);
+      styleInformation = BigTextStyleInformation(notification.content);
     }
 
     // 定義操作按鈕
@@ -185,13 +195,14 @@ class RichNotificationService {
     final Map<String, dynamic> payload = {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
+      'deeplinkRoute': notification.deeplinkRoute,
       'notificationId': notification.id,
     };
 
     await _flutterLocalNotificationsPlugin.show(
       notification.id.hashCode, // 使用 hashCode 作為 ID
       notification.title,
-      notification.message,
+      notification.content,
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
