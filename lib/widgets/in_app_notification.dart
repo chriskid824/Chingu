@@ -45,7 +45,7 @@ class InAppNotification extends StatelessWidget {
                   ),
                 ],
                 border: Border.all(
-                  color: chinguTheme?.surfaceVariant ?? Colors.grey.withOpacity(0.2),
+                  color: chinguTheme?.surfaceVariant ?? Colors.grey.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -76,7 +76,7 @@ class InAppNotification extends StatelessWidget {
                         Text(
                           notification.message,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -96,7 +96,7 @@ class InAppNotification extends StatelessWidget {
                         child: Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -118,7 +118,7 @@ class InAppNotification extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: chinguTheme?.surfaceVariant ?? Colors.grey.withOpacity(0.2),
+            color: chinguTheme?.surfaceVariant ?? Colors.grey.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -142,7 +142,7 @@ class InAppNotification extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
+        color: iconColor.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(

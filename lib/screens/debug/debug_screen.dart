@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import '../../models/notification_model.dart';
+import '../../services/in_app_notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -108,72 +110,140 @@ class _DebugScreenState extends State<DebugScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('開發者工具')),
-      body: Center(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            const SizedBox(height: 24),
             Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 24),
             const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                '點擊下方按鈕將生成 6 個測試用戶和 1 個測試活動到您的 Firestore 資料庫中。',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
+            const Text(
+              '點擊下方按鈕將生成 6 個測試用戶和 1 個測試活動到您的 Firestore 資料庫中。',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
             if (_isLoading)
               const CircularProgressIndicator()
             else
-              ElevatedButton.icon(
-                onPressed: _runSeeder,
-                icon: const Icon(Icons.add_to_photos_rounded),
-                label: const Text('生成測試數據 (Seeder)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _generateMatchTestData,
-                icon: const Icon(Icons.favorite_rounded),
-                label: const Text('生成配對測試數據'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.pink,
-                  side: const BorderSide(color: Colors.pink),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _clearData,
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('清除所有數據'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
+              Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _runSeeder,
+                    icon: const Icon(Icons.add_to_photos_rounded),
+                    label: const Text('生成測試數據 (Seeder)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _generateMatchTestData,
+                    icon: const Icon(Icons.favorite_rounded),
+                    label: const Text('生成配對測試數據'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.pink,
+                      side: const BorderSide(color: Colors.pink),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _clearData,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('清除所有數據'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
             const SizedBox(height: 24),
             Text(
               _status,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: _status.startsWith('❌') ? Colors.red : Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),
+
+            const Divider(height: 48),
+            const Text('通知測試', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().show(NotificationModel(
+                      id: 'test_match',
+                      userId: 'current_user',
+                      type: 'match',
+                      title: 'New Match!',
+                      message: 'You have a new match with Jessica.',
+                      createdAt: DateTime.now(),
+                      actionType: 'open_chat',
+                    ));
+                  },
+                  child: const Text('Match Notification'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().show(NotificationModel(
+                      id: 'test_event',
+                      userId: 'current_user',
+                      type: 'event',
+                      title: 'Dinner Reminder',
+                      message: 'Your dinner event starts in 2 hours.',
+                      createdAt: DateTime.now(),
+                      actionType: 'view_event',
+                    ));
+                  },
+                  child: const Text('Event Notification'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    InAppNotificationService().show(NotificationModel(
+                      id: 'test_msg',
+                      userId: 'current_user',
+                      type: 'message',
+                      title: 'New Message',
+                      message: 'David sent you a message.',
+                      createdAt: DateTime.now(),
+                      actionType: 'open_chat',
+                    ));
+                  },
+                  child: const Text('Message Notification'),
+                ),
+                ElevatedButton(
+                   onPressed: () {
+                    InAppNotificationService().show(NotificationModel(
+                      id: 'test_system',
+                      userId: 'current_user',
+                      type: 'system',
+                      title: 'System Update',
+                      message: 'We have updated our privacy policy.',
+                      createdAt: DateTime.now(),
+                    ));
+                  },
+                  child: const Text('System Notification'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
 }
-
-
-

@@ -92,6 +92,12 @@
     - Unit Tests for Dinner Event Provider & Matching Service
     - Profile Preview Mode
 
+- ✅ **In-App Notification Banner (Task 132)**:
+  - Refactored `InAppNotification` to use `Color.withValues`.
+  - Created `InAppNotificationService` for managing overlay banners.
+  - Added Widget Tests.
+  - Integrated with `DebugScreen` for testing.
+
 - ✅ **聊天詳情畫面 (ChatDetailScreen)**: 完整實作即時聊天功能
   - 修復了 `AppRouter` 中缺少 `settings` 參數導致 arguments 無法傳遞的問題
   - 實作了 Firestore 即時訊息流監聽
