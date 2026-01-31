@@ -57,9 +57,35 @@ class ChinguApp extends StatelessWidget {
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
+            builder: (context, child) {
+              return NotificationListenerWrapper(child: child);
+            },
           );
         },
       ),
     );
+  }
+}
+
+class NotificationListenerWrapper extends StatefulWidget {
+  final Widget? child;
+  const NotificationListenerWrapper({super.key, this.child});
+
+  @override
+  State<NotificationListenerWrapper> createState() => _NotificationListenerWrapperState();
+}
+
+class _NotificationListenerWrapperState extends State<NotificationListenerWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RichNotificationService().initFirebaseMessaging(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child ?? const SizedBox.shrink();
   }
 }

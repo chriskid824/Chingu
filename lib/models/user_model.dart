@@ -38,6 +38,15 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final bool notifyNewMatch;
+  final bool notifyMatchSuccess;
+  final bool notifyNewMessage;
+  final bool notifyDinnerReminder;
+  final bool notifyDinnerChanges;
+  final bool notifyPromotions;
+  final bool notifyNewsletter;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +75,13 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notifyNewMatch = true,
+    this.notifyMatchSuccess = true,
+    this.notifyNewMessage = true,
+    this.notifyDinnerReminder = true,
+    this.notifyDinnerChanges = true,
+    this.notifyPromotions = false,
+    this.notifyNewsletter = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +120,13 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notifyNewMatch: map['notifyNewMatch'] ?? true,
+      notifyMatchSuccess: map['notifyMatchSuccess'] ?? true,
+      notifyNewMessage: map['notifyNewMessage'] ?? true,
+      notifyDinnerReminder: map['notifyDinnerReminder'] ?? true,
+      notifyDinnerChanges: map['notifyDinnerChanges'] ?? true,
+      notifyPromotions: map['notifyPromotions'] ?? false,
+      notifyNewsletter: map['notifyNewsletter'] ?? false,
     );
   }
 
@@ -136,6 +159,13 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notifyNewMatch': notifyNewMatch,
+      'notifyMatchSuccess': notifyMatchSuccess,
+      'notifyNewMessage': notifyNewMessage,
+      'notifyDinnerReminder': notifyDinnerReminder,
+      'notifyDinnerChanges': notifyDinnerChanges,
+      'notifyPromotions': notifyPromotions,
+      'notifyNewsletter': notifyNewsletter,
     };
   }
 
@@ -166,6 +196,13 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? notifyNewMatch,
+    bool? notifyMatchSuccess,
+    bool? notifyNewMessage,
+    bool? notifyDinnerReminder,
+    bool? notifyDinnerChanges,
+    bool? notifyPromotions,
+    bool? notifyNewsletter,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +232,13 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notifyNewMatch: notifyNewMatch ?? this.notifyNewMatch,
+      notifyMatchSuccess: notifyMatchSuccess ?? this.notifyMatchSuccess,
+      notifyNewMessage: notifyNewMessage ?? this.notifyNewMessage,
+      notifyDinnerReminder: notifyDinnerReminder ?? this.notifyDinnerReminder,
+      notifyDinnerChanges: notifyDinnerChanges ?? this.notifyDinnerChanges,
+      notifyPromotions: notifyPromotions ?? this.notifyPromotions,
+      notifyNewsletter: notifyNewsletter ?? this.notifyNewsletter,
     );
   }
 
