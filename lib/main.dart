@@ -22,6 +22,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 提前檢查通知啟動，優化啟動速度
+  final initialNotification = await RichNotificationService().checkInitialNotification();
+
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
 
@@ -31,11 +34,16 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  runApp(ChinguApp(initialNotification: initialNotification));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final InitialNotificationData? initialNotification;
+
+  const ChinguApp({
+    super.key,
+    this.initialNotification,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +64,34 @@ class ChinguApp extends StatelessWidget {
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
             initialRoute: AppRoutes.mainNavigation,
+            onGenerateInitialRoutes: initialNotification != null
+                ? (_) {
+                    // 如果目標是 mainNavigation，只返回一個路由
+                    if (initialNotification!.route == AppRoutes.mainNavigation) {
+                      return [
+                        AppRouter.generateRoute(
+                          RouteSettings(
+                            name: AppRoutes.mainNavigation,
+                            arguments: initialNotification!.arguments,
+                          ),
+                        ),
+                      ];
+                    }
+
+                    // 否則返回 mainNavigation -> targetRoute 的堆疊
+                    return [
+                      AppRouter.generateRoute(
+                        const RouteSettings(name: AppRoutes.mainNavigation),
+                      ),
+                      AppRouter.generateRoute(
+                        RouteSettings(
+                          name: initialNotification!.route,
+                          arguments: initialNotification!.arguments,
+                        ),
+                      ),
+                    ];
+                  }
+                : null,
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
