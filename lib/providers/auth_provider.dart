@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -65,7 +66,8 @@ class AuthProvider with ChangeNotifier {
         _errorMessage = '找不到用戶資料 (Document Not Found)';
         notifyListeners();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: '載入用戶資料失敗');
       debugPrint('載入用戶資料失敗: $e');
       _errorMessage = '載入資料失敗: $e';
       _userModel = null;
@@ -124,7 +126,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: '註冊失敗');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -151,7 +154,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: '登入失敗');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -197,7 +201,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: 'Google 登入失敗');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -211,7 +216,8 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
       await _authService.signOut();
       _setLoading(false);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: '登出失敗');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -228,7 +234,8 @@ class AuthProvider with ChangeNotifier {
 
       _setLoading(false);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: '發送密碼重設郵件失敗');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -254,7 +261,8 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordError(e, stackTrace, reason: '更新用戶資料失敗');
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -293,6 +301,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
