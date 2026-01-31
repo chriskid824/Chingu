@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final FirebaseFunctions _functions;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    FirebaseFunctions? functions,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _functions = functions ?? FirebaseFunctions.instance;
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -157,8 +161,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
@@ -178,9 +181,35 @@ class MatchingService {
     // 更新雙方的 totalMatches
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
-    
+
     // 創建聊天室
-    return await _chatService.createChatRoom(user1Id, user2Id);
+    final chatRoomId = await _chatService.createChatRoom(user1Id, user2Id);
+
+    // 發送配對通知
+    try {
+      final user1 = await _firestoreService.getUser(user1Id);
+      final user2 = await _firestoreService.getUser(user2Id);
+
+      if (user1 != null && user2 != null) {
+        // 通知 User 1
+        await _functions.httpsCallable('sendNotification').call({
+          'targetUserId': user1Id,
+          'notificationType': 'match_success',
+          'params': {'userName': user2.name},
+        });
+
+        // 通知 User 2
+        await _functions.httpsCallable('sendNotification').call({
+          'targetUserId': user2Id,
+          'notificationType': 'match_success',
+          'params': {'userName': user1.name},
+        });
+      }
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+    }
+
+    return chatRoomId;
   }
 
   /// 獲取已滑過的用戶 ID 列表

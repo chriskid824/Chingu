@@ -2,13 +2,14 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([FirestoreService, ChatService, FirebaseFunctions, HttpsCallable, HttpsCallableResult])
 import 'matching_service_test.mocks.dart';
 
 void main() {
@@ -16,6 +17,9 @@ void main() {
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
   late FakeFirebaseFirestore fakeFirestore;
+  late MockFirebaseFunctions mockFunctions;
+  late MockHttpsCallable mockCallable;
+  late MockHttpsCallableResult<dynamic> mockCallableResult;
 
   // Test data
   final currentUser = UserModel(
@@ -23,6 +27,8 @@ void main() {
     email: 'current@test.com',
     name: 'Current User',
     gender: 'male',
+    job: 'Developer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -31,7 +37,8 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -39,6 +46,8 @@ void main() {
     email: 'candidate@test.com',
     name: 'Candidate User',
     gender: 'female',
+    job: 'Designer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -47,25 +56,35 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
     fakeFirestore = FakeFirebaseFirestore();
+    mockFunctions = MockFirebaseFunctions();
+    mockCallable = MockHttpsCallable();
+    mockCallableResult = MockHttpsCallableResult();
 
-    matchingService = MatchingService(
-      firestore: fakeFirestore,
-      firestoreService: mockFirestoreService,
-      chatService: mockChatService,
-    );
+    // Mock functions behavior
+    when(mockFunctions.httpsCallable(any)).thenReturn(mockCallable);
+    when(mockCallable.call(any)).thenAnswer((_) async => mockCallableResult);
+    when(mockCallableResult.data).thenReturn({});
   });
 
   group('getMatches', () {
     test('should return candidates when hard filters pass and not swiped',
         () async {
       // Arrange
+      matchingService = MatchingService(
+        firestore: fakeFirestore,
+        firestoreService: mockFirestoreService,
+        chatService: mockChatService,
+        functions: mockFunctions,
+      );
+
       when(mockFirestoreService.queryMatchingUsers(
         city: anyNamed('city'),
         limit: anyNamed('limit'),
@@ -78,16 +97,23 @@ void main() {
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
       // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Interest: 1 common ('coding') / 4 * 50 = 12.5
+      // Location: same city, same district = 30
+      // Age: diff 1 = 10
+      // Budget: same = 10
+      // Total: 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
       // Arrange
+      matchingService = MatchingService(
+        firestore: fakeFirestore,
+        firestoreService: mockFirestoreService,
+        chatService: mockChatService,
+        functions: mockFunctions,
+      );
+
       // Add a swipe record to fake firestore
       await fakeFirestore.collection('swipes').add({
         'userId': currentUser.uid,
@@ -109,6 +135,13 @@ void main() {
 
     test('should filter out users who fail hard filters (age)', () async {
       // Arrange
+      matchingService = MatchingService(
+        firestore: fakeFirestore,
+        firestoreService: mockFirestoreService,
+        chatService: mockChatService,
+        functions: mockFunctions,
+      );
+
       final oldCandidate = candidateUser.copyWith(age: 40); // > maxAge 30
 
       when(mockFirestoreService.queryMatchingUsers(
@@ -126,6 +159,14 @@ void main() {
 
   group('recordSwipe', () {
     test('should record swipe correctly', () async {
+      // Arrange
+      matchingService = MatchingService(
+        firestore: fakeFirestore,
+        firestoreService: mockFirestoreService,
+        chatService: mockChatService,
+        functions: mockFunctions,
+      );
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -160,6 +201,21 @@ void main() {
       when(mockChatService.createChatRoom(any, any))
           .thenAnswer((_) async => 'chat_room_id');
 
+      // Mock FirestoreService.getUser calls inside _handleMatchSuccess
+      when(mockFirestoreService.getUser(currentUser.uid))
+          .thenAnswer((_) async => currentUser);
+      when(mockFirestoreService.getUser(candidateUser.uid))
+          .thenAnswer((_) async => candidateUser);
+      when(mockFirestoreService.updateUserStats(any, totalMatches: anyNamed('totalMatches')))
+          .thenAnswer((_) async {});
+
+      matchingService = MatchingService(
+        firestore: fakeFirestore,
+        firestoreService: mockFirestoreService,
+        chatService: mockChatService,
+        functions: mockFunctions,
+      );
+
       // Act
       final result = await matchingService.recordSwipe(
         currentUser.uid,
@@ -174,6 +230,9 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify Cloud Function calls
+      verify(mockFunctions.httpsCallable('sendNotification')).called(2);
     });
   });
 }
