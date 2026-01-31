@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -60,6 +65,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 記錄登入歷史
+        _recordLoginHistory(uid);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -291,6 +298,61 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// 記錄登入歷史
+  Future<void> _recordLoginHistory(String uid) async {
+    try {
+      String? ipAddress;
+      String? location;
+      String deviceInfo = 'Unknown Device';
+      String os = 'Unknown OS';
+
+      // 獲取設備資訊
+      final deviceInfoPlugin = DeviceInfoPlugin();
+      try {
+        if (Platform.isAndroid) {
+          final androidInfo = await deviceInfoPlugin.androidInfo;
+          deviceInfo = '${androidInfo.manufacturer} ${androidInfo.model}';
+          os = 'Android ${androidInfo.version.release}';
+        } else if (Platform.isIOS) {
+          final iosInfo = await deviceInfoPlugin.iosInfo;
+          deviceInfo = iosInfo.name;
+          os = '${iosInfo.systemName} ${iosInfo.systemVersion}';
+        }
+      } catch (e) {
+        debugPrint('獲取設備資訊失敗: $e');
+      }
+
+      // 獲取 IP 和位置 (使用 ipwho.is HTTPS 服務)
+      try {
+        final response = await http.get(Uri.parse('https://ipwho.is/'));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            ipAddress = data['ip'];
+            location = '${data['city']}, ${data['country']}';
+          }
+        }
+      } catch (e) {
+        debugPrint('獲取位置失敗: $e');
+      }
+
+      final history = LoginHistoryModel(
+        id: '', // Firestore will generate ID
+        userId: uid,
+        timestamp: DateTime.now(),
+        ipAddress: ipAddress,
+        location: location,
+        deviceInfo: deviceInfo,
+        os: os,
+      );
+
+      await _firestoreService.addLoginHistory(history);
+    } catch (e) {
+      debugPrint('記錄登入歷史失敗: $e');
+      // 不拋出異常，以免影響正常登入流程
+    }
   }
 }
 
