@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -288,6 +289,36 @@ class FirestoreService {
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
     }
+  }
+
+  /// 新增登入歷史
+  ///
+  /// [history] 登入歷史資料
+  Future<void> addLoginHistory(LoginHistoryModel history) async {
+    try {
+      await _usersCollection
+          .doc(history.userId)
+          .collection('login_history')
+          .add(history.toMap());
+    } catch (e) {
+      throw Exception('新增登入歷史失敗: $e');
+    }
+  }
+
+  /// 獲取登入歷史
+  ///
+  /// [userId] 用戶 ID
+  Stream<List<LoginHistoryModel>> getLoginHistory(String userId) {
+    return _usersCollection
+        .doc(userId)
+        .collection('login_history')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => LoginHistoryModel.fromFirestore(doc))
+          .toList();
+    });
   }
 }
 
