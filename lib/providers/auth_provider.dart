@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -250,6 +251,61 @@ class AuthProvider with ChangeNotifier {
 
       // 重新載入用戶資料
       await _loadUserData(_firebaseUser!.uid);
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 更新通知訂閱
+  Future<bool> updateNotificationSubscriptions({
+    List<String>? regions,
+    List<String>? interests,
+  }) async {
+    try {
+      if (_firebaseUser == null || _userModel == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      // Calculate old and new topics for FCM
+      // We prefix topics to avoid collisions
+      final List<String> oldTopics = [
+        ..._userModel!.subscribedRegions.map((r) => 'region_$r'),
+        ..._userModel!.subscribedInterests.map((i) => 'interest_$i'),
+      ];
+
+      final List<String> newRegions = regions ?? _userModel!.subscribedRegions;
+      final List<String> newInterests = interests ?? _userModel!.subscribedInterests;
+
+      final List<String> newTopics = [
+        ...newRegions.map((r) => 'region_$r'),
+        ...newInterests.map((i) => 'interest_$i'),
+      ];
+
+      // Sync with FCM
+      await NotificationService().syncUserSubscriptions(oldTopics, newTopics);
+
+      // Update Firestore
+      final Map<String, dynamic> data = {};
+      if (regions != null) data['subscribedRegions'] = regions;
+      if (interests != null) data['subscribedInterests'] = interests;
+
+      if (data.isNotEmpty) {
+        await _firestoreService.updateUser(_firebaseUser!.uid, data);
+
+        // Update local model
+        _userModel = _userModel!.copyWith(
+          subscribedRegions: regions,
+          subscribedInterests: interests,
+        );
+      }
 
       _setLoading(false);
       notifyListeners();
