@@ -38,6 +38,11 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final bool notifyMatch;
+  final bool notifyMessage;
+  final bool notifyEvent;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +71,9 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notifyMatch = true,
+    this.notifyMessage = true,
+    this.notifyEvent = true,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +112,9 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notifyMatch: map['notifyMatch'] ?? true,
+      notifyMessage: map['notifyMessage'] ?? true,
+      notifyEvent: map['notifyEvent'] ?? true,
     );
   }
 
@@ -136,6 +147,9 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notifyMatch': notifyMatch,
+      'notifyMessage': notifyMessage,
+      'notifyEvent': notifyEvent,
     };
   }
 
@@ -166,6 +180,9 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? notifyMatch,
+    bool? notifyMessage,
+    bool? notifyEvent,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +212,9 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notifyMatch: notifyMatch ?? this.notifyMatch,
+      notifyMessage: notifyMessage ?? this.notifyMessage,
+      notifyEvent: notifyEvent ?? this.notifyEvent,
     );
   }
 
