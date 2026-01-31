@@ -1,9 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
 class ChatService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
+
+  ChatService({
+    FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _functions = functions ?? FirebaseFunctions.instance;
 
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
@@ -114,6 +122,48 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      try {
+        final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+          final data = chatRoomDoc.data() as Map<String, dynamic>;
+          final participants = List<String>.from(data['participantIds'] ?? []);
+
+          // 找出接收者 (不是發送者的人)
+          final receiverId = participants.firstWhere(
+            (id) => id != senderId,
+            orElse: () => '',
+          );
+
+          if (receiverId.isNotEmpty) {
+            // 獲取接收者資料
+            final userDoc = await _firestore.collection('users').doc(receiverId).get();
+            if (userDoc.exists) {
+              final userData = userDoc.data() as Map<String, dynamic>;
+              final token = userData['fcmToken'] as String?;
+
+              if (token != null && token.isNotEmpty) {
+                // 調用 Cloud Function
+                final callable = _functions.httpsCallable('sendNotification');
+                await callable.call({
+                  'token': token,
+                  'title': senderName,
+                  'body': type == 'text' ? message : '傳送了一個附件',
+                  'data': {
+                    'type': 'chat',
+                    'chatId': chatRoomId,
+                    'senderId': senderId,
+                  },
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // 通知發送失敗不應影響訊息發送流程
+        print('發送通知失敗: $e');
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
