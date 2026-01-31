@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/chat_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ChatService _chatService = ChatService();
 
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
@@ -117,26 +119,19 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    required String senderName,
+    required String targetUserId,
     String type = 'text',
   }) async {
     try {
-      final timestamp = FieldValue.serverTimestamp();
-
-      // 1. 新增訊息
-      await _firestore.collection('messages').add({
-        'chatRoomId': chatRoomId,
-        'senderId': senderId,
-        'text': text,
-        'type': type,
-        'timestamp': timestamp,
-        'isRead': false,
-      });
-
-      // 2. 更新聊天室最後訊息
-      await _firestore.collection('chat_rooms').doc(chatRoomId).update({
-        'lastMessage': text,
-        'lastMessageAt': timestamp,
-      });
+      await _chatService.sendMessage(
+        chatRoomId: chatRoomId,
+        senderId: senderId,
+        senderName: senderName,
+        text: text,
+        targetUserId: targetUserId,
+        type: type,
+      );
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;

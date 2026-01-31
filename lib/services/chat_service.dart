@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -79,7 +81,8 @@ class ChatService {
     required String senderId,
     required String senderName,
     String? senderAvatarUrl,
-    required String message,
+    required String text,
+    required String targetUserId,
     String type = 'text',
     bool isForwarded = false,
     String? originalSenderId,
@@ -94,10 +97,11 @@ class ChatService {
         'senderId': senderId,
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
-        'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': text,
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
+        'isRead': false,
         'isForwarded': isForwarded,
         'originalSenderId': originalSenderId,
         'originalSenderName': originalSenderName,
@@ -105,15 +109,39 @@ class ChatService {
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': type == 'text' ? text : '[${type}]',
         'lastMessageTime': timestamp,
+        'lastMessageAt': timestamp, // Maintain compatibility with ChatProvider
         'lastMessageSenderId': senderId,
-        // 使用 FieldValue.increment 更新接收者的未讀數
-        // 這裡需要知道接收者的 ID，但在這裡我們沒有。
-        // ChatProvider 的 sendMessage 似乎沒有更新 unreadCount。
-        // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
-        // 暫時保持簡單，只更新 lastMessage。
+        'unreadCount.$targetUserId': FieldValue.increment(1),
       });
+
+      // 3. 發送推播通知
+      try {
+        final previewText = type == 'text' ? text : '[${type}]';
+        final safePreview = previewText.length > 20
+            ? '${previewText.substring(0, 20)}...'
+            : previewText;
+
+        await FirebaseFunctions.instance.httpsCallable('sendNotification').call({
+          'targetUserId': targetUserId,
+          'notificationType': 'new_message',
+          'params': {
+            'userName': senderName,
+            'messagePreview': safePreview,
+          },
+          'data': {
+            'actionType': 'open_chat',
+            'actionData': jsonEncode({
+              'chatRoomId': chatRoomId,
+              'otherUserId': senderId,
+            }),
+          },
+        });
+      } catch (e) {
+        print('發送通知失敗: $e');
+        // Don't throw here, as message was sent successfully
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
