@@ -289,6 +289,63 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 添加收藏
+  Future<void> addFavorite(String currentUserId, String targetUserId) async {
+    try {
+      await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .set({
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('添加收藏失敗: $e');
+    }
+  }
+
+  /// 移除收藏
+  Future<void> removeFavorite(String currentUserId, String targetUserId) async {
+    try {
+      await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .delete();
+    } catch (e) {
+      throw Exception('移除收藏失敗: $e');
+    }
+  }
+
+  /// 獲取收藏列表 (IDs)
+  Future<List<String>> getFavorites(String currentUserId) async {
+    try {
+      final snapshot = await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      throw Exception('獲取收藏列表失敗: $e');
+    }
+  }
+
+  /// 檢查是否已收藏
+  Future<bool> isFavorite(String currentUserId, String targetUserId) async {
+    try {
+      final doc = await _usersCollection
+          .doc(currentUserId)
+          .collection('favorites')
+          .doc(targetUserId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      throw Exception('檢查收藏狀態失敗: $e');
+    }
+  }
 }
 
 
