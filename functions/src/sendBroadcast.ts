@@ -1,7 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -84,14 +86,30 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             return { success: true, messageId: response, recipients: "all" };
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
-            const usersSnapshot = await admin.firestore()
-                .collection("users")
-                .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
-                .get();
+            // Firestore 'in' query supports up to 10 comparison values per batch
+            const chunks: string[][] = [];
+            for (let i = 0; i < targetUserIds.length; i += 10) {
+                chunks.push(targetUserIds.slice(i, i + 10));
+            }
 
-            targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
-                .filter((token) => token); // Remove null/undefined tokens
+            const snapshots = await Promise.all(
+                chunks.map((chunk) =>
+                    admin.firestore()
+                        .collection("users")
+                        .where(admin.firestore.FieldPath.documentId(), "in", chunk)
+                        .get()
+                )
+            );
+
+            targetTokens = [];
+            snapshots.forEach((snapshot) => {
+                snapshot.docs.forEach((doc) => {
+                    const token = doc.data().fcmToken;
+                    if (token) {
+                        targetTokens.push(token);
+                    }
+                });
+            });
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
@@ -117,27 +135,43 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             );
         }
 
-        // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
+        // Send multicast message in chunks of 500
+        let successCount = 0;
+        let failureCount = 0;
 
-        const response = await admin.messaging().sendEachForMulticast(message);
+        // Chunk tokens into batches of 500
+        const tokenChunks: string[][] = [];
+        for (let i = 0; i < targetTokens.length; i += 500) {
+            tokenChunks.push(targetTokens.slice(i, i + 500));
+        }
 
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
+        for (const chunk of tokenChunks) {
+            const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: chunk,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+            successCount += response.successCount;
+            failureCount += response.failureCount;
+
+            if (response.failureCount > 0) {
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        console.error(`Error sending to token ${chunk[idx]}:`, resp.error);
+                    }
+                });
+            }
+        }
+
+        console.log(`Successfully sent ${successCount} messages`);
+        if (failureCount > 0) {
+            console.log(`Failed to send ${failureCount} messages`);
         }
 
         // Log the broadcast
@@ -148,14 +182,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
             sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: successCount,
+            failureCount: failureCount,
         });
 
         return {
             success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: successCount,
+            failureCount: failureCount,
             totalTargets: targetTokens.length,
         };
     } catch (error) {
