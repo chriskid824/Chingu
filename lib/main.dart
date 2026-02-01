@@ -22,20 +22,23 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 初始化 Crashlytics
-  await CrashReportingService().initialize();
+  // 平行初始化其他服務
+  await Future.wait([
+    CrashReportingService().initialize(),
+    initializeDateFormatting('zh_TW', null),
+    RichNotificationService().initialize(),
+  ]);
 
-  // 初始化日期格式化
-  await initializeDateFormatting('zh_TW', null);
+  // 檢查啟動通知
+  final initialRouteInfo = await RichNotificationService().getInitialRoute();
 
-  // 初始化豐富通知服務
-  await RichNotificationService().initialize();
-
-  runApp(const ChinguApp());
+  runApp(ChinguApp(initialRouteInfo: initialRouteInfo));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final NotificationRouteInfo? initialRouteInfo;
+
+  const ChinguApp({super.key, this.initialRouteInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +58,19 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
-            onGenerateRoute: AppRouter.generateRoute,
+            initialRoute: initialRouteInfo?.route ?? AppRoutes.mainNavigation,
+            onGenerateRoute: (settings) {
+              if (initialRouteInfo != null &&
+                  settings.name == initialRouteInfo!.route) {
+                return AppRouter.generateRoute(
+                  RouteSettings(
+                    name: settings.name,
+                    arguments: initialRouteInfo!.arguments,
+                  ),
+                );
+              }
+              return AppRouter.generateRoute(settings);
+            },
           );
         },
       ),
