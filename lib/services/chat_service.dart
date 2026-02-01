@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -116,6 +117,21 @@ class ChatService {
       });
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
+    }
+  }
+
+  /// 獲取聊天室數量 (Active Chats)
+  Future<int> getChatRoomCount(String userId) async {
+    try {
+      final query = _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .count();
+
+      final aggregateQuerySnapshot = await query.get();
+      return aggregateQuerySnapshot.count ?? 0;
+    } catch (e) {
+      debugPrint('獲取聊天室數量失敗: $e');
+      return 0;
     }
   }
 }
