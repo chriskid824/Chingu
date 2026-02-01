@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
 
@@ -9,14 +10,17 @@ class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final UserBlockService _userBlockService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    UserBlockService? userBlockService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _userBlockService = userBlockService ?? UserBlockService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -47,7 +51,12 @@ class MatchingService {
 
       // 2. 獲取已滑過的用戶 ID (喜歡或不喜歡)
       final swipedIds = await _getSwipedUserIds(currentUser.uid);
-      print('已滑過 ${swipedIds.length} 個用戶');
+
+      // 獲取封鎖/被封鎖的用戶 ID
+      final blockedIds = await _userBlockService.getAllExcludedUserIds(currentUser.uid);
+      final blockedIdSet = blockedIds.toSet();
+
+      print('已滑過 ${swipedIds.length} 個用戶, 已封鎖/被封鎖 ${blockedIds.length} 個用戶');
 
       // 3. 過濾和評分
       List<Map<String, dynamic>> scoredMatches = [];
@@ -62,6 +71,12 @@ class MatchingService {
         // 排除已滑過的
         if (swipedIds.contains(candidate.uid)) {
           print('跳過: 已滑過 (${candidate.name})');
+          continue;
+        }
+
+        // 排除已封鎖/被封鎖的
+        if (blockedIdSet.contains(candidate.uid)) {
+          print('跳過: 已封鎖/被封鎖 (${candidate.name})');
           continue;
         }
 
