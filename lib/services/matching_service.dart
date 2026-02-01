@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
 
@@ -90,7 +91,8 @@ class MatchingService {
       final result = scoredMatches.take(limit).toList();
       print('最終返回 ${result.length} 個候選人');
       return result;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Get matches failed');
       print('MatchingService.getMatches 錯誤: $e');
       throw Exception('獲取配對失敗: $e');
     }
@@ -135,7 +137,8 @@ class MatchingService {
         'chatRoomId': null,
         'partner': null,
       };
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Record swipe failed');
       throw Exception('記錄滑動失敗: $e');
     }
   }
@@ -162,7 +165,8 @@ class MatchingService {
         return true;
       }
       return false;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Check mutual match failed');
       print('檢查配對失敗: $e');
       return false;
     }
@@ -277,7 +281,8 @@ class MatchingService {
       
       await batch.commit();
       print('已清除用戶 $userId 的 ${mySwipes.docs.length} 條滑動記錄');
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Clear swipe history failed');
       throw Exception('清除滑動記錄失敗: $e');
     }
   }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -14,7 +15,8 @@ class FirestoreService {
   Future<void> createUser(UserModel userModel) async {
     try {
       await _usersCollection.doc(userModel.uid).set(userModel.toMap());
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Create user failed');
       throw Exception('創建用戶資料失敗: $e');
     }
   }
@@ -32,7 +34,8 @@ class FirestoreService {
       }
 
       return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Get user failed');
       throw Exception('獲取用戶資料失敗: $e');
     }
   }
@@ -48,7 +51,8 @@ class FirestoreService {
 
       // 使用 set with merge 來確保即使文檔不存在也能創建
       await _usersCollection.doc(uid).set(data, SetOptions(merge: true));
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Update user failed');
       throw Exception('更新用戶資料失敗: $e');
     }
   }
@@ -59,7 +63,8 @@ class FirestoreService {
   Future<void> deleteUser(String uid) async {
     try {
       await _usersCollection.doc(uid).delete();
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Delete user failed');
       throw Exception('刪除用戶資料失敗: $e');
     }
   }
@@ -71,7 +76,8 @@ class FirestoreService {
     try {
       final doc = await _usersCollection.doc(uid).get();
       return doc.exists;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Check user exists failed');
       throw Exception('檢查用戶失敗: $e');
     }
   }
@@ -97,7 +103,8 @@ class FirestoreService {
       await _usersCollection.doc(uid).update({
         'lastLogin': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Update last login failed');
       throw Exception('更新登入時間失敗: $e');
     }
   }
@@ -156,7 +163,8 @@ class FirestoreService {
 
       print('過濾後剩餘 ${users.length} 個用戶');
       return users;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Query matching users failed');
       print('FirestoreService.queryMatchingUsers 錯誤: $e');
       throw Exception('查詢用戶失敗: $e');
     }
@@ -189,7 +197,8 @@ class FirestoreService {
       }
 
       return allUsers;
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Get batch users failed');
       throw Exception('批次獲取用戶失敗: $e');
     }
   }
@@ -213,7 +222,8 @@ class FirestoreService {
           .map((doc) =>
               UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Search users failed');
       throw Exception('搜尋用戶失敗: $e');
     }
   }
@@ -242,7 +252,8 @@ class FirestoreService {
       if (updates.isNotEmpty) {
         await _usersCollection.doc(uid).update(updates);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Update user stats failed');
       throw Exception('更新用戶統計失敗: $e');
     }
   }
@@ -263,7 +274,8 @@ class FirestoreService {
           ((currentAverage * (totalRatings - 1)) + newRating) / totalRatings;
 
       await updateUser(uid, {'averageRating': newAverage});
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Update user rating failed');
       throw Exception('更新用戶評分失敗: $e');
     }
   }
@@ -285,7 +297,8 @@ class FirestoreService {
         'status': 'pending', // pending, reviewed, resolved
         'type': 'user_report',
       });
-    } catch (e) {
+    } catch (e, stack) {
+      CrashReportingService().recordError(e, stack, reason: 'Submit user report failed');
       throw Exception('提交舉報失敗: $e');
     }
   }
