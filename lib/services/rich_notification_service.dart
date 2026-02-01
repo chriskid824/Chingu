@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'analytics_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -69,6 +70,16 @@ class RichNotificationService {
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+
+        // 記錄點擊事件
+        AnalyticsService().logEvent(
+          name: 'notification_clicked',
+          parameters: {
+            'action_type': actionType,
+            'action_id': actionId,
+            'has_action_data': actionData != null,
+          },
+        );
 
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
@@ -194,6 +205,16 @@ class RichNotificationService {
       notification.message,
       platformChannelSpecifics,
       payload: json.encode(payload),
+    );
+
+    // 記錄顯示事件
+    AnalyticsService().logEvent(
+      name: 'notification_displayed',
+      parameters: {
+        'notification_id': notification.id,
+        'action_type': notification.actionType,
+        'has_image': notification.imageUrl != null && notification.imageUrl!.isNotEmpty,
+      },
     );
   }
 }
