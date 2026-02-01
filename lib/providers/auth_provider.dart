@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/two_factor_auth_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -9,12 +10,14 @@ enum AuthStatus {
   uninitialized, // 未初始化
   authenticated, // 已認證
   unauthenticated, // 未認證
+  requiresTwoFactor, // 需要雙因素認證
 }
 
 /// 認證 Provider - 管理用戶認證狀態
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final TwoFactorAuthService _twoFactorAuthService = TwoFactorAuthService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -29,6 +32,7 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+  bool get requiresTwoFactor => _status == AuthStatus.requiresTwoFactor;
   String? get uid => _firebaseUser?.uid;
 
   AuthProvider() {
@@ -47,7 +51,13 @@ class AuthProvider with ChangeNotifier {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
-      _status = AuthStatus.authenticated;
+
+      // 檢查是否開啟 2FA
+      if (_userModel != null && _userModel!.isTwoFactorEnabled) {
+        _status = AuthStatus.requiresTwoFactor;
+      } else {
+        _status = AuthStatus.authenticated;
+      }
     }
     notifyListeners();
   }
@@ -70,6 +80,69 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = '載入資料失敗: $e';
       _userModel = null;
       notifyListeners();
+    }
+  }
+
+  /// 驗證雙因素代碼
+  ///
+  /// [code] 驗證碼
+  Future<bool> verifyTwoFactor(String code) async {
+    try {
+      if (_userModel == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      // 決定目標 (Email 或 Phone)
+      String target = _userModel!.email;
+      if (_userModel!.twoFactorMethod == 'sms' && _userModel!.phoneNumber != null) {
+        target = _userModel!.phoneNumber!;
+      }
+
+      await _twoFactorAuthService.verifyCode(target, code);
+
+      // 驗證成功，更新狀態
+      _status = AuthStatus.authenticated;
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 重新發送雙因素驗證碼
+  Future<bool> resendTwoFactorCode() async {
+    try {
+      if (_userModel == null) return false;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      String target = _userModel!.email;
+      if (_userModel!.twoFactorMethod == 'sms' && _userModel!.phoneNumber != null) {
+        target = _userModel!.phoneNumber!;
+      }
+
+      await _twoFactorAuthService.sendVerificationCode(
+        target: target,
+        method: _userModel!.twoFactorMethod,
+        uid: _userModel!.uid,
+      );
+
+      _setLoading(false);
+      // 注意: 這裡不改變 _status，因為仍然在需要驗證的狀態
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
     }
   }
 
@@ -122,6 +195,14 @@ class AuthProvider with ChangeNotifier {
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
 
+      // 註冊後不應立即要求 2FA，除非我們強制作為流程一部分。
+      // 目前假設新註冊用戶 2FA 為 false，所以會直接 authenticated.
+      if (_userModel != null && _userModel!.isTwoFactorEnabled) {
+         _status = AuthStatus.requiresTwoFactor;
+      } else {
+         _status = AuthStatus.authenticated;
+      }
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -148,6 +229,12 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+
+      // 注意：這裡不需要手動調用 _loadUserData，因為 _onAuthStateChanged 會被觸發
+      // 但是為了確保 signIn 返回時狀態已經正確（如果有異步延遲），
+      // 依賴監聽器是比較安全的做法。
+      // 不過 _onAuthStateChanged 是異步的，可能在 signIn 返回後才執行完成。
+      // 所以UI應該監聽 AuthProvider 的狀態變化，而不是僅依賴 signIn 的返回值。
 
       _setLoading(false);
       return true;
@@ -194,6 +281,8 @@ class AuthProvider with ChangeNotifier {
 
         await _firestoreService.createUser(userModel);
       }
+
+      // 同樣依賴 _onAuthStateChanged 更新狀態
 
       _setLoading(false);
       return true;
@@ -293,6 +382,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-
