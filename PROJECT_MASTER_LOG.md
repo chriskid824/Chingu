@@ -112,6 +112,10 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **敏感資料加密 (Sensitive Data Encryption)**:
+  - 實作 `EncryptionHelper` (`lib/utils/encryption_helper.dart`) 提供 AES-256 加密/解密功能
+  - 新增單元測試 `test/utils/encryption_helper_test.dart`
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
