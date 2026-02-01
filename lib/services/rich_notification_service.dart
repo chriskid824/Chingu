@@ -59,6 +59,45 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 獲取啟動時的通知路由資訊
+  Future<NotificationRouteInfo?> getInitialRoute() async {
+    try {
+      final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+          await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+      if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+        final payload = notificationAppLaunchDetails!.notificationResponse?.payload;
+        if (payload != null) {
+          final Map<String, dynamic> data = json.decode(payload);
+          final String? actionType = data['actionType'];
+          final String? actionData = data['actionData'];
+
+          return _mapActionToRoute(actionType, actionData);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking launch notification: $e');
+    }
+    return null;
+  }
+
+  NotificationRouteInfo _mapActionToRoute(String? actionType, String? actionData) {
+    switch (actionType) {
+      case 'open_chat':
+        // 導航到聊天列表 Tab (index 3)
+        return const NotificationRouteInfo(
+          AppRoutes.mainNavigation,
+          {'initialIndex': 3},
+        );
+      case 'view_event':
+        return NotificationRouteInfo(AppRoutes.eventDetail, actionData);
+      case 'match_history':
+        return const NotificationRouteInfo(AppRoutes.matchesList, null);
+      default:
+        return const NotificationRouteInfo(AppRoutes.notifications, null);
+    }
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
@@ -196,4 +235,11 @@ class RichNotificationService {
       payload: json.encode(payload),
     );
   }
+}
+
+class NotificationRouteInfo {
+  final String route;
+  final Object? arguments;
+
+  const NotificationRouteInfo(this.route, this.arguments);
 }
