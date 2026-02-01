@@ -54,6 +54,7 @@ class DinnerEventService {
         participantStatus: participantStatus,
         status: 'pending', // 等待配對
         createdAt: DateTime.now(),
+        is24hReminderSent: false,
         icebreakerQuestions: icebreakerQuestions,
       );
 
