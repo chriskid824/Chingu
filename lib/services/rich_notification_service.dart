@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'analytics_service.dart';
+import 'notification_ab_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -66,19 +69,40 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? type = data['type'] ?? 'system';
+
+        // Log analytics
+        _trackNotificationClick(type!);
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        handleNavigation(actionType, actionData, actionId);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
     }
   }
 
-  /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  /// Track notification click
+  Future<void> _trackNotificationClick(String type) async {
+     final userId = FirebaseAuth.instance.currentUser?.uid;
+     final abService = NotificationABService();
+     final group = userId != null ? abService.getGroup(userId) : ExperimentGroup.control;
+
+     await AnalyticsService().logEvent(
+       name: 'notification_clicked',
+       parameters: {
+         'notification_type': type,
+         'experiment_group': group.toString().split('.').last,
+         'variant': group.toString().split('.').last,
+         'source': 'local_notification',
+       },
+     );
+  }
+
+  /// 處理導航邏輯 (公開方法，供 NotificationService 調用)
+  void handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -186,6 +210,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'type': notification.type, // Added type
     };
 
     await _flutterLocalNotificationsPlugin.show(
