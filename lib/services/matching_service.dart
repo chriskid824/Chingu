@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -118,6 +119,14 @@ class MatchingService {
         if (isMatch) {
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
           
+          // 發送通知 (非阻塞)
+          FirebaseFunctions.instance
+              .httpsCallable('sendMatchNotification')
+              .call({'matchedUserId': targetUserId})
+              .catchError((e) {
+            print('Failed to send match notification: $e');
+          });
+
           // 獲取對方資料以返回
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
@@ -158,7 +167,6 @@ class MatchingService {
 
       if (query.docs.isNotEmpty) {
         // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
         return true;
       }
       return false;
