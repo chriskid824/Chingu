@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
@@ -28,6 +27,11 @@ class CrashReportingService {
   /// Record an error to Crashlytics
   void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
     FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+  }
+
+  /// Record a non-fatal exception to Crashlytics
+  void recordException(dynamic exception, StackTrace? stack, {dynamic reason}) {
+    recordError(exception, stack, reason: reason, fatal: false);
   }
 
   /// Set a user identifier for crash reports
