@@ -60,6 +60,12 @@ class MockDinnerEventService implements DinnerEventService {
   }
 
   @override
+  Future<List<DinnerEventModel>> getEventHistory(String userId) async {
+    if (shouldThrow) throw Exception('Mock Error');
+    return _mockEvents.where((e) => e.participantIds.contains(userId)).toList();
+  }
+
+  @override
   Future<void> joinEvent(String eventId, String userId) async {
     if (shouldThrow) throw Exception('Mock Error');
     final index = _mockEvents.indexWhere((e) => e.id == eventId);
