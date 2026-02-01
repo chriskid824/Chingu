@@ -227,6 +227,7 @@ class NotificationStorageService {
     String? imageUrl,
     String? actionType,
     String? actionData,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -240,6 +241,7 @@ class NotificationStorageService {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -252,6 +254,7 @@ class NotificationStorageService {
     required String matchedUserName,
     required String matchedUserId,
     String? matchedUserPhotoUrl,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -265,6 +268,7 @@ class NotificationStorageService {
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -278,6 +282,7 @@ class NotificationStorageService {
     required String eventTitle,
     required String message,
     String? imageUrl,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -291,6 +296,7 @@ class NotificationStorageService {
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -304,6 +310,7 @@ class NotificationStorageService {
     required String senderId,
     required String messagePreview,
     String? senderPhotoUrl,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -317,6 +324,7 @@ class NotificationStorageService {
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
