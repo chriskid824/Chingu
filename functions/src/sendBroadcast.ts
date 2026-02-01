@@ -1,7 +1,10 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-admin.initializeApp();
+// Ensure Firebase Admin is initialized
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 
 /**
  * Cloud Function for sending broadcast notifications
@@ -13,7 +16,7 @@ admin.initializeApp();
  * - User-specific: targetUserIds = ["uid1", "uid2"]
  */
 export const sendBroadcast = functions.https.onCall(async (data, context) => {
-    // Verify that the request is made by an authenticated user
+    // 1. Authentication Check
     if (!context.auth) {
         throw new functions.https.HttpsError(
             "unauthenticated",
@@ -21,17 +24,24 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         );
     }
 
-    // TODO: Add admin role verification
-    // For now, we'll check if user is in an 'admins' collection
-    const adminDoc = await admin.firestore()
-        .collection("admins")
-        .doc(context.auth.uid)
-        .get();
+    // 2. Admin Verification
+    try {
+        const adminDoc = await admin.firestore()
+            .collection("admins")
+            .doc(context.auth.uid)
+            .get();
 
-    if (!adminDoc.exists) {
+        if (!adminDoc.exists) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "Only admins can send broadcast notifications."
+            );
+        }
+    } catch (error) {
+        console.error("Error verifying admin status:", error);
         throw new functions.https.HttpsError(
-            "permission-denied",
-            "Only admins can send broadcast notifications."
+            "internal",
+            "Failed to verify admin status."
         );
     }
 
@@ -45,7 +55,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         imageUrl,
     } = data;
 
-    // Validate required fields
+    // 3. Validation
     if (!title || !body) {
         throw new functions.https.HttpsError(
             "invalid-argument",
@@ -53,47 +63,53 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         );
     }
 
+    if (!targetAll && (!targetCities || targetCities.length === 0) && (!targetUserIds || targetUserIds.length === 0)) {
+         throw new functions.https.HttpsError(
+            "invalid-argument",
+            "Must specify targetAll, targetCities, or targetUserIds."
+        );
+    }
+
     try {
         let targetTokens: string[] = [];
 
+        // 4. Token Retrieval
         if (targetAll) {
-            // Send to all users - use topic subscription
-            const message = {
-                notification: {
-                    title: title,
-                    body: body,
-                    ...(imageUrl && { imageUrl }),
-                },
-                data: customData || {},
-                topic: "all_users",
-            };
-
-            const response = await admin.messaging().send(message);
-            console.log("Successfully sent broadcast to all users:", response);
-
-            // Log the broadcast
-            await admin.firestore().collection("broadcast_logs").add({
-                title,
-                body,
-                targetType: "all",
-                sentBy: context.auth.uid,
-                sentAt: admin.firestore.FieldValue.serverTimestamp(),
-                messageId: response,
-            });
-
-            return { success: true, messageId: response, recipients: "all" };
-        } else if (targetUserIds && targetUserIds.length > 0) {
-            // Send to specific users
-            const usersSnapshot = await admin.firestore()
-                .collection("users")
-                .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
-                .get();
-
+            // Fetch all users
+            // Note: For very large user bases, this should be paginated or use a different strategy (like topic subscription)
+            // But since clients don't subscribe to 'all_users' topic yet, we must fetch tokens.
+            const usersSnapshot = await admin.firestore().collection("users").get();
             targetTokens = usersSnapshot.docs
                 .map((doc) => doc.data().fcmToken)
-                .filter((token) => token); // Remove null/undefined tokens
+                .filter((token) => token && typeof token === 'string' && token.length > 0);
+
+            console.log(`Targeting all users. Found ${targetTokens.length} tokens.`);
+
+        } else if (targetUserIds && targetUserIds.length > 0) {
+            // Fetch specific users by ID
+            // Firestore 'in' query is limited to 10 (or 30 in some SDKs), so we fetch by ID individually or in chunks if needed.
+            // For simplicity and robustness, we can fetch all documents if list is small, or use getAll.
+            // admin.firestore().getAll(...refs) is efficient.
+
+            const refs = targetUserIds.map((id: string) => admin.firestore().collection("users").doc(id));
+            const userDocs = await admin.firestore().getAll(...refs);
+
+            targetTokens = userDocs
+                .map((doc) => doc.data()?.fcmToken)
+                .filter((token) => token && typeof token === 'string' && token.length > 0);
+
+            console.log(`Targeting ${targetUserIds.length} users. Found ${targetTokens.length} tokens.`);
+
         } else if (targetCities && targetCities.length > 0) {
-            // Send to users in specific cities
+            // Fetch users by city
+            // 'in' query supports up to 10 values.
+            if (targetCities.length > 10) {
+                throw new functions.https.HttpsError(
+                    "invalid-argument",
+                    "Cannot target more than 10 cities at once."
+                );
+            }
+
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
             const usersSnapshot = await admin.firestore()
                 .collection("users")
@@ -102,62 +118,74 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
 
             targetTokens = usersSnapshot.docs
                 .map((doc) => doc.data().fcmToken)
-                .filter((token) => token);
-        } else {
-            throw new functions.https.HttpsError(
-                "invalid-argument",
-                "Must specify targetAll, targetUserIds, or targetCities."
-            );
+                .filter((token) => token && typeof token === 'string' && token.length > 0);
+
+             console.log(`Targeting cities ${targetCities.join(', ')}. Found ${targetTokens.length} tokens.`);
         }
 
         if (targetTokens.length === 0) {
-            throw new functions.https.HttpsError(
-                "not-found",
-                "No users found with FCM tokens for the specified criteria."
-            );
+            console.log("No valid tokens found for the target.");
+            return {
+                success: true,
+                successCount: 0,
+                failureCount: 0,
+                totalTargets: 0,
+                message: "No users found to send notification to."
+            };
         }
 
-        // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
+        // Deduplicate tokens
+        targetTokens = [...new Set(targetTokens)];
 
-        const response = await admin.messaging().sendEachForMulticast(message);
+        // 5. Batch Sending
+        const BATCH_SIZE = 500;
+        let successCount = 0;
+        let failureCount = 0;
 
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
-                }
-            });
+        // Process in batches
+        for (let i = 0; i < targetTokens.length; i += BATCH_SIZE) {
+            const batchTokens = targetTokens.slice(i, i + BATCH_SIZE);
+
+            const message: admin.messaging.MulticastMessage = {
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: batchTokens,
+            };
+
+            const response = await admin.messaging().sendEachForMulticast(message);
+            successCount += response.successCount;
+            failureCount += response.failureCount;
+
+            // Log failures for debugging (optional, avoid spamming logs if massive failures)
+             if (response.failureCount > 0) {
+                console.log(`Batch ${i/BATCH_SIZE + 1} had ${response.failureCount} failures.`);
+                // Could implement logic here to remove invalid tokens from Firestore
+            }
         }
 
-        // Log the broadcast
+        // 6. Logging
         await admin.firestore().collection("broadcast_logs").add({
             title,
             body,
-            targetType: targetUserIds.length > 0 ? "users" : "cities",
-            targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
+            targetType: targetAll ? "all" : (targetUserIds.length > 0 ? "users" : "cities"),
+            targetCount: targetTokens.length,
             sentBy: context.auth.uid,
             sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount: successCount,
+            failureCount: failureCount,
         });
 
         return {
             success: true,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount,
+            failureCount,
             totalTargets: targetTokens.length,
         };
+
     } catch (error) {
         console.error("Error sending broadcast:", error);
         throw new functions.https.HttpsError(
