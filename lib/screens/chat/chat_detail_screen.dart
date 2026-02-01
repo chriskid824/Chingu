@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -31,8 +32,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        if (_otherUser == null && args.containsKey('otherUserId')) {
+          _fetchOtherUser(args['otherUserId']);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String userId) async {
+    try {
+      final user = await FirestoreService().getUser(userId);
+      if (mounted && user != null) {
+        setState(() {
+          _otherUser = user;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user: $e');
     }
   }
 

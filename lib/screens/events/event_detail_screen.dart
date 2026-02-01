@@ -1,14 +1,107 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:intl/intl.dart';
 
-class EventDetailScreen extends StatelessWidget {
+class EventDetailScreen extends StatefulWidget {
   const EventDetailScreen({super.key});
-  
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  DinnerEventModel? _event;
+  bool _isLoading = false;
+  String? _errorMessage;
+  bool _isInit = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null && args.containsKey('eventId')) {
+        _fetchEvent(args['eventId']);
+      }
+      _isInit = true;
+    }
+  }
+
+  Future<void> _fetchEvent(String eventId) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final event = await DinnerEventService().getEvent(eventId);
+      if (mounted) {
+        setState(() {
+          _event = event;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(child: Text(_errorMessage!)),
+      );
+    }
+
+    // Use fetched data or fallback
+    final eventTitle = _event != null
+        ? '${_event!.city} ${_event!.district} 晚餐'
+        : '6人晚餐聚會';
+
+    final eventDate = _event != null
+        ? DateFormat('yyyy年MM月dd日 (E)\nHH:mm', 'zh_TW').format(_event!.dateTime)
+        : '2025年10月15日 (星期三)\n19:00';
+
+    final budget = _event != null
+        ? _event!.budgetRangeText
+        : 'NT\$ 500-800 / 人';
+
+    final location = _event != null
+        ? '${_event!.city}${_event!.district}'
+        : '台北市信義區信義路五段7號';
+
+    final participants = _event != null
+        ? '6 人（固定）\n目前已報名：${_event!.participantIds.length} 人'
+        : '6 人（固定）\n目前已報名：4 人';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -117,7 +210,7 @@ class EventDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '6人晚餐聚會',
+                          eventTitle,
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -129,18 +222,18 @@ class EventDetailScreen extends StatelessWidget {
                           gradient: chinguTheme?.successGradient,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.check_circle,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              '已確認',
-                              style: TextStyle(
+                              _event?.statusText ?? '已確認',
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -157,7 +250,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    eventDate,
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +258,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    budget,
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +266,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    location,
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,7 +274,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    participants,
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
