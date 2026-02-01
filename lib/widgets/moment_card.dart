@@ -4,6 +4,10 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/moment_service.dart';
+import 'package:chingu/widgets/comments_sheet.dart';
 
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
@@ -26,6 +30,9 @@ class _MomentCardState extends State<MomentCard> {
   late int _likeCount;
   late int _commentCount;
 
+  final MomentService _momentService = MomentService();
+  bool _isLiking = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,13 +51,58 @@ class _MomentCardState extends State<MomentCard> {
     }
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.userModel;
+
+    // 如果沒有登入或正在處理中，直接返回
+    if (user == null || _isLiking) return;
+
     HapticUtils.light();
+
+    // 樂觀更新 UI
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
+      _isLiking = true;
     });
+
     widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      if (_isLiked) {
+        await _momentService.likeMoment(widget.moment.id, user.uid);
+      } else {
+        await _momentService.unlikeMoment(widget.moment.id, user.uid);
+      }
+    } catch (e) {
+      // 失敗時回滾
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          _likeCount += _isLiked ? 1 : -1;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失敗: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLiking = false;
+        });
+      }
+    }
+  }
+
+  void _showComments() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CommentsSheet(momentId: widget.moment.id),
+    );
+    widget.onCommentTap?.call();
   }
 
   @override
@@ -167,7 +219,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _showComments,
               ),
             ],
           ),
