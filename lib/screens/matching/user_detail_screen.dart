@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
+  final UserModel? user;
+
+  const UserDetailScreen({
+    super.key,
+    this.user,
+  });
   
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // 使用傳入的 user 資料，若無則使用假資料（兼容舊代碼）
+    final String displayCity = user?.city ?? '台北市';
+    final String displayDistrict = user?.district ?? '信義區';
+    final String displayJob = user?.job ?? '軟體工程師';
+    final String displayName = user?.name ?? '陳大明';
+    final int displayAge = user?.age ?? 30;
+    final String displayBio = user?.bio ?? '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。';
+    final List<String> displayInterests = user?.interests ?? ['科技', '美食', '運動', '旅遊', '攝影'];
+    final String displayBudget = user?.budgetRangeText ?? 'NT\$ 500-800';
+    final String displayMatch = user?.preferredMatchTypeText ?? '異性配對';
+    final String displayGender = user?.genderText ?? '男';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -38,6 +58,36 @@ class UserDetailScreen extends StatelessWidget {
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              if (user != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Consumer<AuthProvider>(
+                    builder: (context, authProvider, _) {
+                      final isFav = authProvider.isFavorite(user!.uid);
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border_rounded,
+                            color: isFav ? Colors.red : theme.colorScheme.onSurface,
+                          ),
+                          onPressed: () => authProvider.toggleFavorite(user!.uid),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -112,7 +162,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                          '$displayName, $displayAge',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -132,7 +182,7 @@ class UserDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '軟體工程師',
+                      displayJob,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -162,7 +212,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.location_on_rounded,
                     '位置',
-                    '台北市, 信義區',
+                    '$displayCity, $displayDistrict',
                     theme.colorScheme.primary,
                     theme,
                   ),
@@ -170,7 +220,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800',
+                    displayBudget,
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
@@ -178,7 +228,7 @@ class UserDetailScreen extends StatelessWidget {
                   _buildInfoCard(
                     Icons.favorite_rounded,
                     '配對類型',
-                    '異性配對',
+                    displayMatch,
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -213,7 +263,7 @@ class UserDetailScreen extends StatelessWidget {
                       border: Border.all(color: chinguTheme?.surfaceVariant ?? theme.dividerColor),
                     ),
                     child: Text(
-                      '熱愛科技與美食，喜歡嘗試各種新餐廳。週末常去爬山或騎單車。希望能認識志同道合的朋友，一起探索城市中的美味。',
+                      displayBio,
                       style: TextStyle(
                         fontSize: 15,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -247,13 +297,9 @@ class UserDetailScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _buildInterestChip('科技', Icons.computer_rounded, theme.colorScheme.primary),
-                      _buildInterestChip('美食', Icons.restaurant_rounded, chinguTheme?.error ?? Colors.red),
-                      _buildInterestChip('運動', Icons.sports_soccer_rounded, chinguTheme?.success ?? Colors.green),
-                      _buildInterestChip('旅遊', Icons.flight_rounded, chinguTheme?.warning ?? Colors.amber),
-                      _buildInterestChip('攝影', Icons.camera_alt_rounded, chinguTheme?.secondary ?? Colors.purple),
-                    ],
+                    children: displayInterests.map((interest) {
+                      return _buildInterestChip(interest, Icons.star_rounded, theme.colorScheme.primary);
+                    }).toList(),
                   ),
                   
                   const SizedBox(height: 32),
