@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final NotificationService _notificationService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    NotificationService? notificationService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _notificationService = notificationService ?? NotificationService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -116,6 +120,7 @@ class MatchingService {
       if (isLike) {
         final isMatch = await _checkMutualMatch(userId, targetUserId);
         if (isMatch) {
+          // 配對成功，處理後續流程 (統計、通知、聊天室)
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
           
           // 獲取對方資料以返回
@@ -157,8 +162,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！返回 true 讓 recordSwipe 處理後續流程
         return true;
       }
       return false;
@@ -179,6 +183,10 @@ class MatchingService {
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
     
+    // 發送配對通知 (通知雙方)
+    // user1Id 是當前操作用戶 (Sender)，user2Id 是目標用戶
+    await _notificationService.sendMatchNotification(user2Id);
+
     // 創建聊天室
     return await _chatService.createChatRoom(user1Id, user2Id);
   }
