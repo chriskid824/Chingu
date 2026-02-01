@@ -1,5 +1,75 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class NotificationPreferences {
+  final bool enablePush;
+  final bool newMatch;
+  final bool matchSuccess;
+  final bool newMessage;
+  final bool eventReminder;
+  final bool eventChange;
+  final bool promotions;
+  final bool newsletter;
+
+  const NotificationPreferences({
+    this.enablePush = true,
+    this.newMatch = true,
+    this.matchSuccess = true,
+    this.newMessage = true,
+    this.eventReminder = true,
+    this.eventChange = true,
+    this.promotions = false,
+    this.newsletter = false,
+  });
+
+  factory NotificationPreferences.fromMap(Map<String, dynamic> map) {
+    return NotificationPreferences(
+      enablePush: map['enablePush'] ?? true,
+      newMatch: map['newMatch'] ?? true,
+      matchSuccess: map['matchSuccess'] ?? true,
+      newMessage: map['newMessage'] ?? true,
+      eventReminder: map['eventReminder'] ?? true,
+      eventChange: map['eventChange'] ?? true,
+      promotions: map['promotions'] ?? false,
+      newsletter: map['newsletter'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'enablePush': enablePush,
+      'newMatch': newMatch,
+      'matchSuccess': matchSuccess,
+      'newMessage': newMessage,
+      'eventReminder': eventReminder,
+      'eventChange': eventChange,
+      'promotions': promotions,
+      'newsletter': newsletter,
+    };
+  }
+
+  NotificationPreferences copyWith({
+    bool? enablePush,
+    bool? newMatch,
+    bool? matchSuccess,
+    bool? newMessage,
+    bool? eventReminder,
+    bool? eventChange,
+    bool? promotions,
+    bool? newsletter,
+  }) {
+    return NotificationPreferences(
+      enablePush: enablePush ?? this.enablePush,
+      newMatch: newMatch ?? this.newMatch,
+      matchSuccess: matchSuccess ?? this.matchSuccess,
+      newMessage: newMessage ?? this.newMessage,
+      eventReminder: eventReminder ?? this.eventReminder,
+      eventChange: eventChange ?? this.eventChange,
+      promotions: promotions ?? this.promotions,
+      newsletter: newsletter ?? this.newsletter,
+    );
+  }
+}
+
 /// 用戶資料模型
 class UserModel {
   final String uid;
@@ -15,6 +85,9 @@ class UserModel {
   final String? bio;
   final String? avatarUrl;
   
+  // 通知偏好
+  final NotificationPreferences notificationPreferences;
+
   // 配對偏好
   final String preferredMatchType; // 'opposite', 'same', 'any'
   final int minAge;
@@ -51,6 +124,7 @@ class UserModel {
     required this.district,
     this.bio,
     this.avatarUrl,
+    this.notificationPreferences = const NotificationPreferences(),
     required this.preferredMatchType,
     required this.minAge,
     required this.maxAge,
@@ -89,6 +163,10 @@ class UserModel {
       district: map['district'] ?? '',
       bio: map['bio'],
       avatarUrl: map['avatarUrl'],
+      notificationPreferences: map['notificationPreferences'] != null
+          ? NotificationPreferences.fromMap(
+              map['notificationPreferences'] as Map<String, dynamic>)
+          : const NotificationPreferences(),
       preferredMatchType: map['preferredMatchType'] ?? 'any',
       minAge: map['minAge'] ?? 18,
       maxAge: map['maxAge'] ?? 60,
@@ -121,6 +199,7 @@ class UserModel {
       'district': district,
       'bio': bio,
       'avatarUrl': avatarUrl,
+      'notificationPreferences': notificationPreferences.toMap(),
       'preferredMatchType': preferredMatchType,
       'minAge': minAge,
       'maxAge': maxAge,
@@ -152,6 +231,7 @@ class UserModel {
     String? district,
     String? bio,
     String? avatarUrl,
+    NotificationPreferences? notificationPreferences,
     String? preferredMatchType,
     int? minAge,
     int? maxAge,
@@ -180,6 +260,8 @@ class UserModel {
       district: district ?? this.district,
       bio: bio ?? this.bio,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      notificationPreferences:
+          notificationPreferences ?? this.notificationPreferences,
       preferredMatchType: preferredMatchType ?? this.preferredMatchType,
       minAge: minAge ?? this.minAge,
       maxAge: maxAge ?? this.maxAge,
