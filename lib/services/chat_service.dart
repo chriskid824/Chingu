@@ -105,7 +105,7 @@ class ChatService {
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': type == 'text' ? message : '[$type]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
@@ -116,6 +116,22 @@ class ChatService {
       });
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
+    }
+  }
+
+  /// 獲取用戶參與的聊天室數量
+  ///
+  /// [userId] 用戶 ID
+  Future<int> getUserChatCount(String userId) async {
+    try {
+      final query = await _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .count()
+          .get();
+
+      return query.count ?? 0;
+    } catch (e) {
+      throw Exception('獲取聊天室數量失敗: $e');
     }
   }
 }
