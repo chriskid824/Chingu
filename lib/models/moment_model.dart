@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class MomentModel extends Equatable {
@@ -24,6 +25,35 @@ class MomentModel extends Equatable {
     this.commentCount = 0,
     this.isLiked = false,
   });
+
+  factory MomentModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return MomentModel(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      userName: data['userName'] ?? '',
+      userAvatar: data['userAvatar'],
+      content: data['content'] ?? '',
+      imageUrl: data['imageUrl'],
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      likeCount: data['likeCount'] ?? 0,
+      commentCount: data['commentCount'] ?? 0,
+      isLiked: false, // Should be checked against current user separately
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+    };
+  }
 
   MomentModel copyWith({
     String? id,
