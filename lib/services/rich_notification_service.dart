@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firestore_service.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -78,50 +80,121 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  Future<void> _handleNavigation(
+      String? actionType, String? actionData, String? actionId) async {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
+      await _performAction(actionId, actionData, navigator);
       return;
     }
 
     // 處理一般通知點擊
     if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
+      await _performAction(actionType, actionData, navigator);
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
-      case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
-        break;
-      case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
+  Future<void> _performAction(
+      String action, String? data, NavigatorState navigator) async {
+    try {
+      final firestoreService = FirestoreService();
+
+      switch (action) {
+        case 'open_chat':
+          if (data != null) {
+            Map<String, dynamic> parsedData = {};
+            try {
+              parsedData = json.decode(data);
+            } catch (_) {
+              // fallback if data is not JSON
+            }
+
+            final String? chatRoomId = parsedData['chatRoomId'];
+            final String? otherUserId = parsedData['otherUserId'] ??
+                parsedData['senderId'] ??
+                parsedData['partnerId'];
+
+            if (chatRoomId != null && otherUserId != null) {
+              final otherUser = await firestoreService.getUser(otherUserId);
+              if (otherUser != null) {
+                navigator.pushNamed(
+                  AppRoutes.chatDetail,
+                  arguments: {
+                    'chatRoomId': chatRoomId,
+                    'otherUser': otherUser,
+                  },
+                );
+                return;
+              }
+            }
+            navigator.pushNamed(AppRoutes.chatList);
+          } else {
+            navigator.pushNamed(AppRoutes.chatList);
+          }
+          break;
+
+        case 'view_match':
+        case 'match': // Handle both potential action types
+          if (data != null) {
+            Map<String, dynamic> parsedData = {};
+            try {
+              parsedData = json.decode(data);
+            } catch (_) {
+              // fallback if data is not JSON
+            }
+
+            final String? chatRoomId = parsedData['chatRoomId'];
+            final String? partnerId = parsedData['partnerId'] ??
+                parsedData['otherUserId'] ??
+                parsedData['senderId'];
+
+            final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+            if (chatRoomId != null &&
+                partnerId != null &&
+                currentUserId != null) {
+              final currentUser = await firestoreService.getUser(currentUserId);
+              final partner = await firestoreService.getUser(partnerId);
+
+              if (currentUser != null && partner != null) {
+                navigator.pushNamed(
+                  AppRoutes.matchSuccess,
+                  arguments: {
+                    'currentUser': currentUser,
+                    'partner': partner,
+                    'chatRoomId': chatRoomId,
+                  },
+                );
+                return;
+              }
+            }
+            navigator.pushNamed(AppRoutes.matchesList);
+          } else {
+            navigator.pushNamed(AppRoutes.matchesList);
+          }
+          break;
+
+        case 'view_event':
+        case 'event': // Handle both potential action types
           navigator.pushNamed(AppRoutes.eventDetail);
-        }
-        break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
-      default:
-        // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
-        break;
+          break;
+
+        case 'match_history':
+          navigator.pushNamed(AppRoutes.matchesList);
+          break;
+
+        default:
+          // 預設導航到通知頁面
+          navigator.pushNamed(AppRoutes.notifications);
+          break;
+      }
+    } catch (e) {
+      debugPrint('Error handling notification action: $e');
+      // Fallback to notification screen on error
+      navigator.pushNamed(AppRoutes.notifications);
     }
   }
 

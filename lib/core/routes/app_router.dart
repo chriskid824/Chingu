@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/models/user_model.dart';
 // 認證模組
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -178,6 +179,16 @@ class AppRouter {
       
       case AppRoutes.filter:
         return MaterialPageRoute(builder: (_) => const FilterScreen());
+
+      case AppRoutes.matchSuccess:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => MatchSuccessScreen(
+            currentUser: args['currentUser'] as UserModel,
+            partner: args['partner'] as UserModel,
+            chatRoomId: args['chatRoomId'] as String,
+          ),
+        );
       
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
