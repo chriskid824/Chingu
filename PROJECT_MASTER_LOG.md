@@ -112,6 +112,13 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+**最新完成 (2025-11-25):**
+- ✅ **登入歷史記錄 (Login History)**:
+  - 建立 `LoginHistoryModel` 與 `LoginHistoryService` (記錄設備、時間、地點佔位符)
+  - 在 `AuthProvider` 整合登入記錄邏輯 (一般登入、Google 登入、註冊)
+  - 實作 `LoginHistoryScreen` 顯示歷史清單
+  - 更新設定頁面路由與選單
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 

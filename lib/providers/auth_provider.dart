@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/login_history_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -15,6 +16,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final LoginHistoryService _loginHistoryService = LoginHistoryService();
 
   AuthStatus _status = AuthStatus.uninitialized;
   firebase_auth.User? _firebaseUser;
@@ -122,6 +124,9 @@ class AuthProvider with ChangeNotifier {
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
 
+      // 記錄登入歷史
+      _loginHistoryService.recordLogin(firebaseUser.uid, city: userModel.city);
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -144,10 +149,14 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      await _authService.signInWithEmailAndPassword(
+      final user = await _authService.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // 記錄登入歷史
+      // 注意：此時尚未載入最新用戶資料，故不傳入 city
+      _loginHistoryService.recordLogin(user.uid);
 
       _setLoading(false);
       return true;
@@ -194,6 +203,9 @@ class AuthProvider with ChangeNotifier {
 
         await _firestoreService.createUser(userModel);
       }
+
+      // 記錄登入歷史
+      _loginHistoryService.recordLogin(firebaseUser.uid);
 
       _setLoading(false);
       return true;
