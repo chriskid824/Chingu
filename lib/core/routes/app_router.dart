@@ -42,6 +42,7 @@ import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
+import '../../screens/settings/delete_account_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
@@ -97,6 +98,7 @@ class AppRoutes {
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
+  static const String deleteAccount = '/delete-account';
   static const String about = '/about';
   static const String reportUser = '/report-user';
 }
@@ -226,6 +228,9 @@ class AppRouter {
 
       case AppRoutes.helpCenter:
         return MaterialPageRoute(builder: (_) => const HelpCenterScreen());
+
+      case AppRoutes.deleteAccount:
+        return MaterialPageRoute(builder: (_) => const DeleteAccountScreen());
 
       case AppRoutes.about:
         return MaterialPageRoute(builder: (_) => const AboutScreen());
