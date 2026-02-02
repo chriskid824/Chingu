@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/models/notification_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -157,6 +159,29 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  final notification = NotificationModel(
+                    id: 'test_id_${DateTime.now().millisecondsSinceEpoch}',
+                    userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                    type: 'match',
+                    title: '配對成功！',
+                    message: '您與 Sarah 互相喜歡了！快去聊天吧。',
+                    imageUrl: 'https://picsum.photos/200',
+                    actionType: 'open_chat',
+                    createdAt: DateTime.now(),
+                  );
+                  NotificationService().showInAppNotification(notification);
+                },
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: const Text('測試應用內通知'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.purple,
+                  side: const BorderSide(color: Colors.purple),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
