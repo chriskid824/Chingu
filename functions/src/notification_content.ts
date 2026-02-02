@@ -166,3 +166,50 @@ export function getNotificationCopy(
 
     return { title, body };
 }
+
+/**
+ * Deterministically assigns a user to a variant for a given test.
+ * Uses a simple hash of userId + testId to ensure the same user always gets the same variant for a specific test.
+ */
+export function getVariantIdForUser(userId: string, test: NotificationCopyTest): string {
+    const input = `${userId}:${test.testId}`;
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+        const char = input.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    const index = Math.abs(hash) % test.variants.length;
+    return test.variants[index].variantId;
+}
+
+/**
+ * Gets the notification content for a specific user and notification type.
+ * Automatically handles A/B test assignment and parameter substitution.
+ */
+export function getNotificationContent(
+    userId: string,
+    notificationType: string,
+    params: Record<string, string>
+): { title: string; body: string; testId?: string; variantId?: string } {
+    // Find active test for this notification type
+    // In a real scenario, we might have multiple tests or check for active dates,
+    // but for now we assume the first matching test is the active one.
+    const test = allNotificationTests.find((t) => t.notificationType === notificationType);
+
+    if (!test) {
+        // Fallback or error handling if no test is defined for this type
+        // For now, return a generic placeholder
+        console.warn(`No A/B test found for notification type: ${notificationType}`);
+        return { title: 'Notification', body: '' };
+    }
+
+    const variantId = getVariantIdForUser(userId, test);
+    const content = getNotificationCopy(test.testId, variantId, params);
+
+    return {
+        ...content,
+        testId: test.testId,
+        variantId: variantId,
+    };
+}
