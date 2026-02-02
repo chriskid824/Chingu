@@ -90,7 +90,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .get();
 
             targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
+                .map((doc) => {
+                    const data = doc.data();
+                    // Check if push notifications are enabled (default to true if not set)
+                    if (data.notificationSettings && data.notificationSettings.pushEnabled === false) {
+                        return null;
+                    }
+                    return data.fcmToken;
+                })
                 .filter((token) => token); // Remove null/undefined tokens
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
@@ -101,7 +108,14 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 .get();
 
             targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
+                .map((doc) => {
+                    const data = doc.data();
+                    // Check if push notifications are enabled (default to true if not set)
+                    if (data.notificationSettings && data.notificationSettings.pushEnabled === false) {
+                        return null;
+                    }
+                    return data.fcmToken;
+                })
                 .filter((token) => token);
         } else {
             throw new functions.https.HttpsError(
