@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/utils/ab_test_manager.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -48,6 +49,9 @@ class AuthProvider with ChangeNotifier {
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+
+      // 載入用戶的 A/B 測試變體
+      await ABTestManager().refreshUserVariants();
     }
     notifyListeners();
   }
