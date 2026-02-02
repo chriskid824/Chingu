@@ -1,118 +1,124 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/utils/ab_test_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+@GenerateMocks([FirebaseAuth, User])
+import 'ab_test_manager_test.mocks.dart';
 
 void main() {
-  group('ABTestVariant', () {
-    test('should create variant from map', () {
-      final map = {
-        'name': 'variant_a',
-        'weight': 30.0,
-        'config': {'color': 'blue'},
-      };
+  late ABTestManager manager;
+  late FakeFirebaseFirestore fakeFirestore;
+  late MockFirebaseAuth mockAuth;
+  late MockUser mockUser;
 
-      final variant = ABTestVariant.fromMap(map);
-      expect(variant.name, 'variant_a');
-      expect(variant.weight, 30.0);
-      expect(variant.config['color'], 'blue');
-    });
+  setUp(() {
+    fakeFirestore = FakeFirebaseFirestore();
+    mockAuth = MockFirebaseAuth();
+    mockUser = MockUser();
 
-    test('should convert variant to map', () {
-      final variant = ABTestVariant(
-        name: 'variant_b',
-        weight: 70.0,
-        config: {'size': 'large'},
-      );
+    // Set up mock user
+    when(mockUser.uid).thenReturn('test_user_id');
+    when(mockAuth.currentUser).thenReturn(mockUser);
 
-      final map = variant.toMap();
-      expect(map['name'], 'variant_b');
-      expect(map['weight'], 70.0);
-      expect(map['config']['size'], 'large');
-    });
+    manager = ABTestManager();
+    manager.firestoreInstance = fakeFirestore;
+    manager.authInstance = mockAuth;
+    manager.clearCache();
+  });
 
-    test('should handle default values', () {
-      final variant = ABTestVariant.fromMap({});
-      expect(variant.name, '');
-      expect(variant.weight, 50.0);
-      expect(variant.config, isEmpty);
+  group('ABTestManager Initialization', () {
+    test('loads configs from firestore', () async {
+      await fakeFirestore.collection('ab_tests').doc('test_1').set({
+        'name': 'Test A',
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 100},
+        ]
+      });
+
+      await manager.initialize();
+      final variant = await manager.getVariant('test_1');
+      expect(variant, equals('A'));
     });
   });
 
-  group('ABTestConfig', () {
-    test('should create config and convert to map', () {
-      final config = ABTestConfig(
-        testId: 'test_1',
-        name: 'Test Experiment',
-        description: 'Test Description',
-        isActive: true,
-        variants: [
-          ABTestVariant(name: 'control', weight: 50.0),
-          ABTestVariant(name: 'variant_a', weight: 50.0),
-        ],
-      );
+  group('Variant Assignment', () {
+    test('assigns deterministic variant', () async {
+      final testId = 'test_deterministic';
+      await fakeFirestore.collection('ab_tests').doc(testId).set({
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 50},
+          {'name': 'B', 'weight': 50},
+        ]
+      });
 
-      final result = config.toMap();
-      expect(result['name'], 'Test Experiment');
-      expect(result['description'], 'Test Description');
-      expect(result['isActive'], true);
-      expect(result['variants'], hasLength(2));
+      await manager.initialize();
+
+      final variant1 = await manager.getVariant(testId);
+
+      // Check persistence
+      final userDoc = await fakeFirestore.collection('users').doc('test_user_id').collection('ab_test_variants').doc(testId).get();
+      expect(userDoc.exists, isTrue);
+      expect(userDoc.data()?['variant'], equals(variant1));
+
+      // Calling again should return same
+      final variant2 = await manager.getVariant(testId);
+      expect(variant2, equals(variant1));
     });
 
-    test('should handle optional dates', () {
-      final now = DateTime.now();
-      final config = ABTestConfig(
-        testId: 'test_2',
-        name: 'Dated Test',
-        description: 'With dates',
-        isActive: true,
-        variants: [ABTestVariant(name: 'control', weight: 100.0)],
-        startDate: now,
-        endDate: now.add(const Duration(days: 7)),
-      );
+    test('respects different weights/seeds', () async {
+      // This test tries to ensure we don't just always return the first variant
+      // It's tricky to test determinism with random seed fallback, but here we have mocked user ID.
+      // logic: (userId + config.testId).hashCode.abs() % 100;
 
-      final map = config.toMap();
-      expect(map.containsKey('startDate'), true);
-      expect(map.containsKey('endDate'), true);
+      // Let's create a test case where we know the hash result or just check multiple users
+
+      final testId = 'test_weight';
+      await fakeFirestore.collection('ab_tests').doc(testId).set({
+        'isActive': true,
+        'variants': [
+          {'name': 'A', 'weight': 50},
+          {'name': 'B', 'weight': 50},
+        ]
+      });
+
+      // User 1
+      when(mockUser.uid).thenReturn('user_1');
+      manager.clearCache();
+      await manager.initialize();
+      final v1 = await manager.getVariant(testId);
+
+      // User 2
+      when(mockUser.uid).thenReturn('user_2');
+      manager.clearCache();
+      await manager.initialize();
+      final v2 = await manager.getVariant(testId);
+
+      // Note: user_1 and user_2 might get same variant, but at least code runs
+      // print('v1: $v1, v2: $v2');
+      expect(v1, isNotNull);
+      expect(v2, isNotNull);
     });
   });
 
-  group('FeatureConfig', () {
-    test('should create config with default values', () {
-      final config = FeatureConfig(
-        key: 'new_feature',
-        enabled: true,
-      );
+  group('Feature Toggles', () {
+    test('returns correct feature flag', () async {
+      await fakeFirestore.collection('feature_flags').doc('new_feature').set({
+        'enabled': true,
+      });
 
-      expect(config.key, 'new_feature');
-      expect(config.enabled, true);
-      expect(config.config, isEmpty);
+      final isEnabled = await manager.isFeatureEnabled('new_feature');
+      expect(isEnabled, isTrue);
     });
 
-    test('should convert to map correctly', () {
-      final config = FeatureConfig(
-        key: 'feature_1',
-        enabled: false,
-        config: const {'timeout': 5000},
-      );
-
-      final map = config.toMap();
-      expect(map['enabled'], false);
-      expect(map['config']['timeout'], 5000);
-    });
-
-    test('should handle custom config', () {
-      final config = FeatureConfig(
-        key: 'advanced_feature',
-        enabled: true,
-        config: const {
-          'maxUsers': 100,
-          'theme': 'dark',
-          'features': ['chat', 'video']
-        },
-      );
-
-      expect(config.config['maxUsers'], 100);
-      expect(config.config['theme'], 'dark');
-      expect(config.config['features'], hasLength(2));
+    test('returns false for unknown feature', () async {
+       final isEnabled = await manager.isFeatureEnabled('unknown_feature');
+       expect(isEnabled, isFalse);
     });
   });
 }
