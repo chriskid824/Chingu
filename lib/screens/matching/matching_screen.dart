@@ -156,7 +156,15 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                   );
                                 }
                               },
-                              child: MatchCard(user: user),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pushNamed(
+                                    AppRoutes.userDetail,
+                                    arguments: user,
+                                  );
+                                },
+                                child: MatchCard(user: user),
+                              ),
                             );
                           }).toList().reversed.toList(), // 反轉列表，讓第一個元素在 Stack 的最上面
                         ),

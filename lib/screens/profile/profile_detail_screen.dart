@@ -167,6 +167,34 @@ class ProfileDetailScreen extends StatelessWidget {
 
                         const SizedBox(height: 24),
                         // Debug Button
+                        // Favorites Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pushNamed(context, AppRoutes.favorites);
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.bookmark_rounded, size: 16, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '我的收藏',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         // Debug Button
                         Container(
                           decoration: BoxDecoration(
