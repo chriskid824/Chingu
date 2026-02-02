@@ -24,7 +24,6 @@ import '../../screens/matching/matching_screen.dart';
 import '../../screens/matching/user_detail_screen.dart';
 import '../../screens/matching/matches_list_screen.dart';
 import '../../screens/matching/filter_screen.dart';
-import '../../screens/matching/match_success_screen.dart';
 // 活動模組
 import '../../screens/events/events_list_screen.dart';
 import '../../screens/events/event_detail_screen.dart';
@@ -45,6 +44,7 @@ import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+import '../../screens/profile/stats_dashboard_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -70,6 +70,7 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String statsDashboard = '/stats-dashboard';
   
   // 配對模組
   static const String matching = '/matching';
@@ -165,6 +166,9 @@ class AppRouter {
       
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+
+      case AppRoutes.statsDashboard:
+        return MaterialPageRoute(builder: (_) => const StatsDashboardScreen());
 
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
