@@ -289,6 +289,28 @@ class FirestoreService {
       throw Exception('提交舉報失敗: $e');
     }
   }
+
+  /// 提交用戶反饋
+  Future<void> submitFeedback({
+    required String userId,
+    required String type, // 'suggestion', 'bug_report', 'other'
+    required String content,
+    String? contactEmail,
+  }) async {
+    try {
+      await _firestore.collection('feedback').add({
+        'userId': userId,
+        'type': type,
+        'content': content,
+        'contactEmail': contactEmail,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'platform': 'flutter',
+      });
+    } catch (e) {
+      throw Exception('提交反饋失敗: $e');
+    }
+  }
 }
 
 
