@@ -38,6 +38,10 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 隱私設定
+  final bool showOnlineStatus;
+  final bool showLastSeen;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +70,8 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.showOnlineStatus = true,
+    this.showLastSeen = true,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +110,8 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      showOnlineStatus: map['showOnlineStatus'] ?? true,
+      showLastSeen: map['showLastSeen'] ?? true,
     );
   }
 
@@ -136,6 +144,8 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'showOnlineStatus': showOnlineStatus,
+      'showLastSeen': showLastSeen,
     };
   }
 
@@ -166,6 +176,8 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? showOnlineStatus,
+    bool? showLastSeen,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +207,8 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      showOnlineStatus: showOnlineStatus ?? this.showOnlineStatus,
+      showLastSeen: showLastSeen ?? this.showLastSeen,
     );
   }
 
