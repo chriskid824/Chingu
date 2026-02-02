@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'analytics_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -17,6 +18,8 @@ class RichNotificationService {
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  final AnalyticsService _analyticsService = AnalyticsService();
 
   bool _isInitialized = false;
 
@@ -69,6 +72,15 @@ class RichNotificationService {
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
+
+        // Log click
+        if (data.containsKey('variant')) {
+             _analyticsService.logNotificationClicked(
+                notificationId: data['notificationId'] ?? 'unknown',
+                variant: data['variant'],
+                actionId: actionId
+             );
+        }
 
         _handleNavigation(actionType, actionData, actionId);
       } catch (e) {
@@ -126,7 +138,7 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification, {Map<String, dynamic>? extraPayload}) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +198,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      if (extraPayload != null) ...extraPayload,
     };
 
     await _flutterLocalNotificationsPlugin.show(
