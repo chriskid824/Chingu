@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/moment_model.dart';
+import 'package:chingu/services/moment_service.dart';
 import 'package:chingu/utils/haptic_utils.dart';
+import 'package:chingu/widgets/comments_sheet.dart';
 import 'package:intl/intl.dart';
 
 class MomentCard extends StatefulWidget {
@@ -22,6 +24,7 @@ class MomentCard extends StatefulWidget {
 }
 
 class _MomentCardState extends State<MomentCard> {
+  final MomentService _momentService = MomentService();
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
@@ -44,13 +47,50 @@ class _MomentCardState extends State<MomentCard> {
     }
   }
 
-  void _toggleLike() {
+  Future<void> _toggleLike() async {
     HapticUtils.light();
+
+    final wasLiked = _isLiked;
     setState(() {
       _isLiked = !_isLiked;
       _likeCount += _isLiked ? 1 : -1;
     });
+
     widget.onLikeChanged?.call(_isLiked);
+
+    try {
+      if (_isLiked) {
+        await _momentService.likeMoment(widget.moment.id);
+      } else {
+        await _momentService.unlikeMoment(widget.moment.id);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLiked = wasLiked;
+          _likeCount += _isLiked ? 1 : -1;
+        });
+        widget.onLikeChanged?.call(_isLiked);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update like: $e')),
+        );
+      }
+    }
+  }
+
+  void _showComments() {
+    widget.onCommentTap?.call();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).viewInsets.top + 60,
+        ),
+        child: CommentsSheet(momentId: widget.moment.id),
+      ),
+    );
   }
 
   @override
@@ -167,7 +207,7 @@ class _MomentCardState extends State<MomentCard> {
                 icon: Icons.chat_bubble_outline,
                 label: '$_commentCount',
                 color: theme.colorScheme.onSurfaceVariant,
-                onTap: widget.onCommentTap,
+                onTap: _showComments,
               ),
             ],
           ),
