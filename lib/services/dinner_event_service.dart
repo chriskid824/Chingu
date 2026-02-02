@@ -53,6 +53,7 @@ class DinnerEventService {
         participantIds: participantIds,
         participantStatus: participantStatus,
         status: 'pending', // 等待配對
+        isReminderSent: false,
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
       );
