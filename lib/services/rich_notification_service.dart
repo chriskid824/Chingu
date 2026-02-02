@@ -186,6 +186,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'deeplink': notification.deeplink,
     };
 
     await _flutterLocalNotificationsPlugin.show(

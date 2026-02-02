@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import '../core/routes/app_router.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -227,6 +228,7 @@ class NotificationStorageService {
     String? imageUrl,
     String? actionType,
     String? actionData,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -240,6 +242,7 @@ class NotificationStorageService {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -265,6 +268,7 @@ class NotificationStorageService {
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
+      deeplink: AppRoutes.chatList,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -291,6 +295,7 @@ class NotificationStorageService {
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
+      deeplink: AppRoutes.eventDetail,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -317,6 +322,7 @@ class NotificationStorageService {
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
+      deeplink: AppRoutes.chatList,
       isRead: false,
       createdAt: DateTime.now(),
     );
