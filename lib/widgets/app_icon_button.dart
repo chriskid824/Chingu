@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/utils/haptic_utils.dart';
+// import 'package:chingu/utils/haptic_utils.dart';
 
 class AppIconButton extends StatelessWidget {
   final IconData icon;
@@ -8,6 +8,7 @@ class AppIconButton extends StatelessWidget {
   final Color? backgroundColor;
   final double size;
   final double iconSize;
+  final String? tooltip;
 
   const AppIconButton({
     Key? key,
@@ -17,6 +18,7 @@ class AppIconButton extends StatelessWidget {
     this.backgroundColor,
     this.size = 40,
     this.iconSize = 24,
+    this.tooltip,
   }) : super(key: key);
 
   @override
@@ -31,8 +33,9 @@ class AppIconButton extends StatelessWidget {
       child: IconButton(
         icon: Icon(icon, size: iconSize),
         color: color,
+        tooltip: tooltip,
         onPressed: () {
-          HapticUtils.selection();
+          // HapticUtils.selection();
           onPressed();
         },
         padding: EdgeInsets.zero,
