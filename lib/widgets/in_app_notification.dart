@@ -182,3 +182,71 @@ class InAppNotification extends StatelessWidget {
     }
   }
 }
+
+class AnimatedInAppNotification extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback onDismiss;
+  final VoidCallback? onTap;
+
+  const AnimatedInAppNotification({
+    super.key,
+    required this.notification,
+    required this.onDismiss,
+    this.onTap,
+  });
+
+  @override
+  State<AnimatedInAppNotification> createState() => _AnimatedInAppNotificationState();
+}
+
+class _AnimatedInAppNotificationState extends State<AnimatedInAppNotification> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeIn,
+    ));
+
+    _controller.forward();
+  }
+
+  Future<void> _handleDismiss() async {
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _offsetAnimation,
+      child: InAppNotification(
+        notification: widget.notification,
+        onDismiss: _handleDismiss,
+        onTap: () {
+          _handleDismiss().then((_) {
+            if (widget.onTap != null) widget.onTap!();
+          });
+        },
+      ),
+    );
+  }
+}
