@@ -3,20 +3,22 @@ import 'package:chingu/core/theme/app_theme.dart';
 
 class GradientButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final LinearGradient? gradient;
   final double? width;
   final double height;
   final bool isLoading;
+  final bool isEnabled;
 
   const GradientButton({
     super.key,
     required this.text,
-    required this.onPressed,
+    this.onPressed,
     this.gradient,
     this.width,
     this.height = 56,
     this.isLoading = false,
+    this.isEnabled = true,
   });
 
   @override
@@ -24,8 +26,10 @@ class GradientButton extends StatelessWidget {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
     
-    final effectiveGradient = gradient ?? chinguTheme?.primaryGradient ?? 
-        LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]);
+    final effectiveGradient = isEnabled
+        ? (gradient ?? chinguTheme?.primaryGradient ??
+            LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]))
+        : LinearGradient(colors: [theme.disabledColor, theme.disabledColor]);
 
     return Container(
       width: width,
@@ -33,19 +37,21 @@ class GradientButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: effectiveGradient,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: isEnabled ? [
           BoxShadow(
-            color: effectiveGradient.colors.first.withOpacity(0.3),
+            color: effectiveGradient.colors.first.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
-        ],
+        ] : null,
       ),
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: (isEnabled && !isLoading) ? onPressed : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

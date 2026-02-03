@@ -1,14 +1,137 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/widgets/event_registration_dialog.dart';
 
-class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key});
+class EventDetailScreen extends StatefulWidget {
+  final String eventId;
+
+  const EventDetailScreen({super.key, required this.eventId});
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  final DinnerEventService _eventService = DinnerEventService();
+  final String? _userId = FirebaseAuth.instance.currentUser?.uid;
   
+  DinnerEventModel? _event;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvent();
+  }
+
+  Future<void> _loadEvent() async {
+    try {
+      final event = await _eventService.getEvent(widget.eventId);
+      if (mounted) {
+        setState(() {
+          _event = event;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _handleRegistrationAction() {
+    if (_event == null || _userId == null) return;
+    final userId = _userId;
+
+    final isParticipant = _event!.participantIds.contains(userId);
+    final isWaitlisted = _event!.waitlist.contains(userId);
+    final isRegistering = !isParticipant && !isWaitlisted;
+
+    showDialog(
+      context: context,
+      builder: (context) => EventRegistrationDialog(
+        event: _event!,
+        isRegistering: isRegistering,
+        onConfirm: () async {
+          if (!mounted) return;
+          try {
+            if (isRegistering) {
+              await _eventService.registerForEvent(_event!.id, userId);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('報名/加入成功')),
+                );
+              }
+            } else {
+              await _eventService.unregisterFromEvent(_event!.id, userId);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已取消')),
+                );
+              }
+            }
+            // Reload event to update UI
+            if (mounted) {
+              _loadEvent();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('操作失敗: $e')),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null || _event == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('無法載入活動: ${_error ?? "找不到活動"}')),
+      );
+    }
+
+    final event = _event!;
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    final isParticipant = _userId != null && event.participantIds.contains(_userId);
+    final isWaitlisted = _userId != null && event.waitlist.contains(_userId);
+    final isFull = event.isFull;
+
+    String statusText = event.statusText;
+    Color statusColor = theme.colorScheme.primary;
+    if (isParticipant) {
+      statusText = '已報名';
+      statusColor = Colors.green;
+    } else if (isWaitlisted) {
+      statusText = '等候中';
+      statusColor = Colors.orange;
+    } else if (isFull) {
+      statusText = '已額滿';
+      statusColor = Colors.red;
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -48,22 +171,6 @@ class EventDetailScreen extends StatelessWidget {
                 ),
                 onPressed: () {},
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.more_vert_rounded,
-                    size: 18,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                onPressed: () {},
-              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,
@@ -80,8 +187,8 @@ class EventDetailScreen extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.3),
-                          Colors.black.withOpacity(0.6),
+                          Colors.black.withValues(alpha: 0.3),
+                          Colors.black.withValues(alpha: 0.6),
                         ],
                       ),
                     ),
@@ -117,7 +224,7 @@ class EventDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '6人晚餐聚會',
+                          '${event.maxParticipants}人晚餐聚會',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -126,21 +233,21 @@ class EventDetailScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          gradient: chinguTheme?.successGradient,
+                          color: statusColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.check_circle,
+                            const Icon(
+                              Icons.info_outline,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              '已確認',
-                              style: TextStyle(
+                              statusText,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -157,7 +264,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    DateFormat('yyyy年MM月dd日 (E)\nHH:mm', 'zh_TW').format(event.dateTime),
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +272,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    '${event.budgetRangeText} / 人',
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +280,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    '${event.city} ${event.district}\n${event.restaurantAddress ?? "等待配對確認"}',
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,17 +288,20 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    '${event.maxParticipants} 人（固定）\n目前已報名：${event.participantIds.length} 人\n等候中：${event.waitlist.length} 人',
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
                   const SizedBox(height: 32),
                   
+                  if (isParticipant)
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            // Chat Navigation Logic would go here
+                          },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: BorderSide(color: theme.colorScheme.primary),
@@ -227,14 +337,16 @@ class EventDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: theme.colorScheme.primary.withOpacity(0.3),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 6),
                               ),
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              // Navigation logic
+                            },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: Colors.transparent,
@@ -275,7 +387,7 @@ class EventDetailScreen extends StatelessWidget {
           color: theme.cardColor,
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.05),
+              color: theme.shadowColor.withValues(alpha: 0.05),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -283,8 +395,9 @@ class EventDetailScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: GradientButton(
-            text: '立即報名',
-            onPressed: () {},
+            text: isParticipant ? '取消報名' : (isWaitlisted ? '取消等候' : (isFull ? '加入等候清單' : '立即報名')),
+            onPressed: _handleRegistrationAction,
+            isEnabled: _userId != null, // Disable if not logged in
           ),
         ),
       ),
@@ -298,13 +411,13 @@ class EventDetailScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
+            color.withValues(alpha: 0.1),
+            color.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -312,7 +425,7 @@ class EventDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 22, color: color),
