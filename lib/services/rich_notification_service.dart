@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../core/routes/app_router.dart';
 
 class RichNotificationService {
@@ -59,6 +62,39 @@ class RichNotificationService {
     _isInitialized = true;
   }
 
+  /// 檢查應用程式是否由通知啟動
+  Future<void> checkInitialNotification() async {
+    // 1. 檢查 Local Notification 啟動
+    final NotificationAppLaunchDetails? launchDetails =
+        await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+    if (launchDetails != null &&
+        launchDetails.didNotificationLaunchApp &&
+        launchDetails.notificationResponse != null) {
+      _onNotificationTap(launchDetails.notificationResponse!);
+      return;
+    }
+
+    // 2. 檢查 FCM 啟動 (當 app 完全關閉時)
+    try {
+      final RemoteMessage? initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+
+      if (initialMessage != null) {
+        // 構建類似的 payload
+        // 注意: FCM data 都是 String，如果 actionData 是 JSON 字串，直接傳遞即可
+        final String? actionType = initialMessage.data['actionType'];
+        final String? actionData = initialMessage.data['actionData'];
+
+        if (actionType != null) {
+          _handleNavigation(actionType, actionData, null);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking initial FCM message: $e');
+    }
+  }
+
   /// 處理通知點擊事件
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
@@ -94,35 +130,110 @@ class RichNotificationService {
     }
   }
 
-  void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
-      case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
-        break;
-      case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
-        break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
-      default:
-        // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
-        break;
+  Future<void> _performAction(String action, String? data, NavigatorState navigator) async {
+    try {
+      switch (action) {
+        case 'open_chat':
+          if (data != null) {
+            Map<String, dynamic> args = {};
+            String? otherUserId;
+
+            // 嘗試解析 JSON
+            try {
+              final parsedData = json.decode(data);
+              if (parsedData is Map<String, dynamic>) {
+                args['chatRoomId'] = parsedData['chatRoomId'];
+                otherUserId = parsedData['otherUserId'];
+              } else {
+                // 假設 data 是 chatRoomId
+                args['chatRoomId'] = data;
+              }
+            } catch (_) {
+              // 解析失敗，假設 data 是 chatRoomId
+              args['chatRoomId'] = data;
+            }
+
+            // 如果有 otherUserId，獲取用戶資料
+            if (otherUserId != null) {
+              final user = await _fetchUser(otherUserId);
+              if (user != null) {
+                args['otherUser'] = user;
+                navigator.pushNamed(AppRoutes.chatDetail, arguments: args);
+                return;
+              }
+            } else if (args['chatRoomId'] != null) {
+               // 如果只有 chatRoomId，嘗試導航 (ChatDetailScreen 可能需要額外處理或失敗)
+               // 理想情況下應該先 fetch chatRoom 獲取 otherUserId，這裡簡化處理
+               // 降級到聊天列表
+               navigator.pushNamed(AppRoutes.chatList);
+               return;
+            }
+
+            navigator.pushNamed(AppRoutes.chatList);
+          } else {
+            navigator.pushNamed(AppRoutes.chatList);
+          }
+          break;
+
+        case 'match':
+        case 'match_success':
+          if (data != null) {
+            // data 預期是 userId
+            String userId = data;
+             try {
+              final parsedData = json.decode(data);
+              if (parsedData is Map<String, dynamic> && parsedData.containsKey('userId')) {
+                userId = parsedData['userId'];
+              }
+            } catch (_) {}
+
+            final user = await _fetchUser(userId);
+            // 導航到配對詳情 (UserDetailScreen)
+            // 即使 UserDetailScreen 目前可能是硬編碼的，我們還是傳遞參數以備將來支援
+            navigator.pushNamed(AppRoutes.userDetail, arguments: user);
+          } else {
+             navigator.pushNamed(AppRoutes.matchesList);
+          }
+          break;
+
+        case 'view_event':
+          // 導航到活動詳情
+          // 如果 EventDetailScreen 支援參數，這裡應該傳遞
+          navigator.pushNamed(AppRoutes.eventDetail, arguments: data);
+          break;
+
+        case 'match_history':
+          navigator.pushNamed(AppRoutes.matchesList);
+          break;
+
+        case 'navigate':
+           if (data != null) {
+             navigator.pushNamed(data);
+           }
+           break;
+
+        default:
+          // 預設導航到通知頁面
+          navigator.pushNamed(AppRoutes.notifications);
+          break;
+      }
+    } catch (e) {
+      debugPrint('Error performing notification action: $e');
+      navigator.pushNamed(AppRoutes.home);
     }
+  }
+
+  /// 輔助方法：獲取用戶資料
+  Future<UserModel?> _fetchUser(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists && doc.data() != null) {
+        return UserModel.fromMap(doc.data()!, doc.id);
+      }
+    } catch (e) {
+      debugPrint('Error fetching user for notification: $e');
+    }
+    return null;
   }
 
   /// 顯示豐富通知
