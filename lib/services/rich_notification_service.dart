@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -57,6 +58,54 @@ class RichNotificationService {
     }
 
     _isInitialized = true;
+  }
+
+  /// 獲取啟動時的通知數據
+  Future<Map<String, dynamic>?> getInitialNotificationData() async {
+    // Check FCM
+    try {
+      final RemoteMessage? initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        return initialMessage.data;
+      }
+    } catch (e) {
+      debugPrint('Error getting initial FCM message: $e');
+    }
+
+    // Check Local Notification
+    try {
+      final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+          await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+      if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+        final payload = notificationAppLaunchDetails!.notificationResponse?.payload;
+        if (payload != null) {
+          return json.decode(payload);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting initial local notification: $e');
+    }
+
+    return null;
+  }
+
+  /// 根據通知數據獲取路由設置
+  static RouteSettings? getRouteSettingsFromData(Map<String, dynamic> data) {
+    final String? actionType = data['actionType'];
+    // final String? actionData = data['actionData'];
+
+    switch (actionType) {
+      case 'open_chat':
+        return const RouteSettings(name: AppRoutes.chatList);
+      case 'view_event':
+        return const RouteSettings(name: AppRoutes.eventDetail);
+      case 'match_history':
+        return const RouteSettings(name: AppRoutes.matchesList);
+      default:
+        return const RouteSettings(name: AppRoutes.notifications);
+    }
   }
 
   /// 處理通知點擊事件
