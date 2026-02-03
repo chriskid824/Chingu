@@ -5,6 +5,7 @@ import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/widgets/app_icon_button.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/models/report_model.dart';
 
 class ReportUserScreen extends StatefulWidget {
   final String reportedUserId;
@@ -64,12 +65,15 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
         throw Exception('User not logged in');
       }
 
-      await _firestoreService.submitUserReport(
+      final report = ReportModel(
         reporterId: currentUserId,
         reportedUserId: widget.reportedUserId,
         reason: _selectedReason!,
         description: _descriptionController.text.trim(),
+        createdAt: DateTime.now(),
       );
+
+      await _firestoreService.submitReport(report);
 
       if (!mounted) return;
 
