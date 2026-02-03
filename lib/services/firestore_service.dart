@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/feedback_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
@@ -287,6 +288,20 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
+    }
+  }
+
+  /// 提交意見回饋
+  Future<void> submitFeedback(FeedbackModel feedback) async {
+    try {
+      // 這裡我們直接使用 feedback.toMap()
+      // 但為了確保服務器時間準確，我們可以覆蓋 createdAt
+      var data = feedback.toMap();
+      data['createdAt'] = FieldValue.serverTimestamp();
+
+      await _firestore.collection('feedback').add(data);
+    } catch (e) {
+      throw Exception('提交意見回饋失敗: $e');
     }
   }
 }
