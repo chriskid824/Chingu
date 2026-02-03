@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/notification_provider.dart';
+import 'package:chingu/core/constants/interests.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
@@ -8,7 +11,7 @@ class NotificationSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+    final notificationProvider = Provider.of<NotificationProvider>(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -20,6 +23,9 @@ class NotificationSettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
+          _buildSectionTitle(context, '主題訂閱'),
+          _buildSubscriptionSection(context, notificationProvider),
+          const Divider(),
           _buildSectionTitle(context, '推播通知'),
           SwitchListTile(
             title: const Text('啟用推播通知'),
@@ -114,6 +120,57 @@ class NotificationSettingsScreen extends StatelessWidget {
           color: theme.colorScheme.onSurface.withOpacity(0.5),
         ),
       ),
+    );
+  }
+
+  Widget _buildSubscriptionSection(BuildContext context, NotificationProvider provider) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        // Region Subscription
+        ExpansionTile(
+          title: const Text('地區訂閱'),
+          subtitle: Text('接收特定地區的相關通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+          children: [
+            _buildRegionCheckbox(context, 'taipei', '台北', provider),
+            _buildRegionCheckbox(context, 'taichung', '台中', provider),
+            _buildRegionCheckbox(context, 'kaohsiung', '高雄', provider),
+          ],
+        ),
+        // Interest Subscription
+        ExpansionTile(
+          title: const Text('興趣訂閱'),
+          subtitle: Text('接收特定興趣的相關通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+          children: [
+            ...kInterestCategories.expand((category) {
+              final interests = category['interests'] as List<Map<String, dynamic>>;
+              return interests.map((interest) {
+                 final name = interest['name'] as String;
+                 return CheckboxListTile(
+                   title: Text(name),
+                   value: provider.isInterestSubscribed(name),
+                   onChanged: (bool? value) {
+                     provider.toggleInterestSubscription(name, value ?? false);
+                   },
+                   activeColor: theme.colorScheme.primary,
+                 );
+              });
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRegionCheckbox(BuildContext context, String regionId, String label, NotificationProvider provider) {
+    return CheckboxListTile(
+      title: Text(label),
+      value: provider.isRegionSubscribed(regionId),
+      onChanged: (bool? value) {
+        provider.toggleRegionSubscription(regionId, value ?? false);
+      },
+      activeColor: Theme.of(context).colorScheme.primary,
     );
   }
 }
