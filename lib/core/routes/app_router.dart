@@ -43,6 +43,7 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/login_history_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
@@ -94,6 +95,7 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
   static const String privacySettings = '/privacy-settings';
+  static const String loginHistory = '/login-history';
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
   static const String helpCenter = '/help-center';
@@ -218,6 +220,9 @@ class AppRouter {
       case AppRoutes.privacySettings:
         return MaterialPageRoute(builder: (_) => const PrivacySettingsScreen());
       
+      case AppRoutes.loginHistory:
+        return MaterialPageRoute(builder: (_) => const LoginHistoryScreen());
+
       case AppRoutes.notificationSettings:
         return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
       

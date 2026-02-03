@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:chingu/services/login_history_service.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -33,6 +34,9 @@ class AuthService {
         throw Exception('註冊失敗，請稍後再試');
       }
 
+      // 不等待記錄完成，以免阻塞登入流程
+      LoginHistoryService().recordLogin(userCredential.user!.uid, 'email');
+
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -61,6 +65,9 @@ class AuthService {
       if (userCredential.user == null) {
         throw Exception('登入失敗，請稍後再試');
       }
+
+      // 不等待記錄完成，以免阻塞登入流程
+      LoginHistoryService().recordLogin(userCredential.user!.uid, 'email');
 
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
@@ -99,6 +106,9 @@ class AuthService {
       if (userCredential.user == null) {
         throw Exception('Google 登入失敗');
       }
+
+      // 不等待記錄完成，以免阻塞登入流程
+      LoginHistoryService().recordLogin(userCredential.user!.uid, 'google');
 
       return userCredential.user!;
     } catch (e) {
