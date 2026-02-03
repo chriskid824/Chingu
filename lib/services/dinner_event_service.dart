@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -59,7 +60,8 @@ class DinnerEventService {
 
       await docRef.set(event.toMap());
       return docRef.id;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.createEvent');
       throw Exception('創建活動失敗: $e');
     }
   }
@@ -76,7 +78,8 @@ class DinnerEventService {
       }
 
       return DinnerEventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.getEvent');
       throw Exception('獲取活動詳情失敗: $e');
     }
   }
@@ -104,7 +107,8 @@ class DinnerEventService {
       events.sort((a, b) => b.dateTime.compareTo(a.dateTime));
       
       return events;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.getUserEvents');
       throw Exception('獲取用戶活動列表失敗: $e');
     }
   }
@@ -155,7 +159,8 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.joinEvent');
       throw Exception('加入活動失敗: $e');
     }
   }
@@ -205,7 +210,8 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.leaveEvent');
       throw Exception('退出活動失敗: $e');
     }
   }
@@ -239,7 +245,8 @@ class DinnerEventService {
               event.dateTime.isAfter(DateTime.now()) // 只顯示未來的活動
           )
           .toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.getRecommendedEvents');
       throw Exception('獲取推薦活動失敗: $e');
     }
   }
@@ -364,11 +371,9 @@ class DinnerEventService {
         notes: '週四固定晚餐聚會',
       );
       
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'DinnerEventService.joinOrCreateEvent');
       throw Exception('報名失敗: $e');
     }
   }
 }
-
-
-
