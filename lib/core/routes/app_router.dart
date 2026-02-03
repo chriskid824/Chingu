@@ -109,92 +109,93 @@ class AppRouter {
     switch (settings.name) {
       // ==================== 認證路由 ====================
       case AppRoutes.splash:
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const SplashScreen());
 
       case AppRoutes.debug:
-        return MaterialPageRoute(builder: (_) => const DebugScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const DebugScreen());
       
       case AppRoutes.login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const LoginScreen());
       
       case AppRoutes.register:
-        return MaterialPageRoute(builder: (_) => const RegisterScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const RegisterScreen());
       
       case AppRoutes.forgotPassword:
-        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const ForgotPasswordScreen());
       
       case AppRoutes.emailVerification:
-        return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const EmailVerificationScreen());
       
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
         final args = settings.arguments;
         final initialIndex = args is Map<String, dynamic> ? args['initialIndex'] as int? : null;
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => MainScreen(initialIndex: initialIndex),
         );
       
       // ==================== 首頁子頁面 ====================
       case AppRoutes.home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const HomeScreen());
       
       case AppRoutes.notifications:
-        return MaterialPageRoute(builder: (_) => const NotificationsScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const NotificationsScreen());
       
       case AppRoutes.search:
-        return MaterialPageRoute(builder: (_) => const SearchScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const SearchScreen());
       
       // ==================== 個人資料流程 ====================
       case AppRoutes.profileSetup:
-        return MaterialPageRoute(builder: (_) => const ProfileSetupScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const ProfileSetupScreen());
       
       case AppRoutes.interestsSelection:
-        return MaterialPageRoute(builder: (_) => const InterestsSelectionScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const InterestsSelectionScreen());
       
       case AppRoutes.preferences:
-        return MaterialPageRoute(builder: (_) => const PreferencesScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const PreferencesScreen());
 
       case AppRoutes.location:
-        return MaterialPageRoute(builder: (_) => const LocationScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const LocationScreen());
       
       case AppRoutes.notificationPermission:
-        return MaterialPageRoute(builder: (_) => const NotificationPermissionScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const NotificationPermissionScreen());
 
       case AppRoutes.profileDetail:
-        return MaterialPageRoute(builder: (_) => const ProfileDetailScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const ProfileDetailScreen());
       
       case AppRoutes.profilePreview:
-        return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const ProfilePreviewScreen());
 
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
-        return MaterialPageRoute(builder: (_) => const MatchingScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const UserDetailScreen());
       
       case AppRoutes.matchesList:
-        return MaterialPageRoute(builder: (_) => const MatchesListScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const MatchesListScreen());
       
       case AppRoutes.filter:
-        return MaterialPageRoute(builder: (_) => const FilterScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const FilterScreen());
       
       // ==================== 活動模組 ====================
       case AppRoutes.eventsList:
-        return MaterialPageRoute(builder: (_) => const EventsListScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const EventDetailScreen());
       
       case AppRoutes.eventConfirmation:
-        return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const EventConfirmationScreen());
       
       case AppRoutes.eventRating:
-        return MaterialPageRoute(builder: (_) => const EventRatingScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const EventRatingScreen());
       
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
-        return MaterialPageRoute(builder: (_) => const ChatListScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const ChatListScreen());
       
       case AppRoutes.chatDetail:
         return MaterialPageRoute(
@@ -203,43 +204,45 @@ class AppRouter {
         );
       
       case AppRoutes.icebreaker:
-        return MaterialPageRoute(builder: (_) => const IcebreakerScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const IcebreakerScreen());
       
       case AppRoutes.stickerManager:
-        return MaterialPageRoute(builder: (_) => const StickerManagerScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const StickerManagerScreen());
 
       // ==================== 設定模組 ====================
       case AppRoutes.settings:
-        return MaterialPageRoute(builder: (_) => const SettingsScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const SettingsScreen());
       
       case AppRoutes.editProfile:
-        return MaterialPageRoute(builder: (_) => const EditProfileScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const EditProfileScreen());
       
       case AppRoutes.privacySettings:
-        return MaterialPageRoute(builder: (_) => const PrivacySettingsScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const PrivacySettingsScreen());
       
       case AppRoutes.notificationSettings:
-        return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const NotificationSettingsScreen());
       
       case AppRoutes.notificationPreview:
-        return MaterialPageRoute(builder: (_) => const NotificationPreviewScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const NotificationPreviewScreen());
 
       case AppRoutes.helpCenter:
-        return MaterialPageRoute(builder: (_) => const HelpCenterScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const HelpCenterScreen());
 
       case AppRoutes.about:
-        return MaterialPageRoute(builder: (_) => const AboutScreen());
+        return MaterialPageRoute(settings: settings, builder: (_) => const AboutScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
         if (args == null) {
           return MaterialPageRoute(
+            settings: settings,
             builder: (_) => Scaffold(
               body: Center(child: Text('Error: Missing arguments for report user')),
             ),
           );
         }
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => ReportUserScreen(
             reportedUserId: args['reportedUserId'],
             reportedUserName: args['reportedUserName'],
@@ -249,6 +252,7 @@ class AppRouter {
       // ==================== 404 ====================
       default:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => Scaffold(
             body: Center(
               child: Text('找不到頁面: ${settings.name}'),
@@ -259,8 +263,9 @@ class AppRouter {
   }
   
   /// 自定義頁面切換動畫（從右往左滑入）
-  static Route<dynamic> slideRoute(Widget page) {
+  static Route<dynamic> slideRoute(Widget page, {RouteSettings? settings}) {
     return PageRouteBuilder(
+      settings: settings,
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         const begin = Offset(1.0, 0.0);
@@ -279,8 +284,9 @@ class AppRouter {
   }
   
   /// 淡入淡出動畫
-  static Route<dynamic> fadeRoute(Widget page) {
+  static Route<dynamic> fadeRoute(Widget page, {RouteSettings? settings}) {
     return PageRouteBuilder(
+      settings: settings,
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
@@ -291,14 +297,3 @@ class AppRouter {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
