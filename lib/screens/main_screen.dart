@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
+import '../../services/notification_service.dart';
+import '../../services/rich_notification_service.dart';
 import 'home/home_screen.dart';
 import 'matching/matching_screen.dart';
 import 'explore/explore_screen.dart';
@@ -27,6 +29,24 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+
+    // 檢查是否有待處理的通知點擊
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingNotification();
+    });
+  }
+
+  void _checkPendingNotification() {
+    final pendingData = NotificationService().pendingNotificationData;
+    if (pendingData != null && pendingData.isNotEmpty) {
+      final String? actionType = pendingData['actionType'];
+      final String? actionData = pendingData['actionData'];
+
+      RichNotificationService().handleNavigation(actionType, actionData, null);
+
+      // 清除待處理數據，避免重複處理
+      NotificationService().pendingNotificationData = null;
+    }
   }
 
   final List<Widget> _screens = [
