@@ -2,6 +2,15 @@
 
 ## 📅 歷史工作紀錄 (Historical Work Record)
 
+### 2025-11-25：FCM 配置 (FCM Configuration)
+**狀態**：FCM 基礎配置已完成。
+
+#### ✅ 階段 5：推播通知設定 (Phase 5 - Push Notification Setup)
+- [x] **FCM 配置 (FCM Configuration)**
+  - 建立 `android/app/google-services.json` (使用佔位符，待替換為真實檔案)
+  - 驗證 `ios/Runner/GoogleService-Info.plist` 存在
+  - 設定 Android Gradle 插件 (`com.google.gms.google-services`)
+
 ### 2025-11-23 / 2025-11-24：核心功能實作 (Core Features Implementation)
 **狀態**：主要功能已完成，聊天詳情頁面待開發。
 
