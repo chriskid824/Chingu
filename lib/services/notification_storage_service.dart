@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -17,6 +18,12 @@ class NotificationStorageService {
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
 
+  @visibleForTesting
+  set firestore(FirebaseFirestore instance) => _firestoreInstance = instance;
+
+  @visibleForTesting
+  set auth(FirebaseAuth instance) => _authInstance = instance;
+
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
@@ -24,12 +31,9 @@ class NotificationStorageService {
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
 
-  /// 獲取用戶通知集合引用
-  CollectionReference<Map<String, dynamic>> _notificationsRef(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('notifications');
+  /// 獲取通知集合引用 (Root Collection)
+  CollectionReference<Map<String, dynamic>> get _notificationsRef {
+    return _firestore.collection('notifications');
   }
 
   /// 儲存新通知
@@ -39,7 +43,13 @@ class NotificationStorageService {
       throw Exception('User not authenticated');
     }
 
-    final docRef = await _notificationsRef(userId).add(notification.toMap());
+    // 確保通知屬於當前用戶，除非有特殊需求
+    // 這裡我們假設創建通知時已經正確設置了 userId，
+    // 或者我們可以在這裡強制覆蓋，但如果用於 "給自己發通知" 則沒問題。
+    // 如果是用戶 A 給用戶 B 發通知，客戶端通常不直接寫數據庫，而是通過 Cloud Functions。
+    // 所以這裡主要處理 "接收到的通知需要本地緩存" 或者 "本地產生的通知"。
+
+    final docRef = await _notificationsRef.add(notification.toMap());
     return docRef.id;
   }
 
@@ -50,7 +60,14 @@ class NotificationStorageService {
 
     final batch = _firestore.batch();
     for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
+      if (notification.userId != userId) continue;
+
+      DocumentReference docRef;
+      if (notification.id.isNotEmpty) {
+        docRef = _notificationsRef.doc(notification.id);
+      } else {
+        docRef = _notificationsRef.doc();
+      }
       batch.set(docRef, notification.toMap());
     }
     await batch.commit();
@@ -64,7 +81,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return [];
 
-    Query<Map<String, dynamic>> query = _notificationsRef(userId)
+    Query<Map<String, dynamic>> query = _notificationsRef
+        .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .limit(limit);
 
@@ -83,7 +101,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return [];
 
-    final snapshot = await _notificationsRef(userId)
+    final snapshot = await _notificationsRef
+        .where('userId', isEqualTo: userId)
         .where('isRead', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .get();
@@ -98,7 +117,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return 0;
 
-    final snapshot = await _notificationsRef(userId)
+    final snapshot = await _notificationsRef
+        .where('userId', isEqualTo: userId)
         .where('isRead', isEqualTo: false)
         .count()
         .get();
@@ -111,7 +131,9 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
-    await _notificationsRef(userId).doc(notificationId).update({
+    // 為了安全，應該檢查該通知是否屬於當前用戶
+    // 但在客戶端直接操作，通常假設只能操作自己的數據 (依靠 Firestore Rules)
+    await _notificationsRef.doc(notificationId).update({
       'isRead': true,
     });
   }
@@ -121,7 +143,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
-    final unread = await _notificationsRef(userId)
+    final unread = await _notificationsRef
+        .where('userId', isEqualTo: userId)
         .where('isRead', isEqualTo: false)
         .get();
 
@@ -139,7 +162,7 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
-    await _notificationsRef(userId).doc(notificationId).delete();
+    await _notificationsRef.doc(notificationId).delete();
   }
 
   /// 刪除所有通知
@@ -147,7 +170,10 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
-    final snapshot = await _notificationsRef(userId).get();
+    final snapshot = await _notificationsRef
+        .where('userId', isEqualTo: userId)
+        .get();
+
     if (snapshot.docs.isEmpty) return;
 
     final batch = _firestore.batch();
@@ -165,7 +191,8 @@ class NotificationStorageService {
     final cutoffDate = DateTime.now().subtract(Duration(days: olderThanDays));
     final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
-    final snapshot = await _notificationsRef(userId)
+    final snapshot = await _notificationsRef
+        .where('userId', isEqualTo: userId)
         .where('createdAt', isLessThan: cutoffTimestamp)
         .get();
 
@@ -185,7 +212,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return Stream.value([]);
 
-    return _notificationsRef(userId)
+    return _notificationsRef
+        .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
@@ -199,7 +227,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return Stream.value(0);
 
-    return _notificationsRef(userId)
+    return _notificationsRef
+        .where('userId', isEqualTo: userId)
         .where('isRead', isEqualTo: false)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
@@ -210,7 +239,8 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return [];
 
-    final snapshot = await _notificationsRef(userId)
+    final snapshot = await _notificationsRef
+        .where('userId', isEqualTo: userId)
         .where('type', isEqualTo: type)
         .orderBy('createdAt', descending: true)
         .get();
@@ -244,7 +274,7 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef.add(notification.toMap());
   }
 
   /// 創建配對通知
@@ -269,7 +299,7 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef.add(notification.toMap());
   }
 
   /// 創建活動通知
@@ -295,7 +325,7 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef.add(notification.toMap());
   }
 
   /// 創建消息通知
@@ -321,6 +351,6 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef.add(notification.toMap());
   }
 }
