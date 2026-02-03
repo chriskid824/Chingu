@@ -1,41 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
-class NotificationPreviewScreen extends StatefulWidget {
+class NotificationPreviewScreen extends StatelessWidget {
   const NotificationPreviewScreen({super.key});
-
-  @override
-  State<NotificationPreviewScreen> createState() => _NotificationPreviewScreenState();
-}
-
-class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
-  // 0: Always Show, 1: Never
-  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('訊息預覽設定', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: theme.colorScheme.onSurface,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          _buildPreviewSection(theme, chinguTheme),
-          const SizedBox(height: 24),
-          _buildOptionsList(theme),
-        ],
-      ),
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final user = authProvider.userModel;
+
+        if (user == null) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        // 0: Always Show (true), 1: Never (false)
+        final selectedIndex = user.showMessagePreview ? 0 : 1;
+
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            title: const Text('訊息預覽設定', style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: theme.scaffoldBackgroundColor,
+            foregroundColor: theme.colorScheme.onSurface,
+            elevation: 0,
+          ),
+          body: Column(
+            children: [
+              _buildPreviewSection(theme, chinguTheme, selectedIndex),
+              const SizedBox(height: 24),
+              _buildOptionsList(theme, selectedIndex, authProvider),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildPreviewSection(ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildPreviewSection(ThemeData theme, ChinguTheme? chinguTheme, int selectedIndex) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
@@ -106,7 +113,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _selectedIndex == 0 ? '哈囉！這週末有空一起吃飯嗎？' : '新訊息',
+                        selectedIndex == 0 ? '哈囉！這週末有空一起吃飯嗎？' : '新訊息',
                         style: TextStyle(
                           fontSize: 14,
                           color: theme.colorScheme.onSurface.withOpacity(0.8),
@@ -123,7 +130,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
     );
   }
 
-  Widget _buildOptionsList(ThemeData theme) {
+  Widget _buildOptionsList(ThemeData theme, int selectedIndex, AuthProvider authProvider) {
     return Column(
       children: [
         _buildOptionTile(
@@ -131,12 +138,16 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
           title: '總是顯示',
           subtitle: '在通知中顯示訊息內容',
           index: 0,
+          selectedIndex: selectedIndex,
+          onTap: () => authProvider.updateUserData({'showMessagePreview': true}),
         ),
         _buildOptionTile(
           theme: theme,
           title: '從不顯示',
           subtitle: '僅顯示「新訊息」',
           index: 1,
+          selectedIndex: selectedIndex,
+          onTap: () => authProvider.updateUserData({'showMessagePreview': false}),
         ),
       ],
     );
@@ -147,15 +158,13 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
     required String title,
     required String subtitle,
     required int index,
+    required int selectedIndex,
+    required VoidCallback onTap,
   }) {
-    final isSelected = _selectedIndex == index;
+    final isSelected = selectedIndex == index;
 
     return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
