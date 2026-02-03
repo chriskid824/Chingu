@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:chingu/services/crash_reporting_service.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -34,9 +35,11 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.registerWithEmailAndPassword');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.registerWithEmailAndPassword');
       throw Exception('註冊過程發生錯誤: $e');
     }
   }
@@ -63,9 +66,11 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.signInWithEmailAndPassword');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.signInWithEmailAndPassword');
       throw Exception('登入過程發生錯誤: $e');
     }
   }
@@ -101,7 +106,8 @@ class AuthService {
       }
 
       return userCredential.user!;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.signInWithGoogle');
       throw Exception('Google 登入失敗: $e');
     }
   }
@@ -113,7 +119,8 @@ class AuthService {
         _auth.signOut(),
         _googleSignIn.signOut(),
       ]);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.signOut');
       throw Exception('登出失敗: $e');
     }
   }
@@ -124,9 +131,11 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.sendPasswordResetEmail');
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.sendPasswordResetEmail');
       throw Exception('發送重設郵件失敗: $e');
     }
   }
@@ -138,7 +147,8 @@ class AuthService {
     try {
       await _auth.currentUser?.updateDisplayName(displayName);
       await _auth.currentUser?.reload();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.updateDisplayName');
       throw Exception('更新名稱失敗: $e');
     }
   }
@@ -150,7 +160,8 @@ class AuthService {
     try {
       await _auth.currentUser?.updatePhotoURL(photoURL);
       await _auth.currentUser?.reload();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.updatePhotoURL');
       throw Exception('更新照片失敗: $e');
     }
   }
@@ -159,12 +170,14 @@ class AuthService {
   Future<void> deleteAccount() async {
     try {
       await _auth.currentUser?.delete();
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.deleteAccount');
       if (e.code == 'requires-recent-login') {
         throw Exception('此操作需要最近登入，請先登出再重新登入');
       }
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CrashReportingService().recordHandledException(e, stackTrace, reason: 'AuthService.deleteAccount');
       throw Exception('刪除帳號失敗: $e');
     }
   }
@@ -195,6 +208,3 @@ class AuthService {
     }
   }
 }
-
-
-

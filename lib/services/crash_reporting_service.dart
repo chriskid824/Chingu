@@ -30,6 +30,11 @@ class CrashReportingService {
     FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
   }
 
+  /// Record a handled exception to Crashlytics (non-fatal)
+  void recordHandledException(dynamic exception, StackTrace? stack, {dynamic reason}) {
+    recordError(exception, stack, reason: reason, fatal: false);
+  }
+
   /// Set a user identifier for crash reports
   Future<void> setUserIdentifier(String identifier) async {
     await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
