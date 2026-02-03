@@ -43,6 +43,7 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/delete_account_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String deleteAccount = '/delete-account';
 }
 
 /// 應用程式路由配置
@@ -246,6 +248,9 @@ class AppRouter {
           ),
         );
       
+      case AppRoutes.deleteAccount:
+        return MaterialPageRoute(builder: (_) => const DeleteAccountScreen());
+
       // ==================== 404 ====================
       default:
         return MaterialPageRoute(
