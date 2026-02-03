@@ -8,6 +8,20 @@ class ChatService {
   /// 聊天室集合引用
   CollectionReference get _chatRoomsCollection => _firestore.collection('chat_rooms');
 
+  /// 獲取用戶參與的聊天室數量
+  Future<int> getChatCount(String userId) async {
+    try {
+      final countQuery = await _chatRoomsCollection
+          .where('participantIds', arrayContains: userId)
+          .count()
+          .get();
+      return countQuery.count ?? 0;
+    } catch (e) {
+      print('獲取聊天室數量失敗: $e');
+      return 0;
+    }
+  }
+
   /// 創建或獲取現有聊天室
   /// 
   /// 如果兩人之間已存在聊天室，則返回現有 ID。
