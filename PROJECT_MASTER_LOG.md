@@ -72,6 +72,12 @@
 歷史工作紀錄請見本文件後半部分。
 
 **最新完成 (2025-11-24):**
+- ✅ **通知服務 (Notification Service)**:
+  - 實作 `NotificationService` 處理 FCM Token 管理與同步 (用戶登入時自動保存)
+  - 實作前台 (Foreground) 訊息監聽並使用 `RichNotificationService` 顯示本地通知
+  - 實作後台與終止狀態 (Background/Terminated) 的訊息點擊導航邏輯
+  - 優化 `main.dart` 初始化流程，避免阻塞 App 啟動
+  - 重構 `RichNotificationService` 暴露導航邏輯供 FCM 使用
 - ✅ **批量任務合併 (Bulk Merge of Ready-for-Review Tasks)**:
   - **聊天增強**:
     - GIF Picker (`gif_picker.dart`)
