@@ -8,6 +8,7 @@ class GradientButton extends StatelessWidget {
   final double? width;
   final double height;
   final bool isLoading;
+  final bool isEnabled;
 
   const GradientButton({
     super.key,
@@ -17,6 +18,7 @@ class GradientButton extends StatelessWidget {
     this.width,
     this.height = 56,
     this.isLoading = false,
+    this.isEnabled = true,
   });
 
   @override
@@ -24,8 +26,10 @@ class GradientButton extends StatelessWidget {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
     
-    final effectiveGradient = gradient ?? chinguTheme?.primaryGradient ?? 
-        LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]);
+    final effectiveGradient = isEnabled
+        ? (gradient ?? chinguTheme?.primaryGradient ??
+            LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]))
+        : const LinearGradient(colors: [Colors.grey, Colors.grey]);
 
     return Container(
       width: width,
@@ -34,15 +38,16 @@ class GradientButton extends StatelessWidget {
         gradient: effectiveGradient,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: effectiveGradient.colors.first.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
+          if (isEnabled)
+            BoxShadow(
+              color: effectiveGradient.colors.first.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
         ],
       ),
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: (isLoading || !isEnabled) ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
