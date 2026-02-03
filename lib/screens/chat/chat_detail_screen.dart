@@ -162,11 +162,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              _otherUser!.name,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _otherUser!.name,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                _buildUserStatus(context, _otherUser!),
+              ],
             ),
           ],
         ),
@@ -321,6 +327,54 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildUserStatus(BuildContext context, UserModel user) {
+    // 檢查隱私設定
+    if (user.isOnlineStatusHidden) {
+      return const SizedBox.shrink();
+    }
+
+    final now = DateTime.now();
+    final difference = now.difference(user.lastLogin);
+    // 10分鐘內視為在線
+    final isOnline = difference.inMinutes < 10;
+
+    if (isOnline) {
+      return Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Text(
+            '在線',
+            style: TextStyle(
+              color: Colors.green,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      );
+    } else {
+      if (user.isLastSeenHidden) {
+        return const SizedBox.shrink();
+      }
+
+      final timeStr = DateFormat('MM/dd HH:mm').format(user.lastLogin);
+       return Text(
+        '最後上線: $timeStr',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          fontSize: 10,
+        ),
+      );
+    }
   }
 
   Widget _buildMessageInput(BuildContext context) {
