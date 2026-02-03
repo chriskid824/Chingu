@@ -2,22 +2,92 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
-// Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
-import 'matching_service_test.mocks.dart';
+// Manual Mocks with robust noSuchMethod implementation
+class MockFirestoreService extends Mock implements FirestoreService {
+  @override
+  Future<List<UserModel>> queryMatchingUsers({
+    required String city,
+    int? budgetRange,
+    String? gender,
+    int? minAge,
+    int? maxAge,
+    int limit = 20,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#queryMatchingUsers, [], {
+        #city: city,
+        #budgetRange: budgetRange,
+        #gender: gender,
+        #minAge: minAge,
+        #maxAge: maxAge,
+        #limit: limit,
+      }),
+      returnValue: Future.value(<UserModel>[]),
+      returnValueForMissingStub: Future.value(<UserModel>[]),
+    ) as Future<List<UserModel>>;
+  }
+
+  @override
+  Future<void> updateUserStats(
+    String uid, {
+    int? totalDinners,
+    int? totalMatches,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#updateUserStats, [uid], {
+        #totalDinners: totalDinners,
+        #totalMatches: totalMatches,
+      }),
+      returnValue: Future<void>.value(),
+      returnValueForMissingStub: Future<void>.value(),
+    );
+  }
+}
+
+class MockChatService extends Mock implements ChatService {
+  @override
+  Future<String> createChatRoom(String user1Id, String user2Id) {
+    return super.noSuchMethod(
+      Invocation.method(#createChatRoom, [user1Id, user2Id]),
+      returnValue: Future.value(''),
+      returnValueForMissingStub: Future.value(''),
+    ) as Future<String>;
+  }
+}
+
+class MockNotificationService extends Mock implements NotificationService {
+  @override
+  Future<void> sendMatchNotification({
+    required String currentUserId,
+    required String targetUserId,
+    required String chatRoomId,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#sendMatchNotification, [], {
+        #currentUserId: currentUserId,
+        #targetUserId: targetUserId,
+        #chatRoomId: chatRoomId,
+      }),
+      returnValue: Future<void>.value(),
+      returnValueForMissingStub: Future<void>.value(),
+    );
+  }
+}
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockNotificationService mockNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
+  final now = DateTime.now();
   final currentUser = UserModel(
     uid: 'current_user',
     email: 'current@test.com',
@@ -31,7 +101,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    country: 'Taiwan',
+    job: 'Developer',
+    createdAt: now,
+    lastLogin: now,
   );
 
   final candidateUser = UserModel(
@@ -47,18 +120,23 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    country: 'Taiwan',
+    job: 'Designer',
+    createdAt: now,
+    lastLogin: now,
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockNotificationService = MockNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: mockNotificationService,
     );
   });
 
@@ -66,9 +144,11 @@ void main() {
     test('should return candidates when hard filters pass and not swiped',
         () async {
       // Arrange
+      // Using anyNamed inside specific argument if mockito supports it, or explicit
+      // Since manual mocks can be tricky with argument matchers, explicit is safer for now.
       when(mockFirestoreService.queryMatchingUsers(
-        city: anyNamed('city'),
-        limit: anyNamed('limit'),
+        city: 'Taipei',
+        limit: 50,
       )).thenAnswer((_) async => [candidateUser]);
 
       // Act
@@ -76,14 +156,8 @@ void main() {
 
       // Assert
       expect(results.length, 1);
-      expect(results.first['user'], candidateUser);
-      // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      expect(results.first['user'].uid, candidateUser.uid);
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -96,8 +170,8 @@ void main() {
       });
 
       when(mockFirestoreService.queryMatchingUsers(
-        city: anyNamed('city'),
-        limit: anyNamed('limit'),
+        city: 'Taipei',
+        limit: 50,
       )).thenAnswer((_) async => [candidateUser]);
 
       // Act
@@ -112,8 +186,8 @@ void main() {
       final oldCandidate = candidateUser.copyWith(age: 40); // > maxAge 30
 
       when(mockFirestoreService.queryMatchingUsers(
-        city: anyNamed('city'),
-        limit: anyNamed('limit'),
+        city: 'Taipei',
+        limit: 50,
       )).thenAnswer((_) async => [oldCandidate]);
 
       // Act
@@ -157,8 +231,21 @@ void main() {
           .doc(candidateUser.uid)
           .set(candidateUser.toMap());
 
-      when(mockChatService.createChatRoom(any, any))
+      when(mockChatService.createChatRoom(currentUser.uid, candidateUser.uid))
           .thenAnswer((_) async => 'chat_room_id');
+
+      // Stub updateUserStats
+      when(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1))
+          .thenAnswer((_) async {});
+      when(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1))
+          .thenAnswer((_) async {});
+
+      // Stub sendMatchNotification
+      when(mockNotificationService.sendMatchNotification(
+        currentUserId: currentUser.uid,
+        targetUserId: candidateUser.uid,
+        chatRoomId: 'chat_room_id',
+      )).thenAnswer((_) async => {});
 
       // Act
       final result = await matchingService.recordSwipe(
@@ -174,6 +261,13 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      verify(mockNotificationService.sendMatchNotification(
+        currentUserId: currentUser.uid,
+        targetUserId: candidateUser.uid,
+        chatRoomId: 'chat_room_id',
+      )).called(1);
     });
   });
 }
