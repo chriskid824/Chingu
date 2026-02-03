@@ -31,7 +31,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    job: 'Developer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -47,7 +50,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    job: 'Designer',
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
@@ -82,8 +88,8 @@ void main() {
       // Budget: same = 20
       // Location: same city, same district = 20
       // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Total: 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
