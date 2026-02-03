@@ -38,6 +38,12 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設置
+  final bool notificationMatches;
+  final bool notificationMessages;
+  final bool notificationEvents;
+  final bool notificationMarketing;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +72,10 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notificationMatches = true,
+    this.notificationMessages = true,
+    this.notificationEvents = true,
+    this.notificationMarketing = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +114,10 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationMatches: map['notificationMatches'] ?? true,
+      notificationMessages: map['notificationMessages'] ?? true,
+      notificationEvents: map['notificationEvents'] ?? true,
+      notificationMarketing: map['notificationMarketing'] ?? false,
     );
   }
 
@@ -136,6 +150,10 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationMatches': notificationMatches,
+      'notificationMessages': notificationMessages,
+      'notificationEvents': notificationEvents,
+      'notificationMarketing': notificationMarketing,
     };
   }
 
@@ -166,6 +184,10 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? notificationMatches,
+    bool? notificationMessages,
+    bool? notificationEvents,
+    bool? notificationMarketing,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +217,10 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationMatches: notificationMatches ?? this.notificationMatches,
+      notificationMessages: notificationMessages ?? this.notificationMessages,
+      notificationEvents: notificationEvents ?? this.notificationEvents,
+      notificationMarketing: notificationMarketing ?? this.notificationMarketing,
     );
   }
 
