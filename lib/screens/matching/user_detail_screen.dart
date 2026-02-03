@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
+  final String? userId;
+  final String? userName;
+
+  const UserDetailScreen({
+    super.key,
+    this.userId,
+    this.userName,
+  });
   
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final displayName = userName ?? '陳大明';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -38,6 +47,39 @@ class UserDetailScreen extends StatelessWidget {
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.flag_rounded,
+                    size: 18,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.reportUser,
+                    arguments: {
+                      'reportedUserId': 'dummy_uid_123',
+                      'reportedUserName': '陳大明',
+                    },
+                  );
+                },
+              ),
+              const SizedBox(width: 16),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -112,7 +154,7 @@ class UserDetailScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '陳大明, 30',
+                                  '$displayName, 30',
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,

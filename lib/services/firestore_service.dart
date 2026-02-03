@@ -1,9 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/report_model.dart';
 
 /// Firestore 服務 - 處理所有 Firestore 數據操作
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -269,22 +273,9 @@ class FirestoreService {
   }
 
   /// 提交用戶舉報
-  Future<void> submitUserReport({
-    required String reporterId,
-    required String reportedUserId,
-    required String reason,
-    required String description,
-  }) async {
+  Future<void> submitReport(ReportModel report) async {
     try {
-      await _firestore.collection('reports').add({
-        'reporterId': reporterId,
-        'reportedUserId': reportedUserId,
-        'reason': reason,
-        'description': description,
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'pending', // pending, reviewed, resolved
-        'type': 'user_report',
-      });
+      await _firestore.collection('reports').add(report.toMap());
     } catch (e) {
       throw Exception('提交舉報失敗: $e');
     }
