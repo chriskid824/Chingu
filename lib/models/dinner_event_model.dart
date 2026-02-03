@@ -33,6 +33,10 @@ class DinnerEventModel {
   final Map<String, double>? ratings; // uid -> rating (1-5)
   final Map<String, String>? reviews; // uid -> review text
 
+  // 提醒狀態
+  final bool reminder24hSent;
+  final bool reminder2hSent;
+
   DinnerEventModel({
     required this.id,
     required this.creatorId,
@@ -54,6 +58,8 @@ class DinnerEventModel {
     this.icebreakerQuestions = const [],
     this.ratings,
     this.reviews,
+    this.reminder24hSent = false,
+    this.reminder2hSent = false,
   });
 
   /// 從 Firestore 文檔創建 DinnerEventModel
@@ -93,6 +99,8 @@ class DinnerEventModel {
       reviews: map['reviews'] != null 
           ? Map<String, String>.from(map['reviews']) 
           : null,
+      reminder24hSent: map['reminder24hSent'] ?? false,
+      reminder2hSent: map['reminder2hSent'] ?? false,
     );
   }
 
@@ -118,6 +126,8 @@ class DinnerEventModel {
       'icebreakerQuestions': icebreakerQuestions,
       'ratings': ratings,
       'reviews': reviews,
+      'reminder24hSent': reminder24hSent,
+      'reminder2hSent': reminder2hSent,
     };
   }
 
@@ -140,6 +150,8 @@ class DinnerEventModel {
     List<String>? icebreakerQuestions,
     Map<String, double>? ratings,
     Map<String, String>? reviews,
+    bool? reminder24hSent,
+    bool? reminder2hSent,
   }) {
     return DinnerEventModel(
       id: id,
@@ -162,6 +174,8 @@ class DinnerEventModel {
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
       ratings: ratings ?? this.ratings,
       reviews: reviews ?? this.reviews,
+      reminder24hSent: reminder24hSent ?? this.reminder24hSent,
+      reminder2hSent: reminder2hSent ?? this.reminder2hSent,
     );
   }
 
