@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -84,6 +85,7 @@ class ChatService {
     bool isForwarded = false,
     String? originalSenderId,
     String? originalSenderName,
+    String? recipientId,
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
@@ -114,6 +116,41 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      try {
+        String? targetUserId = recipientId;
+
+        // 如果未提供接收者 ID，嘗試從聊天室獲取
+        if (targetUserId == null) {
+          final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+          if (chatRoomDoc.exists) {
+            final data = chatRoomDoc.data() as Map<String, dynamic>;
+            final participants = List<String>.from(data['participantIds'] ?? []);
+            targetUserId = participants.firstWhere(
+              (id) => id != senderId,
+              orElse: () => '',
+            );
+          }
+        }
+
+        if (targetUserId != null && targetUserId.isNotEmpty) {
+          await FirebaseFunctions.instance.httpsCallable('sendNotification').call({
+            'targetUserId': targetUserId,
+            'title': senderName,
+            'body': type == 'text' ? message : '傳送了一個附件',
+            'data': {
+              'chatRoomId': chatRoomId,
+              'type': 'chat',
+              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            },
+          });
+        }
+      } catch (e) {
+        print('發送通知失敗: $e');
+        // 不拋出異常，以免影響訊息發送流程
+      }
+
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
