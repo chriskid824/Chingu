@@ -5,6 +5,7 @@ import 'package:chingu/models/moment_model.dart';
 import 'package:chingu/utils/haptic_utils.dart';
 import 'package:intl/intl.dart';
 
+/// A card widget to display a user moment with like and comment functionality.
 class MomentCard extends StatefulWidget {
   final MomentModel moment;
   final Function(bool isLiked)? onLikeChanged;
