@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chingu/models/notification_preferences.dart';
 
 /// 用戶資料模型
 class UserModel {
@@ -38,6 +39,9 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final NotificationPreferences notificationPreferences;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +70,7 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.notificationPreferences = const NotificationPreferences(),
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +109,10 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationPreferences: map['notificationPreferences'] != null
+          ? NotificationPreferences.fromMap(
+              map['notificationPreferences'] as Map<String, dynamic>)
+          : const NotificationPreferences(),
     );
   }
 
@@ -136,6 +145,7 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationPreferences': notificationPreferences.toMap(),
     };
   }
 
@@ -166,6 +176,7 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    NotificationPreferences? notificationPreferences,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +206,8 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationPreferences:
+          notificationPreferences ?? this.notificationPreferences,
     );
   }
 
