@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -14,6 +16,78 @@ class DebugScreen extends StatefulWidget {
 class _DebugScreenState extends State<DebugScreen> {
   bool _isLoading = false;
   String _status = '';
+
+  // Notification Test State
+  String _selectedNotificationType = 'system';
+  bool _includeImage = false;
+
+  final Map<String, String> _notificationTypes = {
+    'system': '系統通知',
+    'match': '配對通知',
+    'message': '新訊息',
+    'event': '活動通知',
+  };
+
+  Future<void> _sendTestNotification() async {
+    try {
+      final notification = NotificationModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
+        type: _selectedNotificationType,
+        title: _getNotificationTitle(_selectedNotificationType),
+        message: _getNotificationMessage(_selectedNotificationType),
+        createdAt: DateTime.now(),
+        imageUrl: _includeImage ? 'https://picsum.photos/200' : null,
+        actionType: _getNotificationActionType(_selectedNotificationType),
+        actionData: _getNotificationActionData(_selectedNotificationType),
+      );
+
+      await RichNotificationService().showNotification(notification);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已發送測試通知')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('發送失敗: $e')),
+        );
+      }
+    }
+  }
+
+  String _getNotificationTitle(String type) {
+    switch (type) {
+      case 'match': return '新的配對！';
+      case 'message': return '收到新訊息';
+      case 'event': return '活動即將開始';
+      default: return '系統通知';
+    }
+  }
+
+  String _getNotificationMessage(String type) {
+     switch (type) {
+      case 'match': return '恭喜！你與一位新朋友配對成功。';
+      case 'message': return '有人傳送了一則新訊息給您。';
+      case 'event': return '您報名的晚餐活動將在 1 小時後開始。';
+      default: return '這是一則測試用的系統通知。';
+    }
+  }
+
+  String? _getNotificationActionType(String type) {
+    switch (type) {
+      case 'match': return 'match_history';
+      case 'message': return 'open_chat';
+      case 'event': return 'view_event';
+      default: return null;
+    }
+  }
+
+  String? _getNotificationActionData(String type) {
+    return null;
+  }
 
   Future<void> _runSeeder() async {
     setState(() {
@@ -108,13 +182,16 @@ class _DebugScreenState extends State<DebugScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('開發者工具')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 24),
-            const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 24),
+              Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 24),
+              const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 32),
@@ -168,8 +245,69 @@ class _DebugScreenState extends State<DebugScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('通知測試工具 (v1.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                children: [
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: '通知類型',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedNotificationType,
+                        isExpanded: true,
+                        items: _notificationTypes.entries.map((entry) {
+                          return DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedNotificationType = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: const Text('包含圖片 (測試 BigPictureStyle)'),
+                    value: _includeImage,
+                    onChanged: (value) {
+                      setState(() {
+                        _includeImage = value ?? false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _sendTestNotification,
+                    icon: const Icon(Icons.notifications_active_rounded),
+                    label: const Text('發送測試通知'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
+      ),
       ),
     );
   }
