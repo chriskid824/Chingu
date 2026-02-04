@@ -65,6 +65,17 @@ class MatchingService {
           continue;
         }
 
+        // 排除已封鎖或被封鎖的用戶
+        if (currentUser.blockedUserIds.contains(candidate.uid)) {
+          print('跳過: 已封鎖 (${candidate.name})');
+          continue;
+        }
+
+        if (candidate.blockedUserIds.contains(currentUser.uid)) {
+          print('跳過: 被對方封鎖 (${candidate.name})');
+          continue;
+        }
+
         // 硬性條件過濾
         if (!_passesHardFilters(currentUser, candidate)) {
           print('跳過: 不符合硬性條件 (${candidate.name}, 性別: ${candidate.gender}, 年齡: ${candidate.age})');
