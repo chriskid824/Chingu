@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -247,14 +248,46 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
+  /// 檢查是否應該發送通知
+  Future<bool> _shouldSendNotification(
+      String userId, bool Function(UserModel) checkPreference,
+      {UserModel? userModel}) async {
+    try {
+      final user = userModel ??
+          await _firestore
+              .collection('users')
+              .doc(userId)
+              .get()
+              .then((doc) => doc.exists
+                  ? UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)
+                  : null);
+
+      if (user == null) return true; // 如果找不到用戶，默認發送
+
+      return checkPreference(user);
+    } catch (e) {
+      // 發生錯誤時默認發送，避免遺漏重要通知
+      return true;
+    }
+  }
+
   /// 創建配對通知
   Future<void> createMatchNotification({
     required String matchedUserName,
     required String matchedUserId,
     String? matchedUserPhotoUrl,
+    UserModel? currentUserModel,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    final shouldSend = await _shouldSendNotification(
+      userId,
+      (user) => user.notificationPreferences.matchEnabled,
+      userModel: currentUserModel,
+    );
+
+    if (!shouldSend) return;
 
     final notification = NotificationModel(
       id: '',
@@ -278,9 +311,18 @@ class NotificationStorageService {
     required String eventTitle,
     required String message,
     String? imageUrl,
+    UserModel? currentUserModel,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    final shouldSend = await _shouldSendNotification(
+      userId,
+      (user) => user.notificationPreferences.eventEnabled,
+      userModel: currentUserModel,
+    );
+
+    if (!shouldSend) return;
 
     final notification = NotificationModel(
       id: '',
@@ -304,9 +346,18 @@ class NotificationStorageService {
     required String senderId,
     required String messagePreview,
     String? senderPhotoUrl,
+    UserModel? currentUserModel,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    final shouldSend = await _shouldSendNotification(
+      userId,
+      (user) => user.notificationPreferences.messageEnabled,
+      userModel: currentUserModel,
+    );
+
+    if (!shouldSend) return;
 
     final notification = NotificationModel(
       id: '',
