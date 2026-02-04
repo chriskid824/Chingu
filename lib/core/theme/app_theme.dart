@@ -221,7 +221,7 @@ class AppTheme {
           side: preset == AppThemePreset.minimal ? const BorderSide(color: AppColorsMinimal.surfaceVariant) : BorderSide.none,
         ),
         margin: const EdgeInsets.all(8),
-      ),
+      ).data,
     );
   }
 }
