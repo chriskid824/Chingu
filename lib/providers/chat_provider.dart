@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
 
@@ -137,6 +138,49 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 發送推播通知
+      try {
+        final chatRoomDoc = await _firestore.collection('chat_rooms').doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+          final data = chatRoomDoc.data() as Map<String, dynamic>;
+          final participantIds = List<String>.from(data['participantIds'] ?? []);
+          final recipientId = participantIds.firstWhere(
+            (id) => id != senderId,
+            orElse: () => '',
+          );
+
+          if (recipientId.isNotEmpty) {
+            final userDoc = await _firestore.collection('users').doc(recipientId).get();
+            if (userDoc.exists) {
+              final userData = userDoc.data() as Map<String, dynamic>;
+              final fcmToken = userData['fcmToken'] as String?;
+
+              if (fcmToken != null) {
+                // 獲取發送者名稱
+                String senderName = 'New Message';
+                try {
+                  final senderDoc = await _firestore.collection('users').doc(senderId).get();
+                  if (senderDoc.exists) {
+                    senderName = senderDoc.data()?['name'] ?? 'New Message';
+                  }
+                } catch (e) {
+                  print('獲取發送者名稱失敗: $e');
+                }
+
+                await FirebaseFunctions.instance.httpsCallable('sendChatNotification').call({
+                  'token': fcmToken,
+                  'title': senderName,
+                  'body': type == 'text' ? text : (type == 'image' ? '傳送了一張圖片' : '傳送了一則訊息'),
+                  'imageUrl': type == 'image' ? text : null,
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        print('發送推播通知失敗: $e');
+      }
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;
