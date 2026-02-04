@@ -1,7 +1,95 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
+
+/// 具有動畫效果的應用內通知
+class AnimatedInAppNotification extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback onDismiss;
+  final VoidCallback? onTap;
+  final Duration duration;
+
+  const AnimatedInAppNotification({
+    super.key,
+    required this.notification,
+    required this.onDismiss,
+    this.onTap,
+    this.duration = const Duration(seconds: 4),
+  });
+
+  @override
+  State<AnimatedInAppNotification> createState() => _AnimatedInAppNotificationState();
+}
+
+class _AnimatedInAppNotificationState extends State<AnimatedInAppNotification>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeInBack,
+    ));
+
+    _controller.forward();
+
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer(widget.duration, () {
+      _dismiss();
+    });
+  }
+
+  Future<void> _dismiss() async {
+    _timer?.cancel();
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: InAppNotification(
+          notification: widget.notification,
+          onDismiss: _dismiss,
+          onTap: () {
+            _dismiss();
+            widget.onTap?.call();
+          },
+        ),
+      ),
+    );
+  }
+}
 
 class InAppNotification extends StatelessWidget {
   final NotificationModel notification;
@@ -156,7 +244,7 @@ class InAppNotification extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'favorite': return Icons.favorite_rounded;
-      case 'event': return Icons.calendar_today_rounded; // changed to calendar_today
+      case 'event': return Icons.calendar_today_rounded;
       case 'message': return Icons.chat_bubble_rounded;
       case 'star': return Icons.star_rounded;
       case 'notifications':
