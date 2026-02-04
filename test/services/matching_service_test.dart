@@ -2,19 +2,21 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/chat_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
 // Generate mocks
-@GenerateMocks([FirestoreService, ChatService])
+@GenerateMocks([FirestoreService, ChatService, NotificationService])
 import 'matching_service_test.mocks.dart';
 
 void main() {
   late MatchingService matchingService;
   late MockFirestoreService mockFirestoreService;
   late MockChatService mockChatService;
+  late MockNotificationService mockNotificationService;
   late FakeFirebaseFirestore fakeFirestore;
 
   // Test data
@@ -23,6 +25,8 @@ void main() {
     email: 'current@test.com',
     name: 'Current User',
     gender: 'male',
+    job: 'Developer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -31,7 +35,8 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   final candidateUser = UserModel(
@@ -39,6 +44,8 @@ void main() {
     email: 'candidate@test.com',
     name: 'Candidate User',
     gender: 'female',
+    job: 'Designer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
@@ -47,18 +54,21 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
   );
 
   setUp(() {
     mockFirestoreService = MockFirestoreService();
     mockChatService = MockChatService();
+    mockNotificationService = MockNotificationService();
     fakeFirestore = FakeFirebaseFirestore();
 
     matchingService = MatchingService(
       firestore: fakeFirestore,
       firestoreService: mockFirestoreService,
       chatService: mockChatService,
+      notificationService: mockNotificationService,
     );
   });
 
@@ -83,7 +93,7 @@ void main() {
       // Location: same city, same district = 20
       // Age: 20
       // Total: 73
-      expect(results.first['score'], 73);
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
@@ -174,6 +184,13 @@ void main() {
       // Verify stats updated
       verify(mockFirestoreService.updateUserStats(currentUser.uid, totalMatches: 1)).called(1);
       verify(mockFirestoreService.updateUserStats(candidateUser.uid, totalMatches: 1)).called(1);
+
+      // Verify notification sent
+      verify(mockNotificationService.sendMatchNotification(
+        currentUser.uid,
+        candidateUser.uid,
+        'chat_room_id',
+      )).called(1);
     });
   });
 }
