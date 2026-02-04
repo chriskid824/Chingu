@@ -113,6 +113,9 @@ class DinnerEventService {
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
+  ///
+  /// 注意：活動前 24 小時的提醒由後端 Cloud Scheduler (sendEventReminders) 自動處理。
+  /// 當用戶加入活動後，若活動時間在 24 小時後，系統會在活動前 24 小時發送提醒通知。
   Future<void> joinEvent(String eventId, String userId) async {
     try {
       // 使用事務確保數據一致性
