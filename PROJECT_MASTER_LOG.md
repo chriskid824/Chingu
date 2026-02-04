@@ -112,6 +112,14 @@
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
 
+- ✅ **用戶收藏功能 (User Favorites)**:
+  - **資料模型**: 更新 `UserModel` 新增 `favorites` 欄位
+  - **後端服務**: `FirestoreService` 新增 `addFavorite`, `removeFavorite`, `getFavorites` 方法
+  - **UI 實作**:
+    - `UserDetailScreen` 新增收藏按鈕與狀態切換
+    - 實作 `FavoritesScreen` 顯示收藏用戶列表
+    - `ProfileDetailScreen` 新增「我的收藏」入口
+
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
 
