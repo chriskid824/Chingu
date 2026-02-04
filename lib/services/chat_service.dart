@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -105,7 +106,7 @@ class ChatService {
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': type == 'text' ? message : '[$type]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
@@ -114,6 +115,29 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推送通知
+      try {
+        String notificationBody = message;
+        if (type == 'image') {
+          notificationBody = '傳送了一張圖片';
+        } else if (type == 'sticker') {
+          notificationBody = '傳送了一個貼圖';
+        } else if (type != 'text') {
+          notificationBody = '傳送了一則訊息';
+        }
+
+        await FirebaseFunctions.instance
+            .httpsCallable('sendChatNotification')
+            .call({
+          'chatRoomId': chatRoomId,
+          'messageBody': notificationBody,
+        });
+      } catch (e) {
+        // 推送失敗不應影響訊息發送流程，僅記錄錯誤
+        // ignore: avoid_print
+        print('發送推送通知失敗: $e');
+      }
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
