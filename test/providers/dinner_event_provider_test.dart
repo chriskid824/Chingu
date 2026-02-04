@@ -1,8 +1,50 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+
+class MockAnalyticsService implements AnalyticsService {
+  @override
+  Future<void> logCreateEvent() async {}
+
+  @override
+  Future<void> logJoinEvent({required String eventId}) async {}
+
+  @override
+  Future<void> logLeaveEvent({required String eventId}) async {}
+
+  @override
+  Future<void> logBookEvent() async {}
+
+  @override
+  Future<void> logEvent({required String name, Map<String, Object>? parameters}) async {}
+
+  @override
+  Future<void> logLogin({required String method}) async {}
+
+  @override
+  Future<void> logSignUp({required String method}) async {}
+
+  @override
+  Future<void> logScreenView({required String screenName, String? screenClass}) async {}
+
+  @override
+  Future<void> logMatchSwipe({required bool isLike, required bool isMatch}) async {}
+
+  @override
+  Future<void> setUserId({required String id}) async {}
+
+  @override
+  Future<void> setUserProperty({required String name, required String value}) async {}
+
+  @override
+  FirebaseAnalyticsObserver getAnalyticsObserver() {
+    throw UnimplementedError();
+  }
+}
 
 // Mock class
 class MockDinnerEventService implements DinnerEventService {
@@ -143,8 +185,13 @@ void main() {
     late MockDinnerEventService mockService;
 
     setUp(() {
+      AnalyticsService.mockInstance = MockAnalyticsService();
       mockService = MockDinnerEventService();
       provider = DinnerEventProvider(dinnerEventService: mockService);
+    });
+
+    tearDown(() {
+      AnalyticsService.mockInstance = null;
     });
 
     test('Initial state is correct', () {
