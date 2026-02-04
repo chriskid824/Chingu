@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
+import '../models/notification_preferences.dart';
+import 'firestore_service.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -16,10 +19,31 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+  FirestoreService? _firestoreServiceInstance;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+  FirestoreService get _firestoreService =>
+      _firestoreServiceInstance ??= FirestoreService();
+
+  /// 設置 Firestore 實例 (用於測試)
+  @visibleForTesting
+  void setFirestoreInstance(FirebaseFirestore firestore) {
+    _firestoreInstance = firestore;
+  }
+
+  /// 設置 Auth 實例 (用於測試)
+  @visibleForTesting
+  void setAuthInstance(FirebaseAuth auth) {
+    _authInstance = auth;
+  }
+
+  /// 設置 FirestoreService 實例 (用於測試)
+  @visibleForTesting
+  void setFirestoreService(FirestoreService service) {
+    _firestoreServiceInstance = service;
+  }
 
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
@@ -30,6 +54,35 @@ class NotificationStorageService {
         .collection('users')
         .doc(userId)
         .collection('notifications');
+  }
+
+  /// 檢查是否應該發送通知
+  Future<bool> shouldSendNotification(String userId, String type) async {
+    try {
+      final user = await _firestoreService.getUser(userId);
+      if (user == null) return false;
+
+      final prefs = user.notificationPreferences;
+
+      switch (type) {
+        case 'match':
+          return prefs.newMatch || prefs.matchSuccess;
+        case 'event':
+          return prefs.eventReminder;
+        case 'message':
+          return prefs.newMessage;
+        case 'system':
+          return prefs.systemUpdate;
+        case 'rating': // 假設 rating 對應 systemUpdate 或沒有特定開關
+          return prefs.systemUpdate;
+        default:
+          return true;
+      }
+    } catch (e) {
+      // 發生錯誤時預設允許發送，避免遺漏重要通知
+      debugPrint('Error checking notification preferences: $e');
+      return true;
+    }
   }
 
   /// 儲存新通知
@@ -231,6 +284,9 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // 檢查偏好
+    if (!await shouldSendNotification(userId, 'system')) return;
+
     final notification = NotificationModel(
       id: '', // Will be set by Firestore
       userId: userId,
@@ -255,6 +311,9 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    // 檢查偏好
+    if (!await shouldSendNotification(userId, 'match')) return;
 
     final notification = NotificationModel(
       id: '',
@@ -282,6 +341,9 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // 檢查偏好
+    if (!await shouldSendNotification(userId, 'event')) return;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
@@ -307,6 +369,9 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    // 檢查偏好
+    if (!await shouldSendNotification(userId, 'message')) return;
 
     final notification = NotificationModel(
       id: '',
