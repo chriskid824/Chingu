@@ -5,6 +5,8 @@
 ///
 /// The current implementation uses a deterministic hash of the user ID to assign groups.
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum ExperimentGroup {
   control, // Group A (Default)
   variant, // Group B (Experimental)
@@ -26,6 +28,15 @@ class NotificationContent {
 }
 
 class NotificationABService {
+  // Singleton pattern
+  static final NotificationABService _instance = NotificationABService._internal();
+
+  factory NotificationABService() {
+    return _instance;
+  }
+
+  NotificationABService._internal();
+
   /// Assigns a user to an experiment group based on their user ID.
   ///
   /// This uses a deterministic hash so the user always stays in the same group.
@@ -129,6 +140,40 @@ class NotificationABService {
           title: 'System Notification',
           body: message,
         );
+    }
+  }
+
+  /// Logs a notification send event.
+  Future<void> logNotificationSend(String userId, String notificationType, String notificationId) async {
+    try {
+      final group = getGroup(userId);
+      await FirebaseFirestore.instance.collection('notification_stats').add({
+        'userId': userId,
+        'notificationId': notificationId,
+        'type': notificationType,
+        'event': 'send',
+        'group': group.name,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error logging notification send: $e');
+    }
+  }
+
+  /// Logs a notification click event.
+  Future<void> logNotificationClick(String userId, String notificationType, String notificationId) async {
+    try {
+      final group = getGroup(userId);
+      await FirebaseFirestore.instance.collection('notification_stats').add({
+        'userId': userId,
+        'notificationId': notificationId,
+        'type': notificationType,
+        'event': 'click',
+        'group': group.name,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error logging notification click: $e');
     }
   }
 }

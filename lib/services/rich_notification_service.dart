@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import 'notification_ab_service.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -66,6 +68,14 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? notificationId = data['notificationId'];
+        final String? notificationType = data['notificationType'];
+
+        // Track Click
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null && notificationType != null && notificationId != null) {
+          NotificationABService().logNotificationClick(userId, notificationType, notificationId);
+        }
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
@@ -186,6 +196,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      'notificationType': notification.type,
     };
 
     await _flutterLocalNotificationsPlugin.show(
