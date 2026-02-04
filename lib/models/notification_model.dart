@@ -1,13 +1,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum NotificationType {
+  match,
+  event,
+  message,
+  rating,
+  system;
+
+  String toJson() => name;
+  static NotificationType fromJson(String json) {
+    return NotificationType.values.firstWhere(
+      (e) => e.name == json,
+      orElse: () => NotificationType.system,
+    );
+  }
+}
+
 /// 通知模型
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  final NotificationType type;
   final String title;
-  final String message;
+  final String content;
   final String? imageUrl;
+  final String? deeplink;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
   final bool isRead;
@@ -18,8 +35,9 @@ class NotificationModel {
     required this.userId,
     required this.type,
     required this.title,
-    required this.message,
+    required this.content,
     this.imageUrl,
+    this.deeplink,
     this.actionType,
     this.actionData,
     this.isRead = false,
@@ -37,10 +55,11 @@ class NotificationModel {
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
-      type: map['type'] ?? 'system',
+      type: NotificationType.fromJson(map['type'] ?? 'system'),
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
+      content: map['content'] ?? map['message'] ?? '',
       imageUrl: map['imageUrl'],
+      deeplink: map['deeplink'],
       actionType: map['actionType'],
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
@@ -52,10 +71,12 @@ class NotificationModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'type': type,
+      'type': type.toJson(),
       'title': title,
-      'message': message,
+      'content': content,
+      'message': content, // Backward compatibility
       'imageUrl': imageUrl,
+      'deeplink': deeplink,
       'actionType': actionType,
       'actionData': actionData,
       'isRead': isRead,
@@ -70,8 +91,9 @@ class NotificationModel {
       userId: userId,
       type: type,
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
+      deeplink: deeplink,
       actionType: actionType,
       actionData: actionData,
       isRead: true,
@@ -82,41 +104,17 @@ class NotificationModel {
   /// 獲取通知圖標
   String get iconName {
     switch (type) {
-      case 'match':
+      case NotificationType.match:
         return 'favorite';
-      case 'event':
+      case NotificationType.event:
         return 'event';
-      case 'message':
+      case NotificationType.message:
         return 'message';
-      case 'rating':
+      case NotificationType.rating:
         return 'star';
-      case 'system':
+      case NotificationType.system:
       default:
         return 'notifications';
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
