@@ -154,15 +154,38 @@ class ProfileDetailScreen extends StatelessWidget {
                         const SizedBox(height: 24),
 
                         // 統計資料
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatItem(context, '配對', user.totalMatches),
-                            _buildVerticalDivider(),
-                            _buildStatItem(context, '聚餐', user.totalDinners),
-                            _buildVerticalDivider(),
-                            _buildStatItem(context, '評分', user.averageRating, isRating: true),
-                          ],
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pushNamed(context, AppRoutes.statsDashboard);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    _buildStatItem(context, '配對', user.totalMatches),
+                                    _buildVerticalDivider(),
+                                    _buildStatItem(context, '聚餐', user.totalDinners),
+                                    _buildVerticalDivider(),
+                                    _buildStatItem(context, '評分', user.averageRating, isRating: true),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
 
                         const SizedBox(height: 24),

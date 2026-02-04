@@ -114,6 +114,11 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 更新發送者的發送訊息總數
+      await _firestore.collection('users').doc(senderId).update({
+        'totalMessagesSent': FieldValue.increment(1),
+      });
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }
