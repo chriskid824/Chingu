@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/firestore_service.dart';
 import '../models/notification_model.dart';
 
 /// 通知儲存服務
@@ -16,10 +19,17 @@ class NotificationStorageService {
   // Lazy initialization for testability
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
+  FirestoreService? _firestoreServiceInstance;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+  FirestoreService get _firestoreService => _firestoreServiceInstance ??= FirestoreService();
+
+  @visibleForTesting
+  void setFirestoreService(FirestoreService service) {
+    _firestoreServiceInstance = service;
+  }
 
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
@@ -32,7 +42,103 @@ class NotificationStorageService {
         .collection('notifications');
   }
 
-  /// 儲存新通知
+  /// 檢查是否應該發送通知
+  Future<bool> shouldSendNotification(String userId, String type) async {
+    try {
+      final user = await _firestoreService.getUser(userId);
+      if (user == null) return false;
+
+      // 檢查推播總開關
+      if (!user.notificationPreferences.enablePushNotifications) {
+        // 如果是推播通知，這裡應該返回 false。
+        // 但我們這裡主要是在決定是否寫入 Firestore 通知列表。
+        // 用戶可能希望在 App 內的通知中心看到通知，但不接收推播。
+        // 然而，題目要求 "根據設定決定是否發送通知"。
+        // 通常 App 內通知 (In-App) 和推播 (Push) 是分開的。
+        // 但為了簡單起見，我們假設這些開關控制是否產生通知。
+        // 如果 disable push notifications 是關閉所有通知，那就返回 false。
+        // 但 UI 顯示 "接收應用程式的推播通知"。
+        // 我們這裡只檢查具體的類型開關。
+      }
+
+      switch (type) {
+        case 'newMatch':
+          return user.notificationPreferences.newMatch;
+        case 'matchSuccess':
+          return user.notificationPreferences.matchSuccess;
+        case 'newMessage':
+          return user.notificationPreferences.newMessage;
+        case 'eventReminder':
+          return user.notificationPreferences.eventReminder;
+        case 'eventChanges':
+          return user.notificationPreferences.eventChanges;
+        case 'promotions':
+          return user.notificationPreferences.promotions;
+        case 'newsletter':
+          return user.notificationPreferences.newsletter;
+        default:
+          return true;
+      }
+    } catch (e) {
+      print('檢查通知偏好失敗: $e');
+      return true; // 預設發送
+    }
+  }
+
+  /// 發送配對成功通知給指定用戶
+  Future<void> sendMatchNotification({
+    required String targetUserId,
+    required String matchedUserName,
+    required String matchedUserId,
+    String? matchedUserPhotoUrl,
+  }) async {
+    final shouldSend = await shouldSendNotification(targetUserId, 'matchSuccess');
+    if (!shouldSend) return;
+
+    final notification = NotificationModel(
+      id: '',
+      userId: targetUserId,
+      type: 'match',
+      title: '新配對成功! 🎉',
+      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      imageUrl: matchedUserPhotoUrl,
+      actionType: 'open_chat',
+      actionData: matchedUserId,
+      isRead: false,
+      createdAt: DateTime.now(),
+    );
+
+    await _notificationsRef(targetUserId).add(notification.toMap());
+  }
+
+  /// 發送新訊息通知給指定用戶
+  Future<void> sendMessageNotification({
+    required String targetUserId,
+    required String senderName,
+    required String senderId,
+    required String messagePreview,
+    String? senderPhotoUrl,
+  }) async {
+    final shouldSend = await shouldSendNotification(targetUserId, 'newMessage');
+    if (!shouldSend) return;
+
+    final notification = NotificationModel(
+      id: '',
+      userId: targetUserId,
+      type: 'message',
+      title: senderName,
+      message: messagePreview,
+      imageUrl: senderPhotoUrl,
+      actionType: 'open_chat',
+      actionData: senderId,
+      isRead: false,
+      createdAt: DateTime.now(),
+    );
+
+    await _notificationsRef(targetUserId).add(notification.toMap());
+  }
+
+  /// 儲存新通知 (Legacy)
   Future<String> saveNotification(NotificationModel notification) async {
     final userId = _currentUserId;
     if (userId == null) {
@@ -247,7 +353,7 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
-  /// 創建配對通知
+  /// 創建配對通知 (Legacy - notifies current user)
   Future<void> createMatchNotification({
     required String matchedUserName,
     required String matchedUserId,
@@ -255,6 +361,10 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    // Check preferences for current user
+    final shouldSend = await shouldSendNotification(userId, 'matchSuccess');
+    if (!shouldSend) return;
 
     final notification = NotificationModel(
       id: '',
@@ -282,6 +392,10 @@ class NotificationStorageService {
     final userId = _currentUserId;
     if (userId == null) return;
 
+    // TODO: Determine event type (reminder vs changes) to check preferences
+    final shouldSend = await shouldSendNotification(userId, 'eventReminder');
+    if (!shouldSend) return;
+
     final notification = NotificationModel(
       id: '',
       userId: userId,
@@ -298,7 +412,7 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
-  /// 創建消息通知
+  /// 創建消息通知 (Legacy)
   Future<void> createMessageNotification({
     required String senderName,
     required String senderId,
@@ -307,6 +421,9 @@ class NotificationStorageService {
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
+
+    final shouldSend = await shouldSendNotification(userId, 'newMessage');
+    if (!shouldSend) return;
 
     final notification = NotificationModel(
       id: '',
