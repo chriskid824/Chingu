@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/models/login_history_model.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -60,6 +63,33 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+
+        // 記錄登入歷史
+        try {
+          String deviceName = 'Unknown';
+          String location = _userModel!.city.isNotEmpty ? _userModel!.city : 'Unknown';
+
+          if (Platform.isAndroid) {
+            final androidInfo = await DeviceInfoPlugin().androidInfo;
+            deviceName = '${androidInfo.brand} ${androidInfo.model}';
+          } else if (Platform.isIOS) {
+            final iosInfo = await DeviceInfoPlugin().iosInfo;
+            deviceName = '${iosInfo.name} ${iosInfo.systemName} ${iosInfo.systemVersion}';
+          }
+
+          final loginHistory = LoginHistoryModel(
+            id: '', // Firestore will assign
+            timestamp: DateTime.now(),
+            location: location,
+            device: deviceName,
+            ipAddress: '', // IP fetching requires external service, skipping for now
+          );
+
+          await _firestoreService.recordLoginHistory(uid, loginHistory);
+        } catch (e) {
+          debugPrint('記錄登入歷史失敗: $e');
+          // 不中斷登入流程
+        }
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
