@@ -16,6 +16,8 @@ import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
 import '../../screens/profile/profile_preview_screen.dart';
+import '../../screens/profile/user_moments_screen.dart';
+import '../../screens/profile/create_moment_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -70,6 +72,8 @@ class AppRoutes {
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
+  static const String userMoments = '/user-moments';
+  static const String createMoment = '/create-moment';
   
   // 配對模組
   static const String matching = '/matching';
@@ -165,6 +169,16 @@ class AppRouter {
       
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
+
+      case AppRoutes.userMoments:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final userId = args?['userId'] as String?;
+        return MaterialPageRoute(
+          builder: (_) => UserMomentsScreen(userId: userId),
+        );
+
+      case AppRoutes.createMoment:
+        return MaterialPageRoute(builder: (_) => const CreateMomentScreen());
 
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
