@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -7,14 +8,17 @@ import 'package:chingu/services/chat_service.dart';
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
 
   MatchingService({
     FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
     FirestoreService? firestoreService,
     ChatService? chatService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _functions = functions ?? FirebaseFunctions.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
         _chatService = chatService ?? ChatService();
 
@@ -118,6 +122,17 @@ class MatchingService {
         if (isMatch) {
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
           
+          // 發送配對通知
+          try {
+            await _functions.httpsCallable('sendMatchNotification').call({
+              'partnerId': targetUserId,
+              'chatRoomId': chatRoomId,
+            });
+          } catch (e) {
+            print('發送配對通知失敗: $e');
+            // 不中斷流程，繼續返回配對結果
+          }
+
           // 獲取對方資料以返回
           final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
@@ -157,8 +172,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
