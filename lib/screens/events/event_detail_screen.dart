@@ -1,14 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:intl/intl.dart';
 
-class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key});
-  
+class EventDetailScreen extends StatefulWidget {
+  final String? eventId;
+  const EventDetailScreen({super.key, this.eventId});
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  Future<DinnerEventModel?>? _eventFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.eventId != null) {
+      _eventFuture = DinnerEventService().getEvent(widget.eventId!);
+    }
+  }
+
+  DinnerEventModel _getMockEvent() {
+    return DinnerEventModel(
+      id: 'mock_event',
+      creatorId: 'mock_user',
+      dateTime: DateTime(2025, 10, 15, 19, 0),
+      budgetRange: 1,
+      city: '台北市',
+      district: '信義區',
+      restaurantAddress: '台北市信義區信義路五段7號',
+      participantIds: ['1', '2', '3', '4'],
+      participantStatus: {},
+      status: 'confirmed',
+      createdAt: DateTime.now(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (widget.eventId == null) {
+      return _buildContent(context, _getMockEvent());
+    }
+
+    return FutureBuilder<DinnerEventModel?>(
+      future: _eventFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+           return Scaffold(
+             backgroundColor: theme.scaffoldBackgroundColor,
+             body: const Center(child: CircularProgressIndicator()),
+           );
+        }
+
+        if (snapshot.hasError) {
+           return Scaffold(
+             backgroundColor: theme.scaffoldBackgroundColor,
+             appBar: AppBar(title: const Text('Error')),
+             body: Center(child: Text("Error loading event: ${snapshot.error}")),
+           );
+        }
+
+        if (!snapshot.hasData || snapshot.data == null) {
+           return Scaffold(
+             backgroundColor: theme.scaffoldBackgroundColor,
+             appBar: AppBar(title: const Text('Event Not Found')),
+             body: const Center(child: Text("Event not found")),
+           );
+        }
+
+        return _buildContent(context, snapshot.data!);
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context, DinnerEventModel event) {
+    final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    final dateStr = DateFormat('yyyy年MM月dd日 (E)\nHH:mm', 'zh_TW').format(event.dateTime);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -129,18 +204,18 @@ class EventDetailScreen extends StatelessWidget {
                           gradient: chinguTheme?.successGradient,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.check_circle,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              '已確認',
-                              style: TextStyle(
+                              event.statusText,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -157,7 +232,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.calendar_today_rounded,
                     '日期時間',
-                    '2025年10月15日 (星期三)\n19:00',
+                    dateStr,
                     theme.colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
@@ -165,7 +240,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.payments_rounded,
                     '預算範圍',
-                    'NT\$ 500-800 / 人',
+                    '${event.budgetRangeText} / 人',
                     theme.colorScheme.secondary,
                   ),
                   const SizedBox(height: 12),
@@ -173,7 +248,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.location_on_rounded,
                     '地點',
-                    '台北市信義區信義路五段7號',
+                    event.restaurantAddress ?? '${event.city}${event.district}',
                     chinguTheme?.success ?? Colors.green,
                   ),
                   const SizedBox(height: 12),
@@ -181,7 +256,7 @@ class EventDetailScreen extends StatelessWidget {
                     context,
                     Icons.people_rounded,
                     '參加人數',
-                    '6 人（固定）\n目前已報名：4 人',
+                    '6 人（固定）\n目前已報名：${event.participantIds.length} 人',
                     chinguTheme?.warning ?? Colors.orange,
                   ),
                   
