@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/matching_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 
 class MatchingProvider with ChangeNotifier {
   final MatchingService _matchingService = MatchingService();
@@ -71,7 +72,11 @@ class MatchingProvider with ChangeNotifier {
       // 後台執行記錄
       final result = await _matchingService.recordSwipe(userId, targetUserId, isLike);
       
-      if (result['isMatch'] == true) {
+      final isMatch = result['isMatch'] == true;
+      // 記錄配對滑動
+      AnalyticsService().logMatchSwipe(isLike: isLike, isMatch: isMatch);
+
+      if (isMatch) {
         return {
           'chatRoomId': result['chatRoomId'],
           'partner': result['partner'],
