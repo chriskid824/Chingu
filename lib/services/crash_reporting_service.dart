@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,7 +10,11 @@ class CrashReportingService {
 
   Future<void> initialize() async {
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      // Pass to original handler (prints to console)
+      FlutterError.presentError(errorDetails);
+    };
 
     // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
     PlatformDispatcher.instance.onError = (error, stack) {
@@ -23,11 +26,20 @@ class CrashReportingService {
   /// Log a message to Crashlytics
   void log(String message) {
     FirebaseCrashlytics.instance.log(message);
+    if (kDebugMode) {
+      debugPrint('[Crashlytics Log] $message');
+    }
   }
 
   /// Record an error to Crashlytics
-  void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
-    FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+  void recordError(dynamic exception, StackTrace? stack,
+      {dynamic reason, bool fatal = false}) {
+    FirebaseCrashlytics.instance
+        .recordError(exception, stack, reason: reason, fatal: fatal);
+    if (kDebugMode) {
+      debugPrint('[Crashlytics Error] $exception');
+      if (stack != null) debugPrint(stack.toString());
+    }
   }
 
   /// Set a user identifier for crash reports

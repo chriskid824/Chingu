@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
@@ -160,6 +161,40 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('Crashlytics 測試',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton(
+                    onPressed: () {
+                      throw Exception('測試非致命錯誤 (Exception)');
+                    },
+                    child: const Text('拋出 Exception')),
+                ElevatedButton(
+                    onPressed: () {
+                      throw StateError('測試致命錯誤 (StateError)');
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white),
+                    child: const Text('拋出 StateError')),
+                ElevatedButton(
+                    onPressed: () {
+                      FirebaseCrashlytics.instance.crash();
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white),
+                    child: const Text('強制崩潰 (Native)')),
+              ],
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
