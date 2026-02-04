@@ -23,15 +23,18 @@ void main() {
     email: 'current@test.com',
     name: 'Current User',
     gender: 'male',
+    job: 'Developer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
     budgetRange: 2,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
     interests: ['coding', 'reading'],
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
   );
 
   final candidateUser = UserModel(
@@ -39,15 +42,18 @@ void main() {
     email: 'candidate@test.com',
     name: 'Candidate User',
     gender: 'female',
+    job: 'Designer',
+    country: 'Taiwan',
     preferredMatchType: 'any',
     city: 'Taipei',
     district: 'Xinyi',
     budgetRange: 2,
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
     interests: ['coding', 'movies'], // 1 common interest
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
   );
 
   setUp(() {
@@ -77,13 +83,13 @@ void main() {
       // Assert
       expect(results.length, 1);
       expect(results.first['user'], candidateUser);
-      // Score calculation:
-      // Interest: 1 common ('coding') / 3 * 40 = 13.33
-      // Budget: same = 20
-      // Location: same city, same district = 20
-      // Age: 20
-      // Total: 73
-      expect(results.first['score'], 73);
+      // Score calculation updated based on MatchingService v2 logic:
+      // Interest: 1 common / 4 * 50 = 12.5
+      // Location: same city & district = 30
+      // Age: diff 1 (<=2) = 10
+      // Budget: same = 10
+      // Total: 62.5 -> 63
+      expect(results.first['score'], 63);
     });
 
     test('should filter out swiped users', () async {
