@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -31,8 +32,56 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        final otherUserId = args['otherUserId'];
+
+        if (_otherUser == null) {
+          if (otherUserId != null) {
+            _fetchOtherUser(otherUserId);
+          } else if (_chatRoomId != null) {
+            _fetchUserFromChatRoom(_chatRoomId!);
+          }
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String uid) async {
+    try {
+      final user = await FirestoreService().getUser(uid);
+      if (mounted && user != null) {
+        setState(() {
+          _otherUser = user;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user: $e');
+    }
+  }
+
+  Future<void> _fetchUserFromChatRoom(String chatRoomId) async {
+    final authProvider = context.read<AuthProvider>();
+    final currentUser = authProvider.userModel;
+
+    if (currentUser == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('chat_rooms').doc(chatRoomId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final otherUserId = participantIds.firstWhere(
+          (id) => id != currentUser.uid,
+          orElse: () => '',
+        );
+
+        if (otherUserId.isNotEmpty) {
+          _fetchOtherUser(otherUserId);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching chat context: $e');
     }
   }
 
