@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +21,111 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  OverlayEntry? _overlayEntry;
+
+  /// Setup FCM listeners
+  void setupFCM() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _handleForegroundMessage(message);
+    });
+  }
+
+  void _handleForegroundMessage(RemoteMessage message) {
+    try {
+      // Determine title and body
+      String title = message.notification?.title ?? message.data['title'] ?? '新通知';
+      String body = message.notification?.body ??
+          message.data['message'] ??
+          message.data['content'] ??
+          '';
+
+      // Create NotificationModel
+      final notification = NotificationModel(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: '', // Not needed for local display
+        type: message.data['type'] ?? 'system',
+        title: title,
+        message: body,
+        imageUrl: message.data['imageUrl'],
+        actionType: message.data['actionType'],
+        actionData: message.data['actionData'],
+        createdAt: DateTime.now(),
+        isRead: false,
+      );
+
+      showInAppNotification(notification);
+    } catch (e) {
+      debugPrint('Error handling foreground message: $e');
+    }
+  }
+
+  void showInAppNotification(NotificationModel notification) {
+    // Remove existing overlay if any
+    if (_overlayEntry != null) {
+      _overlayEntry!.remove();
+      _overlayEntry = null;
+    }
+
+    final overlayState = AppRouter.navigatorKey.currentState?.overlay;
+    if (overlayState == null) return;
+
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: -150.0, end: 0.0),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.elasticOut,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, value),
+                child: child,
+              );
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: InAppNotification(
+                notification: notification,
+                onDismiss: () {
+                  if (_overlayEntry == entry) {
+                    entry.remove();
+                    _overlayEntry = null;
+                  }
+                },
+                onTap: () {
+                  if (_overlayEntry == entry) {
+                    entry.remove();
+                    _overlayEntry = null;
+                  }
+                  _handleNavigation(
+                    notification.actionType,
+                    notification.actionData,
+                    null,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    _overlayEntry = entry;
+    overlayState.insert(entry);
+
+    // Auto dismiss after 4 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (_overlayEntry == entry) {
+        entry.remove();
+        _overlayEntry = null;
+      }
+    });
+  }
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -55,6 +162,9 @@ class RichNotificationService {
     if (androidImplementation != null) {
       await androidImplementation.requestNotificationsPermission();
     }
+
+    // Setup FCM for foreground notifications
+    setupFCM();
 
     _isInitialized = true;
   }
