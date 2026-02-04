@@ -12,6 +12,8 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -21,6 +23,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 設定背景訊息處理器
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
@@ -34,8 +39,21 @@ void main() async {
   runApp(const ChinguApp());
 }
 
-class ChinguApp extends StatelessWidget {
+class ChinguApp extends StatefulWidget {
   const ChinguApp({super.key});
+
+  @override
+  State<ChinguApp> createState() => _ChinguAppState();
+}
+
+class _ChinguAppState extends State<ChinguApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().initialize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
