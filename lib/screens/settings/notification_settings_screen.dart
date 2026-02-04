@@ -1,14 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/models/notification_preferences.dart';
 
-class NotificationSettingsScreen extends StatelessWidget {
+class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
-  
+
+  @override
+  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  bool _isUpdating = false;
+
+  Future<void> _updatePreference(BuildContext context, String key, bool value) async {
+    setState(() => _isUpdating = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final currentPrefs = authProvider.userModel?.notificationPreferences ?? const NotificationPreferences();
+
+      NotificationPreferences newPrefs;
+      switch (key) {
+        case 'enablePushNotifications':
+          newPrefs = currentPrefs.copyWith(enablePushNotifications: value);
+          break;
+        case 'newMatch':
+          newPrefs = currentPrefs.copyWith(newMatch: value);
+          break;
+        case 'matchSuccess':
+          newPrefs = currentPrefs.copyWith(matchSuccess: value);
+          break;
+        case 'newMessage':
+          newPrefs = currentPrefs.copyWith(newMessage: value);
+          break;
+        case 'eventReminder':
+          newPrefs = currentPrefs.copyWith(eventReminder: value);
+          break;
+        case 'eventChanges':
+          newPrefs = currentPrefs.copyWith(eventChanges: value);
+          break;
+        case 'promotions':
+          newPrefs = currentPrefs.copyWith(promotions: value);
+          break;
+        case 'newsletter':
+          newPrefs = currentPrefs.copyWith(newsletter: value);
+          break;
+        default:
+          newPrefs = currentPrefs;
+      }
+
+      final success = await authProvider.updateUserData({
+        'notificationPreferences': newPrefs.toMap(),
+      });
+
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authProvider.errorMessage ?? '更新失敗')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdating = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // ignore: unused_local_variable
     final chinguTheme = theme.extension<ChinguTheme>();
+
+    // Listen to AuthProvider to get latest user data
+    final authProvider = Provider.of<AuthProvider>(context);
+    final prefs = authProvider.userModel?.notificationPreferences ?? const NotificationPreferences();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -17,6 +84,16 @@ class NotificationSettingsScreen extends StatelessWidget {
         backgroundColor: theme.scaffoldBackgroundColor,
         foregroundColor: theme.colorScheme.onSurface,
         elevation: 0,
+        bottom: _isUpdating
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(2),
+                child: LinearProgressIndicator(
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                  minHeight: 2,
+                ),
+              )
+            : null,
       ),
       body: ListView(
         children: [
@@ -24,8 +101,8 @@ class NotificationSettingsScreen extends StatelessWidget {
           SwitchListTile(
             title: const Text('啟用推播通知'),
             subtitle: Text('接收應用程式的推播通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: prefs.enablePushNotifications,
+            onChanged: (v) => _updatePreference(context, 'enablePushNotifications', v),
             activeColor: theme.colorScheme.primary,
           ),
           const Divider(),
@@ -33,15 +110,15 @@ class NotificationSettingsScreen extends StatelessWidget {
           SwitchListTile(
             title: const Text('新配對'),
             subtitle: Text('當有人喜歡您時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: prefs.newMatch,
+            onChanged: (v) => _updatePreference(context, 'newMatch', v),
             activeColor: theme.colorScheme.primary,
           ),
           SwitchListTile(
             title: const Text('配對成功'),
             subtitle: Text('當配對成功時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: prefs.matchSuccess,
+            onChanged: (v) => _updatePreference(context, 'matchSuccess', v),
             activeColor: theme.colorScheme.primary,
           ),
           const Divider(),
@@ -49,8 +126,8 @@ class NotificationSettingsScreen extends StatelessWidget {
           SwitchListTile(
             title: const Text('新訊息'),
             subtitle: Text('收到新訊息時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: prefs.newMessage,
+            onChanged: (v) => _updatePreference(context, 'newMessage', v),
             activeColor: theme.colorScheme.primary,
           ),
           ListTile(
@@ -70,15 +147,15 @@ class NotificationSettingsScreen extends StatelessWidget {
           SwitchListTile(
             title: const Text('預約提醒'),
             subtitle: Text('晚餐前 1 小時提醒', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: prefs.eventReminder,
+            onChanged: (v) => _updatePreference(context, 'eventReminder', v),
             activeColor: theme.colorScheme.primary,
           ),
           SwitchListTile(
             title: const Text('預約變更'),
             subtitle: Text('當預約有變更時通知', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: true,
-            onChanged: (v) {},
+            value: prefs.eventChanges,
+            onChanged: (v) => _updatePreference(context, 'eventChanges', v),
             activeColor: theme.colorScheme.primary,
           ),
           const Divider(),
@@ -86,15 +163,15 @@ class NotificationSettingsScreen extends StatelessWidget {
           SwitchListTile(
             title: const Text('優惠活動'),
             subtitle: Text('接收優惠和活動資訊', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: false,
-            onChanged: (v) {},
+            value: prefs.promotions,
+            onChanged: (v) => _updatePreference(context, 'promotions', v),
             activeColor: theme.colorScheme.primary,
           ),
           SwitchListTile(
             title: const Text('電子報'),
             subtitle: Text('接收每週電子報', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            value: false,
-            onChanged: (v) {},
+            value: prefs.newsletter,
+            onChanged: (v) => _updatePreference(context, 'newsletter', v),
             activeColor: theme.colorScheme.primary,
           ),
         ],
@@ -117,8 +194,3 @@ class NotificationSettingsScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
