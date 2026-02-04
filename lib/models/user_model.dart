@@ -31,6 +31,7 @@ class UserModel {
   // 統計資料
   final int totalDinners;
   final int totalMatches;
+  final int totalMessagesSent;
   final double averageRating;
 
   // 2FA
@@ -62,6 +63,7 @@ class UserModel {
     this.subscription = 'free',
     this.totalDinners = 0,
     this.totalMatches = 0,
+    this.totalMessagesSent = 0,
     this.averageRating = 0.0,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
@@ -100,6 +102,7 @@ class UserModel {
       subscription: map['subscription'] ?? 'free',
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
+      totalMessagesSent: map['totalMessagesSent'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
@@ -132,6 +135,7 @@ class UserModel {
       'subscription': subscription,
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
+      'totalMessagesSent': totalMessagesSent,
       'averageRating': averageRating,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
@@ -162,6 +166,7 @@ class UserModel {
     String? subscription,
     int? totalDinners,
     int? totalMatches,
+    int? totalMessagesSent,
     double? averageRating,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
@@ -191,6 +196,7 @@ class UserModel {
       subscription: subscription ?? this.subscription,
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
+      totalMessagesSent: totalMessagesSent ?? this.totalMessagesSent,
       averageRating: averageRating ?? this.averageRating,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
