@@ -161,10 +161,11 @@ class AuthService {
       await _auth.currentUser?.delete();
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
-        throw Exception('此操作需要最近登入，請先登出再重新登入');
+        throw AuthRequiresRecentLoginException();
       }
       throw _handleAuthException(e);
     } catch (e) {
+      if (e is AuthRequiresRecentLoginException) rethrow;
       throw Exception('刪除帳號失敗: $e');
     }
   }
@@ -196,5 +197,9 @@ class AuthService {
   }
 }
 
-
-
+/// 刪除帳號時需要最近登入的異常
+class AuthRequiresRecentLoginException implements Exception {
+  final String message = '此操作需要最近登入，請先登出再重新登入';
+  @override
+  String toString() => message;
+}
