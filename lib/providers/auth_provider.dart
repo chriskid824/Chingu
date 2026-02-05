@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -48,6 +49,13 @@ class AuthProvider with ChangeNotifier {
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+
+      // 更新 FCM Token
+      try {
+        await NotificationService().saveTokenToFirestore(firebaseUser.uid);
+      } catch (e) {
+        debugPrint('Error saving FCM token on login: $e');
+      }
     }
     notifyListeners();
   }
