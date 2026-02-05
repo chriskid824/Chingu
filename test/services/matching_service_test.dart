@@ -31,7 +31,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 25,
-    profileCompleted: true,
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
+    job: 'Developer',
   );
 
   final candidateUser = UserModel(
@@ -47,7 +50,10 @@ void main() {
     minAge: 20,
     maxAge: 30,
     age: 24,
-    profileCompleted: true,
+    country: 'Taiwan',
+    createdAt: DateTime.now(),
+    lastLogin: DateTime.now(),
+    job: 'Designer',
   );
 
   setUp(() {
