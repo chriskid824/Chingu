@@ -13,12 +13,14 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
   // 模擬數據
   final List<Map<String, dynamic>> _mutualMatches = [
     {
+      'id': 'user_1',
       'name': '王小華',
       'age': 28,
       'job': '行銷專員',
       'matchScore': 92,
     },
     {
+      'id': 'user_2',
       'name': '李小美',
       'age': 26,
       'job': '設計師',
@@ -28,12 +30,14 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
 
   final List<Map<String, dynamic>> _likedMatches = [
     {
+      'id': 'user_3',
       'name': '陳大明',
       'age': 30,
       'job': '軟體工程師',
       'matchScore': 95,
     },
     {
+      'id': 'user_4',
       'name': '林小芳',
       'age': 27,
       'job': '產品經理',
@@ -126,6 +130,7 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
         final match = matches[index];
         return _buildMatchCard(
           context,
+          match['id'] ?? 'unknown',
           match['name'],
           match['age'],
           match['job'],
@@ -222,10 +227,18 @@ class _MatchesListScreenState extends State<MatchesListScreen> {
     );
   }
 
-  Widget _buildMatchCard(BuildContext context, String name, int age, String job, int matchScore, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildMatchCard(BuildContext context, String id, String name, int age, String job, int matchScore, bool isMutual, ThemeData theme, ChinguTheme? chinguTheme) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.userDetail);
+        Navigator.of(context).pushNamed(
+          AppRoutes.userDetail,
+          arguments: {
+            'userId': id,
+            'userName': name,
+            'userAge': age,
+            'userJob': job,
+          },
+        );
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

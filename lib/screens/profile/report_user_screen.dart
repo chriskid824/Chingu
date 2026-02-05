@@ -35,7 +35,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
     '虛假帳號',
     '仇恨言論',
     '其他',
-  ];
+  ]; // Report reasons
 
   @override
   void dispose() {

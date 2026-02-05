@@ -171,7 +171,15 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => UserDetailScreen(
+            userId: args?['userId'],
+            userName: args?['userName'],
+            userAge: args?['userAge'],
+            userJob: args?['userJob'],
+          ),
+        );
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
@@ -231,6 +239,7 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const AboutScreen());
 
       case AppRoutes.reportUser:
+        // Handle report user route with arguments
         final args = settings.arguments as Map<String, dynamic>?;
         if (args == null) {
           return MaterialPageRoute(
