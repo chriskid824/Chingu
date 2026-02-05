@@ -1,5 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum EventStatus {
+  pending,   // 等待配對
+  confirmed, // 已確認
+  completed, // 已完成
+  cancelled, // 已取消
+  closed     // 報名已截止
+}
+
 /// 晚餐活動模型（固定6人）
 class DinnerEventModel {
   final String id;
@@ -14,6 +22,9 @@ class DinnerEventModel {
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
   
+  // 等候清單
+  final List<String> waitlist; // 用戶 UID 列表
+
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
   final String? restaurantAddress;
@@ -21,7 +32,7 @@ class DinnerEventModel {
   final String? restaurantPhone;
   
   // 活動狀態
-  final String status; // 'pending', 'confirmed', 'completed', 'cancelled'
+  final EventStatus status;
   final DateTime createdAt;
   final DateTime? confirmedAt;
   final DateTime? completedAt;
@@ -43,11 +54,12 @@ class DinnerEventModel {
     this.notes,
     required this.participantIds,
     required this.participantStatus,
+    this.waitlist = const [],
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
     this.restaurantPhone,
-    this.status = 'pending',
+    this.status = EventStatus.pending,
     required this.createdAt,
     this.confirmedAt,
     this.completedAt,
@@ -74,11 +86,17 @@ class DinnerEventModel {
       notes: map['notes'],
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitlist: List<String>.from(map['waitlist'] ?? []),
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
       restaurantPhone: map['restaurantPhone'],
-      status: map['status'] ?? 'pending',
+      status: map['status'] != null
+          ? EventStatus.values.firstWhere(
+              (e) => e.name == map['status'],
+              orElse: () => EventStatus.pending
+            )
+          : EventStatus.pending,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       confirmedAt: map['confirmedAt'] != null 
           ? (map['confirmedAt'] as Timestamp).toDate() 
@@ -107,11 +125,12 @@ class DinnerEventModel {
       'notes': notes,
       'participantIds': participantIds,
       'participantStatus': participantStatus,
+      'waitlist': waitlist,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
       'restaurantPhone': restaurantPhone,
-      'status': status,
+      'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
       'confirmedAt': confirmedAt != null ? Timestamp.fromDate(confirmedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
@@ -130,11 +149,12 @@ class DinnerEventModel {
     String? notes,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitlist,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
     String? restaurantPhone,
-    String? status,
+    EventStatus? status,
     DateTime? confirmedAt,
     DateTime? completedAt,
     List<String>? icebreakerQuestions,
@@ -151,6 +171,7 @@ class DinnerEventModel {
       notes: notes ?? this.notes,
       participantIds: participantIds ?? this.participantIds,
       participantStatus: participantStatus ?? this.participantStatus,
+      waitlist: waitlist ?? this.waitlist,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -184,16 +205,16 @@ class DinnerEventModel {
   /// 獲取狀態文字
   String get statusText {
     switch (status) {
-      case 'pending':
+      case EventStatus.pending:
         return '等待配對';
-      case 'confirmed':
+      case EventStatus.confirmed:
         return '已確認';
-      case 'completed':
+      case EventStatus.completed:
         return '已完成';
-      case 'cancelled':
+      case EventStatus.cancelled:
         return '已取消';
-      default:
-        return '未知';
+      case EventStatus.closed:
+        return '報名截止';
     }
   }
 
@@ -219,7 +240,3 @@ class DinnerEventModel {
     return sum / ratings!.length;
   }
 }
-
-
-
-

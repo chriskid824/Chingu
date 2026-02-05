@@ -3,6 +3,11 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/event_card.dart';
 import 'package:chingu/widgets/animated_tab_bar.dart';
+import 'package:chingu/screens/events/event_history_screen.dart';
+import 'package:chingu/services/dinner_event_service.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
@@ -14,11 +19,30 @@ class EventsListScreen extends StatefulWidget {
 class _EventsListScreenState extends State<EventsListScreen> {
   int _selectedIndex = 0;
   late PageController _pageController;
+  final DinnerEventService _eventService = DinnerEventService();
+  late Future<List<DinnerEventModel>> _upcomingEventsFuture;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
+    _loadUpcomingEvents();
+  }
+
+  void _loadUpcomingEvents() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      _upcomingEventsFuture = _eventService.getUserEvents(userId);
+    } else {
+      _upcomingEventsFuture = Future.value([]);
+    }
+  }
+
+  Future<void> _refreshUpcoming() async {
+    setState(() {
+      _loadUpcomingEvents();
+    });
+    await _upcomingEventsFuture;
   }
 
   @override
@@ -47,7 +71,6 @@ class _EventsListScreenState extends State<EventsListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // final chinguTheme = theme.extension<ChinguTheme>(); // Not needed if AnimatedTabBar handles it internally
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -91,8 +114,8 @@ class _EventsListScreenState extends State<EventsListScreen> {
               controller: _pageController,
               onPageChanged: _onPageChanged,
               children: [
-                _buildEventsList(context, true),
-                _buildEventsList(context, false),
+                _buildUpcomingList(context),
+                const EventHistoryScreen(),
               ],
             ),
           ),
@@ -101,45 +124,56 @@ class _EventsListScreenState extends State<EventsListScreen> {
     );
   }
 
-  Widget _buildEventsList(BuildContext context, bool isUpcoming) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/15',
-          time: '19:00',
-          budget: 'NT\$ 500-800 / 人',
-          location: '台北市信義區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        EventCard(
-          title: '6人晚餐聚會',
-          date: '2025/10/18',
-          time: '18:30',
-          budget: 'NT\$ 800-1200 / 人',
-          location: '台北市大安區',
-          isUpcoming: isUpcoming,
-          onTap: () {
-            Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-          },
-        ),
-        if (!isUpcoming)
-          EventCard(
-            title: '6人晚餐聚會',
-            date: '2025/10/01',
-            time: '19:30',
-            budget: 'NT\$ 600-900 / 人',
-            location: '台北市中山區',
-            isUpcoming: isUpcoming,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.eventDetail);
-            },
-          ),
-      ],
+  Widget _buildUpcomingList(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _refreshUpcoming,
+      child: FutureBuilder<List<DinnerEventModel>>(
+        future: _upcomingEventsFuture,
+        builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+               return const Center(child: CircularProgressIndicator());
+            }
+
+            final events = snapshot.data ?? [];
+            final upcoming = events.where((e) {
+               return e.dateTime.isAfter(DateTime.now()) &&
+                      e.status != EventStatus.cancelled &&
+                      e.status != EventStatus.completed;
+            }).toList();
+
+            if (upcoming.isEmpty) {
+               return ListView(
+                 physics: const AlwaysScrollableScrollPhysics(),
+                 children: const [
+                   SizedBox(height: 100),
+                   Center(child: Text('沒有即將到來的活動')),
+                 ],
+               );
+            }
+
+            return ListView.builder(
+               padding: const EdgeInsets.all(16),
+               itemCount: upcoming.length,
+               itemBuilder: (context, index) {
+                  final event = upcoming[index];
+                  return EventCard(
+                    title: '6人晚餐聚會',
+                    date: DateFormat('yyyy/MM/dd').format(event.dateTime),
+                    time: DateFormat('HH:mm').format(event.dateTime),
+                    budget: event.budgetRangeText,
+                    location: '${event.city} ${event.district}',
+                    isUpcoming: true,
+                    onTap: () {
+                      Navigator.of(context).pushNamed(
+                        AppRoutes.eventDetail,
+                        arguments: event.id,
+                      );
+                    },
+                  );
+               }
+            );
+        }
+      )
     );
   }
 }
