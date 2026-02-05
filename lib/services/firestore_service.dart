@@ -268,6 +268,34 @@ class FirestoreService {
     }
   }
 
+  /// 加入收藏
+  ///
+  /// [uid] 用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> addToFavorites(String uid, String targetUserId) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'favoriteIds': FieldValue.arrayUnion([targetUserId]),
+      });
+    } catch (e) {
+      throw Exception('加入收藏失敗: $e');
+    }
+  }
+
+  /// 移除收藏
+  ///
+  /// [uid] 用戶 ID
+  /// [targetUserId] 目標用戶 ID
+  Future<void> removeFromFavorites(String uid, String targetUserId) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'favoriteIds': FieldValue.arrayRemove([targetUserId]),
+      });
+    } catch (e) {
+      throw Exception('移除收藏失敗: $e');
+    }
+  }
+
   /// 提交用戶舉報
   Future<void> submitUserReport({
     required String reporterId,

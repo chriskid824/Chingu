@@ -281,6 +281,39 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 切換收藏狀態
+  Future<void> toggleFavorite(String targetUserId) async {
+    if (_userModel == null) return;
+
+    final isFavorite = _userModel!.favoriteIds.contains(targetUserId);
+    final uid = _userModel!.uid;
+
+    try {
+      // 樂觀更新 (Optimistic Update)
+      List<String> updatedFavorites = List.from(_userModel!.favoriteIds);
+      if (isFavorite) {
+        updatedFavorites.remove(targetUserId);
+        // 先更新本地狀態
+        _userModel = _userModel!.copyWith(favoriteIds: updatedFavorites);
+        notifyListeners();
+        // 再更新遠端
+        await _firestoreService.removeFromFavorites(uid, targetUserId);
+      } else {
+        updatedFavorites.add(targetUserId);
+        // 先更新本地狀態
+        _userModel = _userModel!.copyWith(favoriteIds: updatedFavorites);
+        notifyListeners();
+        // 再更新遠端
+        await _firestoreService.addToFavorites(uid, targetUserId);
+      }
+    } catch (e) {
+      // 如果失敗，恢復原狀
+      debugPrint('切換收藏失敗: $e');
+      await _loadUserData(uid); // 重新載入正確資料
+      rethrow; // 重新拋出異常，以便 UI 層可以處理
+    }
+  }
+
   /// 設置載入狀態
   void _setLoading(bool value) {
     _isLoading = value;
