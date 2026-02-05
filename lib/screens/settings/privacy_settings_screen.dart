@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
@@ -71,6 +72,14 @@ class PrivacySettingsScreen extends StatelessWidget {
             subtitle: Text('已啟用', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6))),
             trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
             onTap: () {},
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            title: const Text('登入記錄'),
+            trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.loginHistory);
+            },
           ),
           const Divider(),
           _buildSectionTitle(context, '資料管理'),
