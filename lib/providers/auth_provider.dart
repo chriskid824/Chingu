@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/notification_topic_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -271,6 +272,50 @@ class AuthProvider with ChangeNotifier {
         _userModel!.gender.isNotEmpty &&
         _userModel!.job.isNotEmpty &&
         _userModel!.city.isNotEmpty;
+  }
+
+  /// 更新通知訂閱
+  Future<bool> updateNotificationSubscriptions(
+    List<String> regions,
+    List<String> interests,
+  ) async {
+    try {
+      if (_userModel == null || _firebaseUser == null) return false;
+
+      _setLoading(true);
+
+      // 保存舊的訂閱列表以進行比較
+      final oldRegions = List<String>.from(_userModel!.subscribedRegions);
+      final oldInterests = List<String>.from(_userModel!.subscribedTopicInterests);
+
+      // 更新 Firestore
+      final updates = {
+        'subscribedRegions': regions,
+        'subscribedTopicInterests': interests,
+      };
+
+      await _firestoreService.updateUser(_firebaseUser!.uid, updates);
+
+      // 更新 FCM 主題訂閱
+      await NotificationTopicService().updateSubscriptions(
+        oldRegions: oldRegions,
+        newRegions: regions,
+        oldInterests: oldInterests,
+        newInterests: interests,
+      );
+
+      // 重新載入用戶資料
+      await _loadUserData(_firebaseUser!.uid);
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
   }
 
   /// 刷新用戶資料

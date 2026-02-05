@@ -1,14 +1,65 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
-class NotificationSettingsScreen extends StatelessWidget {
+class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
+
+  @override
+  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+  bool _isInitialized = false;
   
+  // Local state for topic subscriptions
+  List<String> _selectedRegions = [];
+  List<String> _selectedInterests = [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.userModel != null) {
+        _selectedRegions = List.from(authProvider.userModel!.subscribedRegions);
+        _selectedInterests = List.from(authProvider.userModel!.subscribedTopicInterests);
+        _isInitialized = true;
+      }
+    }
+  }
+
+  Future<void> _updateSubscriptions({
+    List<String>? newRegions,
+    List<String>? newInterests,
+  }) async {
+    final regions = newRegions ?? _selectedRegions;
+    final interests = newInterests ?? _selectedInterests;
+
+    // Optimistic update
+    setState(() {
+      _selectedRegions = regions;
+      _selectedInterests = interests;
+    });
+
+    // Call API
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.updateNotificationSubscriptions(regions, interests);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    // If user data is not loaded yet (shouldn't happen if navigating from settings), handle gracefully
+    if (authProvider.userModel == null) {
+       return Scaffold(
+        appBar: AppBar(title: const Text('通知設定')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -17,9 +68,24 @@ class NotificationSettingsScreen extends StatelessWidget {
         backgroundColor: theme.scaffoldBackgroundColor,
         foregroundColor: theme.colorScheme.onSurface,
         elevation: 0,
+        actions: [
+          if (authProvider.isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(right: 16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+        ],
       ),
       body: ListView(
         children: [
+          _buildTopicSubscriptionSection(context, theme),
+          const Divider(),
           _buildSectionTitle(context, '推播通知'),
           SwitchListTile(
             title: const Text('啟用推播通知'),
@@ -101,6 +167,86 @@ class NotificationSettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildTopicSubscriptionSection(BuildContext context, ThemeData theme) {
+    // Regions
+    final allRegions = {
+      'taipei': '台北',
+      'taichung': '台中',
+      'kaohsiung': '高雄',
+    };
+
+    // Interests
+    final allInterests = {
+      'food': '美食',
+      'movie': '電影',
+      'music': '音樂',
+      'tech': '科技',
+      'outdoors': '戶外',
+      'art': '藝術',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, '主題訂閱'),
+
+        // Regions
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text('地區', style: TextStyle(
+            fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary
+          )),
+        ),
+        ...allRegions.entries.map((entry) {
+          final isSubscribed = _selectedRegions.contains(entry.key);
+          return CheckboxListTile(
+            title: Text(entry.value),
+            value: isSubscribed,
+            activeColor: theme.colorScheme.primary,
+            onChanged: (bool? value) {
+              if (value == null) return;
+              final newRegions = List<String>.from(_selectedRegions);
+              if (value) {
+                newRegions.add(entry.key);
+              } else {
+                newRegions.remove(entry.key);
+              }
+              _updateSubscriptions(newRegions: newRegions);
+            },
+          );
+        }),
+
+        const SizedBox(height: 8),
+
+        // Interests
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text('興趣', style: TextStyle(
+            fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary
+          )),
+        ),
+        ...allInterests.entries.map((entry) {
+          final isSubscribed = _selectedInterests.contains(entry.key);
+          return CheckboxListTile(
+            title: Text(entry.value),
+            value: isSubscribed,
+            activeColor: theme.colorScheme.primary,
+            onChanged: (bool? value) {
+              if (value == null) return;
+              final newInterests = List<String>.from(_selectedInterests);
+              if (value) {
+                newInterests.add(entry.key);
+              } else {
+                newInterests.remove(entry.key);
+              }
+              _updateSubscriptions(newInterests: newInterests);
+            },
+          );
+        }),
+      ],
+    );
+  }
   
   Widget _buildSectionTitle(BuildContext context, String title) {
     final theme = Theme.of(context);
@@ -117,8 +263,3 @@ class NotificationSettingsScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
