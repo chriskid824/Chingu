@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/analytics_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -43,11 +44,13 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       _firebaseUser = null;
       _userModel = null;
+      await AnalyticsService().setUserId(null);
     } else {
       // 用戶登入
       _firebaseUser = firebaseUser;
       await _loadUserData(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+      await AnalyticsService().setUserId(firebaseUser.uid);
     }
     notifyListeners();
   }
@@ -92,6 +95,8 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+
+      await AnalyticsService().logSignUp(method: 'email');
 
       // 2. 更新顯示名稱
       await _authService.updateDisplayName(name);
@@ -149,6 +154,8 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
 
+      await AnalyticsService().logLogin(method: 'email');
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -171,6 +178,8 @@ class AuthProvider with ChangeNotifier {
       final exists = await _firestoreService.userExists(firebaseUser.uid);
 
       if (!exists) {
+        await AnalyticsService().logSignUp(method: 'google');
+
         // 為新的 Google 用戶創建 Firestore 資料
         final userModel = UserModel(
           uid: firebaseUser.uid,
@@ -193,6 +202,8 @@ class AuthProvider with ChangeNotifier {
         );
 
         await _firestoreService.createUser(userModel);
+      } else {
+        await AnalyticsService().logLogin(method: 'google');
       }
 
       _setLoading(false);
