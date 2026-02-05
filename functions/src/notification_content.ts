@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 /// 通知文案 A/B 測試配置
 /// 用於測試不同通知文案對用戶參與度的影響
 export interface NotificationCopyVariant {
@@ -165,4 +167,27 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * Deterministically select a variant for a user based on their ID
+ * Uses SHA-256 hash of testId + userId to ensure consistent assignment
+ */
+export function getVariantForUser(testId: string, userId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test) {
+        return 'control'; // Default fallback
+    }
+
+    const hash = crypto.createHash('sha256')
+        .update(`${testId}:${userId}`)
+        .digest('hex');
+
+    // Take first 8 chars and convert to number
+    const hashInt = parseInt(hash.substring(0, 8), 16);
+
+    // Use modulo to select variant
+    const index = hashInt % test.variants.length;
+
+    return test.variants[index].variantId;
 }
