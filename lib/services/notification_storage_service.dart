@@ -223,10 +223,11 @@ class NotificationStorageService {
   /// 創建系統通知
   Future<void> createSystemNotification({
     required String title,
-    required String message,
+    required String content,
     String? imageUrl,
     String? actionType,
     String? actionData,
+    String? deeplink,
   }) async {
     final userId = _currentUserId;
     if (userId == null) return;
@@ -236,10 +237,11 @@ class NotificationStorageService {
       userId: userId,
       type: 'system',
       title: title,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: false,
       createdAt: DateTime.now(),
     );
@@ -261,7 +263,7 @@ class NotificationStorageService {
       userId: userId,
       type: 'match',
       title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
+      content: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
       actionType: 'open_chat',
       actionData: matchedUserId,
@@ -276,7 +278,7 @@ class NotificationStorageService {
   Future<void> createEventNotification({
     required String eventId,
     required String eventTitle,
-    required String message,
+    required String content,
     String? imageUrl,
   }) async {
     final userId = _currentUserId;
@@ -287,7 +289,7 @@ class NotificationStorageService {
       userId: userId,
       type: 'event',
       title: eventTitle,
-      message: message,
+      content: content,
       imageUrl: imageUrl,
       actionType: 'view_event',
       actionData: eventId,
@@ -313,7 +315,7 @@ class NotificationStorageService {
       userId: userId,
       type: 'message',
       title: senderName,
-      message: messagePreview,
+      content: messagePreview,
       imageUrl: senderPhotoUrl,
       actionType: 'open_chat',
       actionData: senderId,
