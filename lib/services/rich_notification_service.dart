@@ -2,8 +2,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 class RichNotificationService {
   // Singleton pattern
@@ -18,7 +26,10 @@ class RichNotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
   bool _isInitialized = false;
+  RemoteMessage? _initialMessage;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -56,10 +67,80 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    await _initializeFCM();
+
     _isInitialized = true;
   }
 
-  /// 處理通知點擊事件
+  Future<void> _initializeFCM() async {
+    // Request permission
+    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional) {
+
+      // Get FCM Token (optional, mostly for debugging or server-side registration logic usually handled in Auth)
+      String? token = await _firebaseMessaging.getToken();
+      debugPrint('FCM Token: $token');
+
+      // Foreground message handling
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        RemoteNotification? notification = message.notification;
+        AndroidNotification? android = message.notification?.android;
+
+        // If notification is present, we might want to show a local notification
+        // so it appears as a heads-up notification while app is in foreground.
+        if (notification != null && android != null) {
+          // Construct NotificationModel from message data + notification content
+          final model = NotificationModel(
+            id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: '', // Not critical for display
+            type: message.data['type'] ?? 'system',
+            title: notification.title ?? '',
+            message: notification.body ?? '',
+            imageUrl: notification.android?.imageUrl ?? message.data['imageUrl'],
+            actionType: message.data['actionType'],
+            actionData: message.data['actionData'],
+            createdAt: DateTime.now(),
+          );
+
+          showNotification(model);
+        }
+      });
+
+      // Background state (App running in background) message handling
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('A new onMessageOpenedApp event was published!');
+        _handleNavigation(
+          message.data['actionType'],
+          message.data['actionData'],
+          message.data['actionId'], // Custom ID if used
+        );
+      });
+
+      // Terminated state message handling
+      _initialMessage = await _firebaseMessaging.getInitialMessage();
+    }
+  }
+
+  /// 檢查並消費初始訊息（用於從終止狀態啟動）
+  void consumeInitialMessage() {
+    if (_initialMessage != null) {
+      debugPrint('Consuming initial message: ${_initialMessage!.messageId}');
+      _handleNavigation(
+        _initialMessage!.data['actionType'],
+        _initialMessage!.data['actionData'],
+        _initialMessage!.data['actionId'],
+      );
+      _initialMessage = null;
+    }
+  }
+
+  /// 處理通知點擊事件 (Local Notification)
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
       try {
@@ -80,7 +161,10 @@ class RichNotificationService {
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
-    if (navigator == null) return;
+    if (navigator == null) {
+      debugPrint('Navigator state is null, cannot navigate');
+      return;
+    }
 
     // 優先處理按鈕點擊
     if (actionId != null && actionId != 'default') {
@@ -98,10 +182,6 @@ class RichNotificationService {
     switch (action) {
       case 'open_chat':
         if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
           navigator.pushNamed(AppRoutes.chatList);
         } else {
           navigator.pushNamed(AppRoutes.chatList);
@@ -109,14 +189,11 @@ class RichNotificationService {
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
           navigator.pushNamed(AppRoutes.eventDetail);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.matchesList);
         break;
       default:
         // 預設導航到通知頁面
