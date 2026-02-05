@@ -55,6 +55,8 @@ class DinnerEventService {
         status: 'pending', // 等待配對
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
+        // 提醒將由後端 Cloud Scheduler 自動處理 (活動前 24 小時)
+        isReminderSent: false,
       );
 
       await docRef.set(event.toMap());
