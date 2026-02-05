@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:chingu/services/notification_ab_service.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 
 void main() {
   late NotificationABService service;
+  late FakeFirebaseFirestore fakeFirestore;
 
   setUp(() {
-    service = NotificationABService();
+    fakeFirestore = FakeFirebaseFirestore();
+    service = NotificationABService(firestore: fakeFirestore);
   });
 
   group('NotificationABService Group Assignment', () {
@@ -91,6 +94,30 @@ void main() {
 
       expect(variantContent.title, 'New Message 💬');
       expect(variantContent.body, 'Bob sent you a message. Don\'t leave them waiting!');
+    });
+  });
+
+  group('NotificationABService Tracking', () {
+    test('trackNotificationSent adds document to firestore', () async {
+      await service.trackNotificationSent('user1', NotificationType.match, ExperimentGroup.control);
+      final docs = await fakeFirestore.collection('notification_analytics').get();
+      expect(docs.docs.length, 1);
+      final data = docs.docs.first.data();
+      expect(data['userId'], 'user1');
+      expect(data['type'], 'match');
+      expect(data['group'], 'control');
+      expect(data['event'], 'sent');
+    });
+
+    test('trackNotificationClicked adds document to firestore', () async {
+      await service.trackNotificationClicked('user1', NotificationType.match, ExperimentGroup.variant);
+      final docs = await fakeFirestore.collection('notification_analytics').get();
+      expect(docs.docs.length, 1);
+      final data = docs.docs.first.data();
+      expect(data['userId'], 'user1');
+      expect(data['type'], 'match');
+      expect(data['group'], 'variant');
+      expect(data['event'], 'clicked');
     });
   });
 }
