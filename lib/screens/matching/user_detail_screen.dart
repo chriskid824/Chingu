@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 
 class UserDetailScreen extends StatelessWidget {
-  const UserDetailScreen({super.key});
+  final String? userId;
+
+  const UserDetailScreen({super.key, this.userId});
   
   @override
   Widget build(BuildContext context) {
