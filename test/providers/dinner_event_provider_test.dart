@@ -135,6 +135,12 @@ class MockDinnerEventService implements DinnerEventService {
         district: district
     );
   }
+
+  @override
+  Future<int> getUserEventCount(String userId) async {
+    if (shouldThrow) throw Exception('Mock Error');
+    return _mockEvents.where((e) => e.participantIds.contains(userId)).length;
+  }
 }
 
 void main() {

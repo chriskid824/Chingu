@@ -368,6 +368,20 @@ class DinnerEventService {
       throw Exception('報名失敗: $e');
     }
   }
+
+  /// 獲取用戶參與的活動數量
+  Future<int> getUserEventCount(String userId) async {
+    try {
+      final countQuery = await _eventsCollection
+          .where('participantIds', arrayContains: userId)
+          .count()
+          .get();
+      return countQuery.count ?? 0;
+    } catch (e) {
+      print('獲取活動數量失敗: $e');
+      return 0;
+    }
+  }
 }
 
 
