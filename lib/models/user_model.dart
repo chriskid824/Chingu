@@ -38,6 +38,15 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final bool pushNotificationsEnabled;
+  final bool notifyNewMatches;
+  final bool notifyMatchSuccess;
+  final bool notifyNewMessages;
+  final bool notifyEventReminders;
+  final bool notifyEventChanges;
+  final bool notifyMarketing;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +75,13 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.pushNotificationsEnabled = true,
+    this.notifyNewMatches = true,
+    this.notifyMatchSuccess = true,
+    this.notifyNewMessages = true,
+    this.notifyEventReminders = true,
+    this.notifyEventChanges = true,
+    this.notifyMarketing = false,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +120,13 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      pushNotificationsEnabled: map['pushNotificationsEnabled'] ?? true,
+      notifyNewMatches: map['notifyNewMatches'] ?? true,
+      notifyMatchSuccess: map['notifyMatchSuccess'] ?? true,
+      notifyNewMessages: map['notifyNewMessages'] ?? true,
+      notifyEventReminders: map['notifyEventReminders'] ?? true,
+      notifyEventChanges: map['notifyEventChanges'] ?? true,
+      notifyMarketing: map['notifyMarketing'] ?? false,
     );
   }
 
@@ -136,6 +159,13 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'notifyNewMatches': notifyNewMatches,
+      'notifyMatchSuccess': notifyMatchSuccess,
+      'notifyNewMessages': notifyNewMessages,
+      'notifyEventReminders': notifyEventReminders,
+      'notifyEventChanges': notifyEventChanges,
+      'notifyMarketing': notifyMarketing,
     };
   }
 
@@ -166,6 +196,13 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? pushNotificationsEnabled,
+    bool? notifyNewMatches,
+    bool? notifyMatchSuccess,
+    bool? notifyNewMessages,
+    bool? notifyEventReminders,
+    bool? notifyEventChanges,
+    bool? notifyMarketing,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +232,13 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      notifyNewMatches: notifyNewMatches ?? this.notifyNewMatches,
+      notifyMatchSuccess: notifyMatchSuccess ?? this.notifyMatchSuccess,
+      notifyNewMessages: notifyNewMessages ?? this.notifyNewMessages,
+      notifyEventReminders: notifyEventReminders ?? this.notifyEventReminders,
+      notifyEventChanges: notifyEventChanges ?? this.notifyEventChanges,
+      notifyMarketing: notifyMarketing ?? this.notifyMarketing,
     );
   }
 
