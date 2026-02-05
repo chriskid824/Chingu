@@ -38,6 +38,10 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知訂閱
+  final List<String> subscribedRegions;
+  final List<String> subscribedTopicInterests;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +70,8 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.subscribedRegions = const [],
+    this.subscribedTopicInterests = const [],
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +110,8 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      subscribedRegions: List<String>.from(map['subscribedRegions'] ?? []),
+      subscribedTopicInterests: List<String>.from(map['subscribedTopicInterests'] ?? []),
     );
   }
 
@@ -136,6 +144,8 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'subscribedRegions': subscribedRegions,
+      'subscribedTopicInterests': subscribedTopicInterests,
     };
   }
 
@@ -166,6 +176,8 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    List<String>? subscribedRegions,
+    List<String>? subscribedTopicInterests,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +207,8 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      subscribedRegions: subscribedRegions ?? this.subscribedRegions,
+      subscribedTopicInterests: subscribedTopicInterests ?? this.subscribedTopicInterests,
     );
   }
 
