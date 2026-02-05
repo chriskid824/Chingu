@@ -1,21 +1,60 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/chat_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ChatService _chatService = ChatService();
 
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
   String? _errorMessage;
-  // TODO: 實作真實的未讀訊息計數。目前預設為 0，等待後端支援。
-  final int _totalUnreadCount = 0;
+  int _totalUnreadCount = 0;
+  StreamSubscription<QuerySnapshot>? _unreadSubscription;
 
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   int get totalUnreadCount => _totalUnreadCount;
+
+  @override
+  void dispose() {
+    _unreadSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 監聽用戶的未讀訊息數量
+  void listenToUnreadCount(String userId) {
+    _unreadSubscription?.cancel();
+
+    _unreadSubscription = _firestore
+        .collection('chat_rooms')
+        .where('participantIds', arrayContains: userId)
+        .snapshots()
+        .listen((snapshot) {
+      int total = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final unreadCountMap = Map<String, dynamic>.from(data['unreadCount'] ?? {});
+        final unreadCount = (unreadCountMap[userId] ?? 0) as int;
+        total += unreadCount;
+      }
+
+      _totalUnreadCount = total;
+      BadgeCountService().updateCount(total);
+      notifyListeners();
+    }, onError: (e) {
+      print('監聽未讀訊息失敗: $e');
+    });
+  }
+
+  /// 標記聊天室為已讀
+  Future<void> markAsRead(String chatRoomId, String userId) async {
+    await _chatService.markChatAsRead(chatRoomId, userId);
+  }
 
   /// 載入用戶的聊天室列表
   Future<void> loadChatRooms(String userId) async {
