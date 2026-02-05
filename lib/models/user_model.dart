@@ -32,11 +32,17 @@ class UserModel {
   final int totalDinners;
   final int totalMatches;
   final double averageRating;
+  final int noShowCount; // 爽約次數
 
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
+  final String? fcmToken; // FCM Token for Push Notifications
+
+  // Notification Preferences
+  final List<String> subscribedRegions;
+  final List<String> subscribedTopicInterests;
 
   UserModel({
     required this.uid,
@@ -63,9 +69,13 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.noShowCount = 0,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.fcmToken,
+    this.subscribedRegions = const [],
+    this.subscribedTopicInterests = const [],
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -101,9 +111,13 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      noShowCount: map['noShowCount'] ?? 0,
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      fcmToken: map['fcmToken'],
+      subscribedRegions: List<String>.from(map['subscribedRegions'] ?? []),
+      subscribedTopicInterests: List<String>.from(map['subscribedTopicInterests'] ?? []),
     );
   }
 
@@ -133,9 +147,13 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'noShowCount': noShowCount,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'fcmToken': fcmToken,
+      'subscribedRegions': subscribedRegions,
+      'subscribedTopicInterests': subscribedTopicInterests,
     };
   }
 
@@ -163,9 +181,13 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    int? noShowCount,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    String? fcmToken,
+    List<String>? subscribedRegions,
+    List<String>? subscribedTopicInterests,
   }) {
     return UserModel(
       uid: uid,
@@ -192,9 +214,13 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      noShowCount: noShowCount ?? this.noShowCount,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      fcmToken: fcmToken ?? this.fcmToken,
+      subscribedRegions: subscribedRegions ?? this.subscribedRegions,
+      subscribedTopicInterests: subscribedTopicInterests ?? this.subscribedTopicInterests,
     );
   }
 
