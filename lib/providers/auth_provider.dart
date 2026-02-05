@@ -292,6 +292,41 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// 切換用戶收藏狀態
+  ///
+  /// [targetUserId] 目標用戶 ID
+  Future<void> toggleFavorite(String targetUserId) async {
+    if (_firebaseUser == null || _userModel == null) return;
+
+    final isFavorite = _userModel!.favoriteIds.contains(targetUserId);
+    final previousFavorites = List<String>.from(_userModel!.favoriteIds);
+
+    // 樂觀更新
+    List<String> newFavorites = List.from(previousFavorites);
+    if (isFavorite) {
+      newFavorites.remove(targetUserId);
+    } else {
+      newFavorites.add(targetUserId);
+    }
+
+    _userModel = _userModel!.copyWith(favoriteIds: newFavorites);
+    notifyListeners();
+
+    try {
+      if (isFavorite) {
+        await _firestoreService.removeFromFavorites(_firebaseUser!.uid, targetUserId);
+      } else {
+        await _firestoreService.addToFavorites(_firebaseUser!.uid, targetUserId);
+      }
+    } catch (e) {
+      // 失敗時回滾
+      _userModel = _userModel!.copyWith(favoriteIds: previousFavorites);
+      _errorMessage = '操作失敗: $e';
+      notifyListeners();
+      rethrow;
+    }
+  }
 }
 
 
