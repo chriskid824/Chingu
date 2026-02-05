@@ -111,6 +111,11 @@
   - **開發工具**:
     - `DebugScreen` 新增「清除所有數據」功能 (保護當前用戶資料)
     - 修復 `DatabaseSeeder` 以正確關聯當前登入用戶
+- ✅ **iOS 推送通知配置 (iOS Push Notification Config)**:
+  - 建立 `Runner.entitlements` 並啟用 `aps-environment: development`
+  - 更新 `Info.plist` 新增 `remote-notification` 背景模式
+  - 更新 `project.pbxproj` 連結 entitlements 檔案
+  - 建立 `IOS_PUSH_SETUP_INSTRUCTIONS.md` 提供 APNs 憑證手動設置指引
 
 ### 🎨 階段 4：UI 全面優化 (Phase 4 - Pending 32 Pages)
 目標：將剩餘頁面統一為「極簡紫色 (Minimal Purple)」風格。
