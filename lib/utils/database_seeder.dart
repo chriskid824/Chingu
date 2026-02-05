@@ -31,6 +31,10 @@ class DatabaseSeeder {
       
       print('步驟 3/3: 生成配對和聊天數據...');
       await _seedTestMatchesAndChats();
+
+      print('步驟 4/4: 生成 A/B 測試和功能開關...');
+      await _seedABTests();
+      await _seedFeatureFlags();
       
       print('測試數據生成完成！');
     } catch (e) {
@@ -68,7 +72,7 @@ class DatabaseSeeder {
       print('已清空測試用戶（保留當前用戶）');
       
       // 2. 清空其他集合
-      final collections = ['dinner_events', 'swipes', 'chat_rooms', 'messages'];
+      final collections = ['dinner_events', 'swipes', 'chat_rooms', 'messages', 'ab_tests', 'feature_flags', 'ab_test_events'];
       
       for (var collection in collections) {
         final snapshot = await _firestore.collection(collection).get();
@@ -421,6 +425,80 @@ class DatabaseSeeder {
       print('錯誤堆疊: ${StackTrace.current}');
       // 不拋出異常，允許其他數據生成繼續
     }
+  }
+
+  /// 生成 A/B 測試配置
+  Future<void> _seedABTests() async {
+    print('=== 開始生成 A/B 測試配置 ===');
+    final abTestsCollection = _firestore.collection('ab_tests');
+
+    // 1. 新功能引導測試
+    await abTestsCollection.doc('onboarding_flow_v2').set({
+      'name': '新版引導流程測試',
+      'description': '測試新版引導流程對用戶完成率的影響',
+      'isActive': true,
+      'startDate': FieldValue.serverTimestamp(),
+      'variants': [
+        {
+          'name': 'control',
+          'weight': 50.0,
+          'config': {'showTutorial': false}
+        },
+        {
+          'name': 'interactive_tutorial',
+          'weight': 50.0,
+          'config': {'showTutorial': true}
+        }
+      ]
+    });
+
+    // 2. 按鈕顏色測試
+    await abTestsCollection.doc('cta_button_color').set({
+      'name': '行動呼籲按鈕顏色測試',
+      'description': '測試不同按鈕顏色對點擊率的影響',
+      'isActive': true,
+      'startDate': FieldValue.serverTimestamp(),
+      'variants': [
+        {
+          'name': 'control',
+          'weight': 33.3,
+          'config': {'color': 'primary'}
+        },
+        {
+          'name': 'variant_red',
+          'weight': 33.3,
+          'config': {'color': 'red'}
+        },
+        {
+          'name': 'variant_green',
+          'weight': 33.4,
+          'config': {'color': 'green'}
+        }
+      ]
+    });
+
+    print('✓ 已生成 A/B 測試配置');
+  }
+
+  /// 生成功能開關配置
+  Future<void> _seedFeatureFlags() async {
+    print('=== 開始生成功能開關 ===');
+    final featureFlagsCollection = _firestore.collection('feature_flags');
+
+    await featureFlagsCollection.doc('new_match_algorithm').set({
+      'enabled': false,
+      'config': {
+        'version': '2.0',
+        'minScore': 80
+      }
+    });
+
+    await featureFlagsCollection.doc('dark_mode_beta').set({
+      'enabled': true,
+      'config': {}
+    });
+
+    print('✓ 已生成功能開關配置');
   }
 }
 

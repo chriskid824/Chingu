@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// A/B Testing Manager
 /// 支持功能開關和變體測試
@@ -15,6 +18,16 @@ class ABTestManager {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => 
       _authInstance ??= FirebaseAuth.instance;
+
+  @visibleForTesting
+  void setFirestoreInstance(FirebaseFirestore instance) {
+    _firestoreInstance = instance;
+  }
+
+  @visibleForTesting
+  void setAuthInstance(FirebaseAuth instance) {
+    _authInstance = instance;
+  }
 
   // 本地緩存的測試配置
   Map<String, ABTestConfig> _cachedTests = {};
@@ -37,15 +50,17 @@ class ABTestManager {
         _cachedTests[config.testId] = config;
       }
 
-      // 加載用戶的變體分配
-      await _loadUserVariants();
+      // 如果當前有登入用戶，加載其變體
+      if (_auth.currentUser != null) {
+        await loadUserVariants();
+      }
     } catch (e) {
       print('Failed to initialize ABTestManager: $e');
     }
   }
 
   /// 加載用戶已分配的變體
-  Future<void> _loadUserVariants() async {
+  Future<void> loadUserVariants() async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
@@ -65,41 +80,69 @@ class ABTestManager {
     }
   }
 
+  /// 清除用戶數據（登出時調用）
+  void clearUserData() {
+    _userVariants.clear();
+  }
+
   /// 獲取用戶在特定測試中的變體
   /// 如果用戶尚未分配變體,則自動分配
   Future<String> getVariant(String testId) async {
-    // 檢查緩存
+    // 1. 檢查緩存
     if (_userVariants.containsKey(testId)) {
       return _userVariants[testId]!;
     }
 
-    // 檢查測試配置
+    // 2. 檢查測試配置是否存在
     final config = _cachedTests[testId];
     if (config == null) {
       return 'control'; // 默認返回對照組
     }
 
-    // 分配新變體
+    // 3. 分配新變體
     final variant = _assignVariant(config);
-    await _saveVariantAssignment(testId, variant);
     
+    // 4. 保存分配結果（異步保存，不阻塞返回）
+    _saveVariantAssignment(testId, variant).ignore();
+
+    // 更新本地緩存
     _userVariants[testId] = variant;
     return variant;
   }
 
-  /// 分配變體(基於權重)
+  /// 分配變體(基於權重和用戶ID的確定性哈希)
   String _assignVariant(ABTestConfig config) {
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
-    var cumulative = 0.0;
+    final userId = _auth.currentUser?.uid;
+    // 如果沒有用戶ID，回退到隨機分配或默認
+    if (userId == null) {
+      return config.variants.isNotEmpty ? config.variants.first.name : 'control';
+    }
 
+    // 使用 SHA-256 哈希確保確定性分配
+    // hash(testId:userId)
+    final hashInput = '${config.testId}:$userId';
+    final hash = sha256.convert(utf8.encode(hashInput));
+
+    // 取哈希的前4個字節轉換為整數
+    final hashBytes = hash.bytes;
+    final hashInt = (hashBytes[0] << 24) |
+                   (hashBytes[1] << 16) |
+                   (hashBytes[2] << 8) |
+                   hashBytes[3];
+
+    // 轉換為 0.00-99.99 的值
+    final normalized = (hashInt.abs() % 10000) / 100.0;
+
+    var cumulative = 0.0;
     for (var variant in config.variants) {
       cumulative += variant.weight;
-      if (random < cumulative) {
+      if (normalized < cumulative) {
         return variant.name;
       }
     }
 
-    return config.variants.first.name;
+    // 默認返回第一個變體
+    return config.variants.isNotEmpty ? config.variants.first.name : 'control';
   }
 
   /// 保存用戶的變體分配到 Firestore
@@ -129,17 +172,17 @@ class ABTestManager {
     String featureKey, {
     String? specificVariant,
   }) async {
-    // 嘗試作為 A/B 測試
+    // 1. 嘗試作為 A/B 測試
     if (_cachedTests.containsKey(featureKey)) {
       final variant = await getVariant(featureKey);
       if (specificVariant != null) {
         return variant == specificVariant;
       }
-      // 默認: 非 control 變體返回 true
+      // 默認: 非 control 變體視為啟用
       return variant != 'control';
     }
 
-    // 作為簡單功能開關檢查
+    // 2. 作為簡單功能開關檢查
     final config = await _getFeatureConfig(featureKey);
     return config?.enabled ?? false;
   }
