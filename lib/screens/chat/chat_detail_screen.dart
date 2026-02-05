@@ -22,6 +22,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoadingUser = false;
 
   @override
   void didChangeDependencies() {
@@ -33,6 +34,52 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _otherUser = args['otherUser'];
       }
       _isInit = true;
+    }
+
+    if (_otherUser == null && _chatRoomId != null && !_isLoadingUser) {
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.uid != null) {
+        _isLoadingUser = true;
+        _loadChatDetails(_chatRoomId!, authProvider.uid!);
+      }
+    }
+  }
+
+  Future<void> _loadChatDetails(String chatRoomId, String currentUserId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        final participants = List<String>.from(data['participantIds'] ?? []);
+
+        final otherUserId = participants.firstWhere(
+          (id) => id != currentUserId,
+          orElse: () => '',
+        );
+
+        if (otherUserId.isNotEmpty) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(otherUserId)
+              .get();
+
+          if (userDoc.exists && mounted) {
+            setState(() {
+              _otherUser = UserModel.fromMap(userDoc.data()!, userDoc.id);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading chat details: $e');
+    } finally {
+      if (mounted) {
+        _isLoadingUser = false;
+      }
     }
   }
 

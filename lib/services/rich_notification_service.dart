@@ -1,9 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+
+class NotificationActionResult {
+  final String route;
+  final Object? arguments;
+
+  NotificationActionResult({required this.route, this.arguments});
+}
 
 class RichNotificationService {
   // Singleton pattern
@@ -77,51 +85,80 @@ class RichNotificationService {
     }
   }
 
+  /// 獲取初始通知動作（若應用是從通知啟動）
+  Future<NotificationActionResult?> getInitialNotificationAction() async {
+    // 1. 檢查 Firebase Messaging (FCM) 的初始訊息
+    RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null) {
+      final data = initialMessage.data;
+      final actionType = data['actionType'];
+      final actionData = data['actionData'];
+
+      if (actionType != null) {
+        return _resolveRoute(actionType, actionData);
+      }
+    }
+
+    // 2. 檢查 Flutter Local Notifications 的啟動詳情
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      final payload = notificationAppLaunchDetails!.notificationResponse?.payload;
+      if (payload != null) {
+         try {
+            final Map<String, dynamic> data = json.decode(payload);
+            final String? actionType = data['actionType'];
+            final String? actionData = data['actionData'];
+            final String? actionId = notificationAppLaunchDetails.notificationResponse?.actionId;
+
+            final action = (actionId != null && actionId != 'default') ? actionId : actionType;
+            if (action != null) {
+              return _resolveRoute(action, actionData);
+            }
+         } catch (e) {
+            debugPrint('Error parsing launch payload: $e');
+         }
+      }
+    }
+
+    return null;
+  }
+
+  NotificationActionResult? _resolveRoute(String action, String? data) {
+    switch (action) {
+      case 'open_chat':
+        if (data != null) {
+           return NotificationActionResult(
+             route: AppRoutes.chatDetail,
+             arguments: {'chatRoomId': data}
+           );
+        }
+        return NotificationActionResult(route: AppRoutes.chatList);
+      case 'view_event':
+        return NotificationActionResult(
+            route: AppRoutes.eventDetail,
+            arguments: data != null ? {'eventId': data} : null
+        );
+      case 'match_history':
+        return NotificationActionResult(route: AppRoutes.matchesList);
+      default:
+        return NotificationActionResult(route: AppRoutes.notifications);
+    }
+  }
+
   /// 處理導航邏輯
   void _handleNavigation(String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
-    // 優先處理按鈕點擊
-    if (actionId != null && actionId != 'default') {
-      _performAction(actionId, actionData, navigator);
-      return;
-    }
-
-    // 處理一般通知點擊
-    if (actionType != null) {
-      _performAction(actionType, actionData, navigator);
-    }
-  }
-
-  void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
-      case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
-        break;
-      case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
-        break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
-      default:
-        // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
-        break;
+    final action = (actionId != null && actionId != 'default') ? actionId : actionType;
+    if (action != null) {
+      final result = _resolveRoute(action, actionData);
+      if (result != null) {
+        navigator.pushNamed(result.route, arguments: result.arguments);
+      }
     }
   }
 
