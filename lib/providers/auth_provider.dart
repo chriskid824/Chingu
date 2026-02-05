@@ -281,6 +281,53 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 刪除用戶帳號
+  Future<void> deleteAccount() async {
+    try {
+      if (_firebaseUser == null) return;
+
+      _setLoading(true);
+      _errorMessage = null;
+
+      // 1. 刪除 Firestore 資料
+      await _firestoreService.deleteUser(_firebaseUser!.uid);
+
+      // 2. 刪除 Firebase Auth 帳號
+      await _authService.deleteAccount();
+
+      // 狀態更新由 _onAuthStateChanged 處理
+
+      _setLoading(false);
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      rethrow; // 讓 UI 層處理特定錯誤 (如 requires-recent-login)
+    }
+  }
+
+  /// 請求資料導出
+  Future<void> requestDataExport() async {
+    try {
+      if (_firebaseUser == null) return;
+
+      _setLoading(true);
+
+      // 模擬 API 請求延遲
+      await Future.delayed(const Duration(seconds: 2));
+
+      // 這裡可以添加日誌或調用後端 API
+      debugPrint('User ${_firebaseUser!.uid} requested data export');
+
+      _setLoading(false);
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      throw Exception('請求資料導出失敗: $e');
+    }
+  }
+
   /// 設置載入狀態
   void _setLoading(bool value) {
     _isLoading = value;
