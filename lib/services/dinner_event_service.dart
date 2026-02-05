@@ -3,7 +3,10 @@ import 'package:chingu/models/dinner_event_model.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  DinnerEventService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
@@ -52,7 +55,7 @@ class DinnerEventService {
         notes: notes,
         participantIds: participantIds,
         participantStatus: participantStatus,
-        status: 'pending', // 等待配對
+        status: EventStatus.pending, // 等待配對
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
       );
@@ -126,34 +129,53 @@ class DinnerEventService {
 
         final data = snapshot.data() as Map<String, dynamic>;
         final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final waitlist = List<String>.from(data['waitlist'] ?? []);
         
         if (participantIds.contains(userId)) {
           throw Exception('您已加入此活動');
         }
 
-        if (participantIds.length >= 6) {
-          throw Exception('活動人數已滿');
+        if (waitlist.contains(userId)) {
+          throw Exception('您已在等候清單中');
         }
 
-        // 更新參與者列表
-        participantIds.add(userId);
-        
-        // 更新參與者狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
-
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
-
-        // 如果人數達到 6 人，自動確認活動
-        if (participantIds.length == 6) {
-          updates['status'] = 'confirmed';
-          updates['confirmedAt'] = FieldValue.serverTimestamp();
+        // 檢查活動狀態
+        final statusStr = data['status'] as String? ?? 'pending';
+        if (statusStr == EventStatus.cancelled.name || statusStr == EventStatus.closed.name) {
+          throw Exception('活動已取消或截止');
         }
 
-        transaction.update(docRef, updates);
+        // 檢查報名截止時間 (例如活動前2小時)
+        final dateTime = (data['dateTime'] as Timestamp).toDate();
+        if (DateTime.now().isAfter(dateTime.subtract(const Duration(hours: 2)))) {
+          throw Exception('報名已截止');
+        }
+
+        if (participantIds.length >= MAX_PARTICIPANTS) {
+          // 加入等候清單
+          waitlist.add(userId);
+          transaction.update(docRef, {'waitlist': waitlist});
+        } else {
+          // 加入參與者
+          participantIds.add(userId);
+
+          // 更新參與者狀態
+          final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
+          participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
+
+          final updates = {
+            'participantIds': participantIds,
+            'participantStatus': participantStatus,
+          };
+
+          // 如果人數達到 6 人，自動確認活動
+          if (participantIds.length == 6) {
+            updates['status'] = EventStatus.confirmed.name;
+            updates['confirmedAt'] = FieldValue.serverTimestamp();
+          }
+
+          transaction.update(docRef, updates);
+        }
       });
     } catch (e) {
       throw Exception('加入活動失敗: $e');
@@ -176,9 +198,23 @@ class DinnerEventService {
 
         final data = snapshot.data() as Map<String, dynamic>;
         final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final waitlist = List<String>.from(data['waitlist'] ?? []);
         
+        // 檢查用戶是否在等候清單
+        if (waitlist.contains(userId)) {
+          waitlist.remove(userId);
+          transaction.update(docRef, {'waitlist': waitlist});
+          return;
+        }
+
         if (!participantIds.contains(userId)) {
           throw Exception('您未加入此活動');
+        }
+
+        // 檢查取消截止時間 (活動前24小時)
+        final dateTime = (data['dateTime'] as Timestamp).toDate();
+        if (DateTime.now().isAfter(dateTime.subtract(const Duration(hours: 24)))) {
+          throw Exception('已超過取消期限（活動前24小時），無法取消。如需協助請聯繫客服。');
         }
 
         // 移除參與者
@@ -188,19 +224,35 @@ class DinnerEventService {
         final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
         participantStatus.remove(userId);
 
+        // 自動從等候清單遞補
+        if (waitlist.isNotEmpty) {
+          final nextUserId = waitlist.removeAt(0); // 取出第一位
+          participantIds.add(nextUserId);
+          participantStatus[nextUserId] = 'confirmed'; // 自動確認
+        }
+
         final updates = {
           'participantIds': participantIds,
           'participantStatus': participantStatus,
+          'waitlist': waitlist,
         };
 
-        // 如果活動人數少於 6 人且狀態為已確認，可能需要處理（暫時簡單處理：變回 pending）
-        if (data['status'] == 'confirmed' && participantIds.length < 6) {
-          updates['status'] = 'pending';
+        // 更新活動狀態
+        if (participantIds.length == 6) {
+          updates['status'] = EventStatus.confirmed.name;
+          if (data['status'] != EventStatus.confirmed.name) {
+             updates['confirmedAt'] = FieldValue.serverTimestamp();
+          }
+        } else if (participantIds.length < 6) {
+          if (data['status'] == EventStatus.confirmed.name) {
+            updates['status'] = EventStatus.pending.name;
+            updates['confirmedAt'] = FieldValue.delete();
+          }
         }
 
-        // 如果沒有參與者了，可以考慮刪除活動或標記為取消
-        if (participantIds.isEmpty) {
-          updates['status'] = 'cancelled';
+        // 如果沒有參與者且沒有候補，標記為取消
+        if (participantIds.isEmpty && waitlist.isEmpty) {
+          updates['status'] = EventStatus.cancelled.name;
         }
 
         transaction.update(docRef, updates);
@@ -225,7 +277,7 @@ class DinnerEventService {
       Query query = _eventsCollection
           .where('city', isEqualTo: city)
           .where('budgetRange', isEqualTo: budgetRange)
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: EventStatus.pending.name)
           .orderBy('dateTime') // 按時間排序
           .limit(20);
 
@@ -318,7 +370,7 @@ class DinnerEventService {
       
       final querySnapshot = await _eventsCollection
           .where('city', isEqualTo: city)
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: EventStatus.pending.name)
           .get();
           
       String? targetEventId;
@@ -369,6 +421,3 @@ class DinnerEventService {
     }
   }
 }
-
-
-
