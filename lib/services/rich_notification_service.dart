@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -17,6 +18,12 @@ class RichNotificationService {
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  final StreamController<Map<String, dynamic>> _onNotificationTapController =
+      StreamController.broadcast();
+
+  Stream<Map<String, dynamic>> get onNotificationTapStream =>
+      _onNotificationTapController.stream;
 
   bool _isInitialized = false;
 
@@ -64,6 +71,10 @@ class RichNotificationService {
     if (response.payload != null) {
       try {
         final Map<String, dynamic> data = json.decode(response.payload!);
+
+        // 通知監聽者
+        _onNotificationTapController.add(data);
+
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
 
@@ -126,7 +137,8 @@ class RichNotificationService {
   }
 
   /// 顯示豐富通知
-  Future<void> showNotification(NotificationModel notification) async {
+  Future<void> showNotification(NotificationModel notification,
+      {Map<String, dynamic>? extraPayload}) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
 
@@ -186,6 +198,7 @@ class RichNotificationService {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
       'notificationId': notification.id,
+      ...?extraPayload,
     };
 
     await _flutterLocalNotificationsPlugin.show(
