@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -60,6 +61,8 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+        // 保存 FCM Token
+        RichNotificationService().saveFcmToken(uid);
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';

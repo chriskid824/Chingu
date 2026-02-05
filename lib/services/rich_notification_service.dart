@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
 
@@ -91,6 +93,29 @@ class RichNotificationService {
     // 處理一般通知點擊
     if (actionType != null) {
       _performAction(actionType, actionData, navigator);
+    }
+  }
+
+  /// 保存用戶 FCM Token
+  Future<void> saveFcmToken(String uid) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'fcmToken': token,
+        });
+        debugPrint('FCM Token saved for user $uid');
+      }
+
+      // 監聽 Token 刷新
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'fcmToken': newToken,
+        });
+        debugPrint('FCM Token updated for user $uid');
+      });
+    } catch (e) {
+      debugPrint('Error saving FCM token: $e');
     }
   }
 
