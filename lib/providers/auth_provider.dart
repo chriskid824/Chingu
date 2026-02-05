@@ -262,6 +262,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// 更新隱私設定
+  Future<bool> updatePrivacySettings({
+    bool? showOnlineStatus,
+    bool? showLastSeen,
+  }) async {
+    try {
+      if (_firebaseUser == null) return false;
+
+      final Map<String, dynamic> data = {};
+      if (showOnlineStatus != null) data['showOnlineStatus'] = showOnlineStatus;
+      if (showLastSeen != null) data['showLastSeen'] = showLastSeen;
+
+      if (data.isEmpty) return true;
+
+      return await updateUserData(data);
+    } catch (e) {
+      debugPrint('Update privacy settings failed: $e');
+      return false;
+    }
+  }
+
   /// 檢查用戶是否完成 Onboarding
   bool hasCompletedOnboarding() {
     if (_userModel == null) return false;
