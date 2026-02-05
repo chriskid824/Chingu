@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/user_block_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final UserBlockService _userBlockService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    UserBlockService? userBlockService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _userBlockService = userBlockService ?? UserBlockService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -49,7 +53,11 @@ class MatchingService {
       final swipedIds = await _getSwipedUserIds(currentUser.uid);
       print('已滑過 ${swipedIds.length} 個用戶');
 
-      // 3. 過濾和評分
+      // 3. 獲取已封鎖的用戶 ID
+      final blockedIds = await _userBlockService.getBlockedUserIds(currentUser.uid);
+      print('已封鎖 ${blockedIds.length} 個用戶');
+
+      // 4. 過濾和評分
       List<Map<String, dynamic>> scoredMatches = [];
 
       for (var candidate in candidates) {
@@ -62,6 +70,12 @@ class MatchingService {
         // 排除已滑過的
         if (swipedIds.contains(candidate.uid)) {
           print('跳過: 已滑過 (${candidate.name})');
+          continue;
+        }
+
+        // 排除已封鎖的
+        if (blockedIds.contains(candidate.uid)) {
+          print('跳過: 已封鎖 (${candidate.name})');
           continue;
         }
 
@@ -157,8 +171,9 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
+        // 注意：這裡不調用 _handleMatchSuccess，因為 recordSwipe 會在收到 true 後調用它。
+        // 避免重複調用導致重複創建聊天室或統計數據錯誤。
         return true;
       }
       return false;
@@ -280,6 +295,16 @@ class MatchingService {
     } catch (e) {
       throw Exception('清除滑動記錄失敗: $e');
     }
+  }
+
+  /// 封鎖用戶 (代理方法)
+  Future<void> blockUser(String currentUserId, String targetUserId) async {
+    await _userBlockService.blockUser(currentUserId, targetUserId);
+  }
+
+  /// 解除封鎖 (代理方法)
+  Future<void> unblockUser(String currentUserId, String targetUserId) async {
+    await _userBlockService.unblockUser(currentUserId, targetUserId);
   }
 }
 

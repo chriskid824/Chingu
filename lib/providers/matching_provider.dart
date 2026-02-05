@@ -109,6 +109,21 @@ class MatchingProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+
+  /// 封鎖用戶
+  Future<void> blockUser(String currentUserId, String targetUserId) async {
+    try {
+      // 樂觀更新：從列表中移除
+      _candidates.removeWhere((user) => user.uid == targetUserId);
+      notifyListeners();
+
+      // 調用服務
+      await _matchingService.blockUser(currentUserId, targetUserId);
+    } catch (e) {
+      print('封鎖用戶失敗: $e');
+      // 可以考慮回滾或顯示錯誤
+    }
+  }
 }
 
 
