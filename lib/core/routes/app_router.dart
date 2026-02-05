@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/models/user_model.dart';
+import '../../screens/profile/favorites_screen.dart';
 // 認證模組
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -96,6 +98,7 @@ class AppRoutes {
   static const String privacySettings = '/privacy-settings';
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
+  static const String favorites = '/favorites';
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
@@ -166,11 +169,20 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
+      case AppRoutes.favorites:
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+
       // ==================== 配對模組 ====================
       case AppRoutes.matching:
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
+        final args = settings.arguments;
+        if (args is UserModel) {
+          return MaterialPageRoute(builder: (_) => UserDetailScreen(user: args));
+        } else if (args is String) {
+          return MaterialPageRoute(builder: (_) => UserDetailScreen(userId: args));
+        }
         return MaterialPageRoute(builder: (_) => const UserDetailScreen());
       
       case AppRoutes.matchesList:

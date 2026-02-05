@@ -166,7 +166,42 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-                        // Debug Button
+
+                        // 我的收藏按鈕
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 40),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pushNamed(context, AppRoutes.favorites);
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.favorite_rounded, color: Colors.white, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '我的收藏',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
                         // Debug Button
                         Container(
                           decoration: BoxDecoration(
