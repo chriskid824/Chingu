@@ -3,7 +3,9 @@ import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 
 class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key});
+  final String? eventId;
+
+  const EventDetailScreen({super.key, this.eventId});
   
   @override
   Widget build(BuildContext context) {
