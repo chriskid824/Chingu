@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/services/rich_notification_service.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
@@ -58,6 +59,10 @@ class DinnerEventService {
       );
 
       await docRef.set(event.toMap());
+
+      // 創建者自動加入，排程提醒
+      await _scheduleReminders(docRef.id, creatorId, dateTime);
+
       return docRef.id;
     } catch (e) {
       throw Exception('創建活動失敗: $e');
@@ -155,6 +160,21 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 交易成功後，排程提醒
+      // 由於事務中無法直接獲取完整的 date，我們需要再次獲取或從快照中讀取（但快照是舊的）
+      // 為了準確，我們讀取一次（或假設日期不變）
+      try {
+        final doc = await _eventsCollection.doc(eventId).get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          final dateTime = (data['dateTime'] as Timestamp).toDate();
+          await _scheduleReminders(eventId, userId, dateTime);
+        }
+      } catch (e) {
+        // 記錄錯誤但不中斷流程
+        debugPrint('Failed to schedule reminders after joining event: $e');
+      }
     } catch (e) {
       throw Exception('加入活動失敗: $e');
     }
@@ -205,6 +225,14 @@ class DinnerEventService {
 
         transaction.update(docRef, updates);
       });
+
+      // 交易成功後，取消提醒
+      try {
+        await RichNotificationService().cancelEventNotification(eventId);
+      } catch (e) {
+        debugPrint('Failed to cancel reminders after leaving event: $e');
+      }
+
     } catch (e) {
       throw Exception('退出活動失敗: $e');
     }
@@ -295,6 +323,45 @@ class DinnerEventService {
   /// [date] 日期
   /// [city] 城市
   /// [district] 地區
+  /// 私有方法：排程提醒
+  Future<void> _scheduleReminders(String eventId, String userId, DateTime dateTime) async {
+    try {
+      // 檢查用戶設定
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final settings = userData['notificationSettings'] as Map<String, dynamic>? ?? {};
+
+      final notificationService = RichNotificationService();
+
+      // 1天前提醒
+      if (settings['eventReminder1d'] != false) {
+        await notificationService.scheduleEventNotification(
+          eventId: eventId,
+          title: '晚餐活動提醒',
+          body: '您明晚有一場晚餐聚會喔！',
+          scheduledDate: dateTime.subtract(const Duration(days: 1)),
+          type: '1d',
+        );
+      }
+
+      // 1小時前提醒
+      if (settings['eventReminder1h'] != false) {
+        await notificationService.scheduleEventNotification(
+          eventId: eventId,
+          title: '晚餐活動即將開始',
+          body: '您參加的晚餐聚會將在1小時後開始，別遲到囉！',
+          scheduledDate: dateTime.subtract(const Duration(hours: 1)),
+          type: '1h',
+        );
+      }
+    } catch (e) {
+      // 即使排程失敗，也不應影響主要的業務邏輯
+      debugPrint('Error scheduling reminders: $e');
+    }
+  }
+
   Future<String> joinOrCreateEvent({
     required String userId,
     required DateTime date,
