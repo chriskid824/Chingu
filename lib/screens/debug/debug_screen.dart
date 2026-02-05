@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -104,76 +106,104 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  void _testInAppNotification() {
+    final notification = NotificationModel(
+      id: DateTime.now().toString(),
+      userId: FirebaseAuth.instance.currentUser?.uid ?? 'test-user',
+      type: 'match',
+      title: '新的配對成功！',
+      message: '你和 Alice 互相喜歡了，快去打招呼吧！',
+      actionType: 'view_match',
+      actionData: 'test-user-id',
+      createdAt: DateTime.now(),
+    );
+    RichNotificationService().showInAppNotification(notification);
+    setState(() {
+      _status = '✅ 已發送測試 In-App Notification';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('開發者工具')),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 24),
-            const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                '點擊下方按鈕將生成 6 個測試用戶和 1 個測試活動到您的 Firestore 資料庫中。',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 32),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton.icon(
-                onPressed: _runSeeder,
-                icon: const Icon(Icons.add_to_photos_rounded),
-                label: const Text('生成測試數據 (Seeder)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.storage_rounded, size: 64, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 24),
+              const Text('Firebase 資料庫工具 (v2.0)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _generateMatchTestData,
-                icon: const Icon(Icons.favorite_rounded),
-                label: const Text('生成配對測試數據'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.pink,
-                  side: const BorderSide(color: Colors.pink),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  '點擊下方按鈕將生成 6 個測試用戶和 1 個測試活動到您的 Firestore 資料庫中。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
                 ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _clearData,
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('清除所有數據'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              const SizedBox(height: 32),
+              if (_isLoading)
+                const CircularProgressIndicator()
+              else ...[
+                ElevatedButton.icon(
+                  onPressed: _runSeeder,
+                  icon: const Icon(Icons.add_to_photos_rounded),
+                  label: const Text('生成測試數據 (Seeder)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _generateMatchTestData,
+                  icon: const Icon(Icons.favorite_rounded),
+                  label: const Text('生成配對測試數據'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.pink,
+                    side: const BorderSide(color: Colors.pink),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _clearData,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('清除所有數據'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _testInAppNotification,
+                  icon: const Icon(Icons.notifications_active_rounded),
+                  label: const Text('測試 In-App 通知'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    side: const BorderSide(color: Colors.blue),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              Text(
+                _status,
+                style: TextStyle(
+                  color: _status.startsWith('❌') ? Colors.red : Colors.green,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            const SizedBox(height: 24),
-            Text(
-              _status,
-              style: TextStyle(
-                color: _status.startsWith('❌') ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-
-

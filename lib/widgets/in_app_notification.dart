@@ -3,12 +3,83 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_model.dart';
 import '../core/theme/app_theme.dart';
 
-class InAppNotification extends StatelessWidget {
+/// Animated banner for in-app notifications
+class InAppNotificationBanner extends StatefulWidget {
+  final NotificationModel notification;
+  final VoidCallback onDismiss;
+  final VoidCallback onTap;
+
+  const InAppNotificationBanner({
+    super.key,
+    required this.notification,
+    required this.onDismiss,
+    required this.onTap,
+  });
+
+  @override
+  State<InAppNotificationBanner> createState() => _InAppNotificationBannerState();
+}
+
+class _InAppNotificationBannerState extends State<InAppNotificationBanner> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    ));
+
+    // Start animation
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleDismiss() async {
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: InAppNotificationCard(
+          notification: widget.notification,
+          onDismiss: _handleDismiss,
+          onTap: widget.onTap,
+        ),
+      ),
+    );
+  }
+}
+
+/// The UI Card for the notification
+class InAppNotificationCard extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback? onDismiss;
   final VoidCallback? onTap;
 
-  const InAppNotification({
+  const InAppNotificationCard({
     super.key,
     required this.notification,
     this.onDismiss,

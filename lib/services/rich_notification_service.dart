@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../core/routes/app_router.dart';
+import '../widgets/in_app_notification.dart';
 
 class RichNotificationService {
   // Singleton pattern
@@ -19,6 +23,8 @@ class RichNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  OverlayEntry? _overlayEntry;
+  Timer? _dismissTimer;
 
   /// 初始化通知服務
   Future<void> initialize() async {
@@ -56,10 +62,84 @@ class RichNotificationService {
       await androidImplementation.requestNotificationsPermission();
     }
 
+    // 設置 FCM 前台監聽器
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
     _isInitialized = true;
   }
 
-  /// 處理通知點擊事件
+  /// 處理 FCM 前台訊息
+  void _handleForegroundMessage(RemoteMessage message) {
+    // 只有當包含通知內容時才顯示 In-App Notification
+    if (message.notification != null || message.data.isNotEmpty) {
+      final data = message.data;
+
+      // 構建 NotificationModel
+      final notification = NotificationModel(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        type: data['type'] ?? 'system',
+        title: message.notification?.title ?? data['title'] ?? '通知',
+        message: message.notification?.body ?? data['message'] ?? '',
+        imageUrl: data['imageUrl'],
+        actionType: data['actionType'],
+        actionData: data['actionData'],
+        createdAt: DateTime.now(),
+      );
+
+      showInAppNotification(notification);
+    }
+  }
+
+  /// 顯示應用內通知橫幅
+  void showInAppNotification(NotificationModel notification) {
+    // 確保在主線程執行 UI 操作
+    if (AppRouter.navigatorKey.currentState?.overlay == null) {
+      debugPrint('Navigator overlay is null, cannot show in-app notification');
+      return;
+    }
+
+    _removeCurrentNotification();
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => InAppNotificationBanner(
+        notification: notification,
+        onDismiss: _removeCurrentNotification,
+        onTap: () {
+          _removeCurrentNotification();
+          _handleNavigation(
+            notification.actionType,
+            notification.actionData,
+            null,
+          );
+        },
+      ),
+    );
+
+    AppRouter.navigatorKey.currentState!.overlay!.insert(_overlayEntry!);
+
+    // 自動隱藏倒計時 (5秒)
+    _dismissTimer = Timer(const Duration(seconds: 5), () {
+      _removeCurrentNotification();
+    });
+  }
+
+  void _removeCurrentNotification() {
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+
+    if (_overlayEntry != null) {
+      try {
+        _overlayEntry!.remove();
+      } catch (e) {
+        // 忽略移除時可能發生的錯誤 (如已經被移除)
+        debugPrint('Error removing overlay entry: $e');
+      }
+      _overlayEntry = null;
+    }
+  }
+
+  /// 處理通知點擊事件 (本地通知)
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null) {
       try {
@@ -118,6 +198,14 @@ class RichNotificationService {
       case 'match_history':
         navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
         break;
+      case 'view_match': // Added handling for view_match based on memory
+         // Navigate to UserDetail with userId
+         if (data != null) {
+             navigator.pushNamed(AppRoutes.userDetail, arguments: data);
+         } else {
+             navigator.pushNamed(AppRoutes.matchesList);
+         }
+         break;
       default:
         // 預設導航到通知頁面
         navigator.pushNamed(AppRoutes.notifications);
@@ -125,7 +213,7 @@ class RichNotificationService {
     }
   }
 
-  /// 顯示豐富通知
+  /// 顯示豐富通知 (本地系統通知)
   Future<void> showNotification(NotificationModel notification) async {
     // Android 通知詳情
     StyleInformation? styleInformation;
