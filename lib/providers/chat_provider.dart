@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
+import 'package:chingu/services/notification_storage_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -117,6 +118,9 @@ class ChatProvider with ChangeNotifier {
     required String chatRoomId,
     required String senderId,
     required String text,
+    String? senderName,
+    String? senderAvatarUrl,
+    String? receiverId,
     String type = 'text',
   }) async {
     try {
@@ -137,6 +141,21 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 發送通知 (如果提供了接收者 ID)
+      if (receiverId != null && senderName != null) {
+        try {
+          await NotificationStorageService().createMessageNotification(
+            targetUserId: receiverId,
+            senderName: senderName,
+            senderId: senderId,
+            messagePreview: type == 'text' ? text : (type == 'image' ? '[圖片]' : '[訊息]'),
+            senderPhotoUrl: senderAvatarUrl,
+          );
+        } catch (e) {
+          print('發送訊息通知失敗: $e');
+        }
+      }
     } catch (e) {
       print('發送訊息失敗: $e');
       rethrow;

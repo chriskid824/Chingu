@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 
 /// 通知儲存服務
 /// 負責 Firestore 中通知的 CRUD 操作
@@ -30,6 +31,25 @@ class NotificationStorageService {
         .collection('users')
         .doc(userId)
         .collection('notifications');
+  }
+
+  /// 檢查是否應該發送通知
+  Future<bool> _shouldNotify(String userId, bool Function(UserModel) preferenceSelector) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (!doc.exists) return false;
+
+      final user = UserModel.fromFirestore(doc);
+
+      // 首先檢查總開關
+      if (!user.pushNotificationsEnabled) return false;
+
+      // 檢查特定偏好
+      return preferenceSelector(user);
+    } catch (e) {
+      print('檢查通知偏好失敗: $e');
+      return true; // 默認發送，避免因錯誤漏發
+    }
   }
 
   /// 儲存新通知
@@ -247,18 +267,47 @@ class NotificationStorageService {
     await _notificationsRef(userId).add(notification.toMap());
   }
 
+  /// 創建喜歡通知 (有人喜歡你)
+  Future<void> createLikeNotification({
+    required String targetUserId,
+    required String admirerName,
+    required String admirerId,
+    String? admirerPhotoUrl,
+  }) async {
+    // 檢查偏好
+    final shouldNotify = await _shouldNotify(targetUserId, (u) => u.notifyNewMatches);
+    if (!shouldNotify) return;
+
+    final notification = NotificationModel(
+      id: '',
+      userId: targetUserId,
+      type: 'like',
+      title: '有人喜歡你!',
+      message: '$admirerName 喜歡了你！',
+      imageUrl: admirerPhotoUrl,
+      actionType: 'view_profile',
+      actionData: admirerId,
+      isRead: false,
+      createdAt: DateTime.now(),
+    );
+
+    await _notificationsRef(targetUserId).add(notification.toMap());
+  }
+
   /// 創建配對通知
   Future<void> createMatchNotification({
+    required String targetUserId,
     required String matchedUserName,
     required String matchedUserId,
     String? matchedUserPhotoUrl,
   }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
+    // 檢查偏好
+    final shouldNotify = await _shouldNotify(targetUserId, (u) => u.notifyMatchSuccess);
+    if (!shouldNotify) return;
 
     final notification = NotificationModel(
       id: '',
-      userId: userId,
+      userId: targetUserId,
       type: 'match',
       title: '新配對成功! 🎉',
       message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
@@ -269,22 +318,24 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef(targetUserId).add(notification.toMap());
   }
 
   /// 創建活動通知
   Future<void> createEventNotification({
+    required String targetUserId,
     required String eventId,
     required String eventTitle,
     required String message,
     String? imageUrl,
   }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
+    // 檢查偏好
+    final shouldNotify = await _shouldNotify(targetUserId, (u) => u.notifyEventReminders);
+    if (!shouldNotify) return;
 
     final notification = NotificationModel(
       id: '',
-      userId: userId,
+      userId: targetUserId,
       type: 'event',
       title: eventTitle,
       message: message,
@@ -295,22 +346,24 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef(targetUserId).add(notification.toMap());
   }
 
   /// 創建消息通知
   Future<void> createMessageNotification({
+    required String targetUserId,
     required String senderName,
     required String senderId,
     required String messagePreview,
     String? senderPhotoUrl,
   }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
+    // 檢查偏好
+    final shouldNotify = await _shouldNotify(targetUserId, (u) => u.notifyNewMessages);
+    if (!shouldNotify) return;
 
     final notification = NotificationModel(
       id: '',
-      userId: userId,
+      userId: targetUserId,
       type: 'message',
       title: senderName,
       message: messagePreview,
@@ -321,6 +374,6 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef(targetUserId).add(notification.toMap());
   }
 }

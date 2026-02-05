@@ -33,6 +33,16 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 通知偏好
+  final bool pushNotificationsEnabled;
+  final bool notifyNewMatches;
+  final bool notifyMatchSuccess;
+  final bool notifyNewMessages;
+  final bool notifyEventReminders;
+  final bool notifyEventChanges;
+  final bool notifyPromotions;
+  final bool notifyNewsletter;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,6 +73,14 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.pushNotificationsEnabled = true,
+    this.notifyNewMatches = true,
+    this.notifyMatchSuccess = true,
+    this.notifyNewMessages = true,
+    this.notifyEventReminders = true,
+    this.notifyEventChanges = true,
+    this.notifyPromotions = false,
+    this.notifyNewsletter = false,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +119,14 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      pushNotificationsEnabled: map['pushNotificationsEnabled'] ?? true,
+      notifyNewMatches: map['notifyNewMatches'] ?? true,
+      notifyMatchSuccess: map['notifyMatchSuccess'] ?? true,
+      notifyNewMessages: map['notifyNewMessages'] ?? true,
+      notifyEventReminders: map['notifyEventReminders'] ?? true,
+      notifyEventChanges: map['notifyEventChanges'] ?? true,
+      notifyPromotions: map['notifyPromotions'] ?? false,
+      notifyNewsletter: map['notifyNewsletter'] ?? false,
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +159,14 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'notifyNewMatches': notifyNewMatches,
+      'notifyMatchSuccess': notifyMatchSuccess,
+      'notifyNewMessages': notifyNewMessages,
+      'notifyEventReminders': notifyEventReminders,
+      'notifyEventChanges': notifyEventChanges,
+      'notifyPromotions': notifyPromotions,
+      'notifyNewsletter': notifyNewsletter,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +197,14 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? pushNotificationsEnabled,
+    bool? notifyNewMatches,
+    bool? notifyMatchSuccess,
+    bool? notifyNewMessages,
+    bool? notifyEventReminders,
+    bool? notifyEventChanges,
+    bool? notifyPromotions,
+    bool? notifyNewsletter,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +234,14 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      notifyNewMatches: notifyNewMatches ?? this.notifyNewMatches,
+      notifyMatchSuccess: notifyMatchSuccess ?? this.notifyMatchSuccess,
+      notifyNewMessages: notifyNewMessages ?? this.notifyNewMessages,
+      notifyEventReminders: notifyEventReminders ?? this.notifyEventReminders,
+      notifyEventChanges: notifyEventChanges ?? this.notifyEventChanges,
+      notifyPromotions: notifyPromotions ?? this.notifyPromotions,
+      notifyNewsletter: notifyNewsletter ?? this.notifyNewsletter,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
