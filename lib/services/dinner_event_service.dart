@@ -55,6 +55,7 @@ class DinnerEventService {
         status: 'pending', // 等待配對
         createdAt: DateTime.now(),
         icebreakerQuestions: icebreakerQuestions,
+        reminderSent: false,
       );
 
       await docRef.set(event.toMap());
