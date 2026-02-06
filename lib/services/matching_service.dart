@@ -3,20 +3,24 @@ import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
 import 'package:chingu/services/chat_service.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 配對服務 - 處理用戶配對邏輯、推薦與滑動記錄
 class MatchingService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
   final ChatService _chatService;
+  final NotificationService _notificationService;
 
   MatchingService({
     FirebaseFirestore? firestore,
     FirestoreService? firestoreService,
     ChatService? chatService,
+    NotificationService? notificationService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firestoreService = firestoreService ?? FirestoreService(),
-        _chatService = chatService ?? ChatService();
+        _chatService = chatService ?? ChatService(),
+        _notificationService = notificationService ?? NotificationService();
 
   /// 滑動記錄集合引用
   CollectionReference get _swipesCollection => _firestore.collection('swipes');
@@ -157,8 +161,7 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
+        // 配對成功！
         return true;
       }
       return false;
@@ -178,6 +181,33 @@ class MatchingService {
     // 更新雙方的 totalMatches
     await _firestoreService.updateUserStats(user1Id, totalMatches: 1);
     await _firestoreService.updateUserStats(user2Id, totalMatches: 1);
+
+    // 發送配對通知
+    try {
+      final results = await Future.wait([
+        _firestore.collection('users').doc(user1Id).get(),
+        _firestore.collection('users').doc(user2Id).get(),
+      ]);
+      final user1Doc = results[0];
+      final user2Doc = results[1];
+
+      final user1Name = user1Doc.data()?['name'] as String? ?? 'Someone';
+      final user2Name = user2Doc.data()?['name'] as String? ?? 'Someone';
+
+      // 通知 User 1 (內容顯示 User 2 的名字)
+      _notificationService.sendMatchNotification(
+        targetUserId: user1Id,
+        targetUserName: user2Name,
+      );
+
+      // 通知 User 2 (內容顯示 User 1 的名字)
+      _notificationService.sendMatchNotification(
+        targetUserId: user2Id,
+        targetUserName: user1Name,
+      );
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+    }
     
     // 創建聊天室
     return await _chatService.createChatRoom(user1Id, user2Id);
