@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/services/firestore_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -22,6 +23,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _chatRoomId;
   UserModel? _otherUser;
   bool _isInit = false;
+  bool _isLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -31,8 +33,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+
+        if (_otherUser == null && args['otherUserId'] != null) {
+          _fetchOtherUser(args['otherUserId']);
+        }
       }
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchOtherUser(String uid) async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await FirestoreService().getUser(uid);
+      if (mounted) {
+        setState(() {
+          _otherUser = user;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -128,7 +152,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
 
-    if (_chatRoomId == null || _otherUser == null) {
+    if (_isLoading || _chatRoomId == null || _otherUser == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
