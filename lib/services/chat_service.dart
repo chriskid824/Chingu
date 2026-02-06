@@ -103,9 +103,12 @@ class ChatService {
         'originalSenderName': originalSenderName,
       });
 
+      // 注意: 訊息發送後，Cloud Function 'sendChatNotification' 會被觸發
+      // 並負責發送推播通知給接收者。
+
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': type == 'text' ? message : '[$type]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
