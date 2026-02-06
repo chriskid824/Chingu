@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/firestore_service.dart';
 
@@ -117,11 +118,24 @@ class MatchingService {
         final isMatch = await _checkMutualMatch(userId, targetUserId);
         if (isMatch) {
           final chatRoomId = await _handleMatchSuccess(userId, targetUserId);
-          
+
           // 獲取對方資料以返回
-          final partnerDoc = await _firestore.collection('users').doc(targetUserId).get();
+          final partnerDoc =
+              await _firestore.collection('users').doc(targetUserId).get();
           final partner = UserModel.fromMap(partnerDoc.data()!, targetUserId);
-          
+
+          // 獲取當前用戶資料以發送通知
+          final currentUserDoc =
+              await _firestore.collection('users').doc(userId).get();
+          final currentUser = UserModel.fromMap(currentUserDoc.data()!, userId);
+
+          // 發送配對成功通知
+          await _sendMatchNotifications(
+            currentUser: currentUser,
+            partner: partner,
+            chatRoomId: chatRoomId,
+          );
+
           return {
             'isMatch': true,
             'chatRoomId': chatRoomId,
@@ -157,14 +171,49 @@ class MatchingService {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // 配對成功！創建聊天室或發送通知
-        await _handleMatchSuccess(userId, targetUserId);
         return true;
       }
       return false;
     } catch (e) {
       print('檢查配對失敗: $e');
       return false;
+    }
+  }
+
+  /// 發送配對通知
+  Future<void> _sendMatchNotifications({
+    required UserModel currentUser,
+    required UserModel partner,
+    required String chatRoomId,
+  }) async {
+    try {
+      final functions = FirebaseFunctions.instance;
+      final callable = functions.httpsCallable('sendNotification');
+
+      // 通知對方 (User B)
+      await callable.call({
+        'targetUserId': partner.uid,
+        'notificationType': 'match_success',
+        'params': {'userName': currentUser.name},
+        'data': {
+          'type': 'match',
+          'chatRoomId': chatRoomId,
+        },
+      });
+
+      // 通知當前用戶 (User A)
+      await callable.call({
+        'targetUserId': currentUser.uid,
+        'notificationType': 'match_success',
+        'params': {'userName': partner.name},
+        'data': {
+          'type': 'match',
+          'chatRoomId': chatRoomId,
+        },
+      });
+    } catch (e) {
+      print('發送配對通知失敗: $e');
+      // 不拋出異常，以免影響配對流程
     }
   }
 
