@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/notification_service.dart';
 
 /// 認證狀態枚舉
 enum AuthStatus {
@@ -34,6 +35,9 @@ class AuthProvider with ChangeNotifier {
   AuthProvider() {
     // 監聽認證狀態變化
     _authService.authStateChanges.listen(_onAuthStateChanged);
+
+    // 監聽 FCM Token 變化
+    NotificationService().tokenStream.listen(_onTokenRefresh);
   }
 
   /// 處理認證狀態變化
@@ -60,6 +64,12 @@ class AuthProvider with ChangeNotifier {
       if (_userModel != null) {
         // 更新最後登入時間
         await _firestoreService.updateLastLogin(uid);
+
+        // 檢查並更新 FCM Token
+        final token = await NotificationService().getToken();
+        if (token != null) {
+          await _updateFCMToken(token);
+        }
       } else {
         // 用戶文檔不存在
         _errorMessage = '找不到用戶資料 (Document Not Found)';
@@ -291,6 +301,32 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  Future<void> _onTokenRefresh(String? token) async {
+    if (_firebaseUser != null && token != null) {
+      await _updateFCMToken(token);
+    }
+  }
+
+  Future<void> _updateFCMToken(String token) async {
+    if (_firebaseUser == null) return;
+
+    // 避免不必要的更新
+    if (_userModel?.fcmToken == token) return;
+
+    try {
+      await _firestoreService.updateUser(_firebaseUser!.uid, {
+        'fcmToken': token,
+      });
+      // Update local model
+      if (_userModel != null) {
+        _userModel = _userModel!.copyWith(fcmToken: token);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('更新 FCM Token 失敗: $e');
+    }
   }
 }
 
