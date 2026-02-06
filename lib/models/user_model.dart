@@ -38,6 +38,9 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final NotificationSettings notificationSettings;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,7 +69,8 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
-  });
+    NotificationSettings? notificationSettings,
+  }) : notificationSettings = notificationSettings ?? NotificationSettings();
 
   /// 從 Firestore 文檔創建 UserModel
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -104,6 +108,9 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationSettings: NotificationSettings.fromMap(
+        map['notificationSettings'] ?? {},
+      ),
     );
   }
 
@@ -136,6 +143,7 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationSettings': notificationSettings.toMap(),
     };
   }
 
@@ -166,6 +174,7 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    NotificationSettings? notificationSettings,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +204,7 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 
@@ -231,5 +241,77 @@ class UserModel {
       default:
         return '不限';
     }
+  }
+}
+
+/// 通知設定模型
+class NotificationSettings {
+  final bool enablePushNotifications;
+  final bool newMatch;
+  final bool matchSuccess;
+  final bool newMessage;
+  final bool eventReminder;
+  final bool eventChange;
+  final bool promotions;
+  final bool newsletter;
+
+  NotificationSettings({
+    this.enablePushNotifications = true,
+    this.newMatch = true,
+    this.matchSuccess = true,
+    this.newMessage = true,
+    this.eventReminder = true,
+    this.eventChange = true,
+    this.promotions = false,
+    this.newsletter = false,
+  });
+
+  factory NotificationSettings.fromMap(Map<String, dynamic> map) {
+    return NotificationSettings(
+      enablePushNotifications: map['enablePushNotifications'] ?? true,
+      newMatch: map['newMatch'] ?? true,
+      matchSuccess: map['matchSuccess'] ?? true,
+      newMessage: map['newMessage'] ?? true,
+      eventReminder: map['eventReminder'] ?? true,
+      eventChange: map['eventChange'] ?? true,
+      promotions: map['promotions'] ?? false,
+      newsletter: map['newsletter'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'enablePushNotifications': enablePushNotifications,
+      'newMatch': newMatch,
+      'matchSuccess': matchSuccess,
+      'newMessage': newMessage,
+      'eventReminder': eventReminder,
+      'eventChange': eventChange,
+      'promotions': promotions,
+      'newsletter': newsletter,
+    };
+  }
+
+  NotificationSettings copyWith({
+    bool? enablePushNotifications,
+    bool? newMatch,
+    bool? matchSuccess,
+    bool? newMessage,
+    bool? eventReminder,
+    bool? eventChange,
+    bool? promotions,
+    bool? newsletter,
+  }) {
+    return NotificationSettings(
+      enablePushNotifications:
+          enablePushNotifications ?? this.enablePushNotifications,
+      newMatch: newMatch ?? this.newMatch,
+      matchSuccess: matchSuccess ?? this.matchSuccess,
+      newMessage: newMessage ?? this.newMessage,
+      eventReminder: eventReminder ?? this.eventReminder,
+      eventChange: eventChange ?? this.eventChange,
+      promotions: promotions ?? this.promotions,
+      newsletter: newsletter ?? this.newsletter,
+    );
   }
 }
