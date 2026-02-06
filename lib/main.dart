@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -12,6 +13,7 @@ import 'providers/chat_provider.dart';
 import 'services/crash_reporting_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // 確保 Flutter 綁定已初始化
@@ -31,11 +33,46 @@ void main() async {
   // 初始化豐富通知服務
   await RichNotificationService().initialize();
 
-  runApp(const ChinguApp());
+  // 初始化 FCM 通知服務
+  try {
+    await NotificationService().initialize();
+
+    // 註冊後台訊息處理器
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('Failed to initialize NotificationService: $e');
+  }
+
+  // 檢查是否從終止狀態啟動
+  String? initialRoute;
+  Object? initialArguments;
+
+  try {
+    final initialRouteInfo = await NotificationService().getInitialNotificationRoute();
+
+    if (initialRouteInfo != null) {
+      initialRoute = initialRouteInfo['route'] as String?;
+      initialArguments = initialRouteInfo['arguments'];
+    }
+  } catch (e) {
+    debugPrint('Failed to get initial notification route: $e');
+  }
+
+  runApp(ChinguApp(
+    initialRoute: initialRoute,
+    initialArguments: initialArguments,
+  ));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialRoute;
+  final Object? initialArguments;
+
+  const ChinguApp({
+    super.key,
+    this.initialRoute,
+    this.initialArguments,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +92,18 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
-            onGenerateRoute: AppRouter.generateRoute,
+            initialRoute: initialRoute ?? AppRoutes.mainNavigation,
+            onGenerateRoute: (settings) {
+              if (initialRoute != null && settings.name == initialRoute && initialArguments != null) {
+                return AppRouter.generateRoute(
+                  RouteSettings(
+                    name: settings.name,
+                    arguments: initialArguments,
+                  ),
+                );
+              }
+              return AppRouter.generateRoute(settings);
+            },
           );
         },
       ),
