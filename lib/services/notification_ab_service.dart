@@ -5,6 +5,9 @@
 ///
 /// The current implementation uses a deterministic hash of the user ID to assign groups.
 
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
+
 enum ExperimentGroup {
   control, // Group A (Default)
   variant, // Group B (Experimental)
@@ -26,6 +29,13 @@ class NotificationContent {
 }
 
 class NotificationABService {
+  final FirebaseAnalytics? _analytics;
+
+  NotificationABService({FirebaseAnalytics? analytics})
+      : _analytics = analytics;
+
+  FirebaseAnalytics get analytics => _analytics ?? FirebaseAnalytics.instance;
+
   /// Assigns a user to an experiment group based on their user ID.
   ///
   /// This uses a deterministic hash so the user always stays in the same group.
@@ -129,6 +139,43 @@ class NotificationABService {
           title: 'System Notification',
           body: message,
         );
+    }
+  }
+
+  /// Tracks that a notification has been sent/received (client-side impression).
+  Future<void> trackNotificationSent(
+      String userId, NotificationType type) async {
+    final group = getGroup(userId);
+    try {
+      await analytics.logEvent(
+        name: 'notification_sent',
+        parameters: {
+          'user_id': userId,
+          'notification_type': type.name,
+          'experiment_group': group.name,
+        },
+      );
+    } catch (e) {
+      // Ignore analytics errors in production to avoid crashing
+      debugPrint('Analytics error: $e');
+    }
+  }
+
+  /// Tracks that a notification has been clicked.
+  Future<void> trackNotificationClicked(
+      String userId, NotificationType type) async {
+    final group = getGroup(userId);
+    try {
+      await analytics.logEvent(
+        name: 'notification_clicked',
+        parameters: {
+          'user_id': userId,
+          'notification_type': type.name,
+          'experiment_group': group.name,
+        },
+      );
+    } catch (e) {
+      debugPrint('Analytics error: $e');
     }
   }
 }
