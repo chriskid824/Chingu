@@ -278,13 +278,14 @@ class NotificationStorageService {
     required String eventTitle,
     required String message,
     String? imageUrl,
+    String? userId, // Optional target user ID
   }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
+    final targetUserId = userId ?? _currentUserId;
+    if (targetUserId == null) return;
 
     final notification = NotificationModel(
       id: '',
-      userId: userId,
+      userId: targetUserId,
       type: 'event',
       title: eventTitle,
       message: message,
@@ -295,7 +296,7 @@ class NotificationStorageService {
       createdAt: DateTime.now(),
     );
 
-    await _notificationsRef(userId).add(notification.toMap());
+    await _notificationsRef(targetUserId).add(notification.toMap());
   }
 
   /// 創建消息通知
