@@ -21,6 +21,15 @@ class NotificationStorageService {
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
 
+  /// 設置測試用的實例
+  void setInstancesForTesting({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) {
+    _firestoreInstance = firestore;
+    _authInstance = auth;
+  }
+
   /// 獲取當前用戶 ID
   String? get _currentUserId => _auth.currentUser?.uid;
 
@@ -39,21 +48,20 @@ class NotificationStorageService {
       throw Exception('User not authenticated');
     }
 
-    final docRef = await _notificationsRef(userId).add(notification.toMap());
-    return docRef.id;
-  }
+    // 確保通知屬於當前用戶，或者通知中的 userId 與當前用戶匹配
+    // 如果通知對象是別人，這裡需要小心。通常 StorageService 用於存儲 *接收到* 的通知，
+    // 所以應該存到 _currentUserId 的集合中。
+    // 但是 NotificationModel 有 userId 字段。
+    // 我們假設 saveNotification 是在當前用戶收到通知時調用，存入自己的收件箱。
 
-  /// 批量儲存通知 (用於同步)
-  Future<void> saveNotifications(List<NotificationModel> notifications) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    final batch = _firestore.batch();
-    for (final notification in notifications) {
-      final docRef = _notificationsRef(userId).doc(notification.id);
-      batch.set(docRef, notification.toMap());
+    if (notification.id.isNotEmpty) {
+      // 如果有 ID (例如來自 FCM messageId)，使用它作為文檔 ID 以防止重複
+      await _notificationsRef(userId).doc(notification.id).set(notification.toMap());
+      return notification.id;
+    } else {
+      final docRef = await _notificationsRef(userId).add(notification.toMap());
+      return docRef.id;
     }
-    await batch.commit();
   }
 
   /// 獲取所有通知 (分頁)
@@ -73,21 +81,6 @@ class NotificationStorageService {
     }
 
     final snapshot = await query.get();
-    return snapshot.docs
-        .map((doc) => NotificationModel.fromFirestore(doc))
-        .toList();
-  }
-
-  /// 獲取未讀通知
-  Future<List<NotificationModel>> getUnreadNotifications() async {
-    final userId = _currentUserId;
-    if (userId == null) return [];
-
-    final snapshot = await _notificationsRef(userId)
-        .where('isRead', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
-        .get();
-
     return snapshot.docs
         .map((doc) => NotificationModel.fromFirestore(doc))
         .toList();
@@ -134,66 +127,6 @@ class NotificationStorageService {
     await batch.commit();
   }
 
-  /// 刪除單個通知
-  Future<void> deleteNotification(String notificationId) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    await _notificationsRef(userId).doc(notificationId).delete();
-  }
-
-  /// 刪除所有通知
-  Future<void> deleteAllNotifications() async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    final snapshot = await _notificationsRef(userId).get();
-    if (snapshot.docs.isEmpty) return;
-
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
-    }
-    await batch.commit();
-  }
-
-  /// 刪除舊通知 (超過指定天數)
-  Future<int> deleteOldNotifications({int olderThanDays = 30}) async {
-    final userId = _currentUserId;
-    if (userId == null) return 0;
-
-    final cutoffDate = DateTime.now().subtract(Duration(days: olderThanDays));
-    final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
-
-    final snapshot = await _notificationsRef(userId)
-        .where('createdAt', isLessThan: cutoffTimestamp)
-        .get();
-
-    if (snapshot.docs.isEmpty) return 0;
-
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.delete(doc.reference);
-    }
-    await batch.commit();
-
-    return snapshot.docs.length;
-  }
-
-  /// 監聽通知變化 (實時更新)
-  Stream<List<NotificationModel>> watchNotifications({int limit = 50}) {
-    final userId = _currentUserId;
-    if (userId == null) return Stream.value([]);
-
-    return _notificationsRef(userId)
-        .orderBy('createdAt', descending: true)
-        .limit(limit)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => NotificationModel.fromFirestore(doc))
-            .toList());
-  }
-
   /// 監聽未讀通知數量
   Stream<int> watchUnreadCount() {
     final userId = _currentUserId;
@@ -203,124 +136,5 @@ class NotificationStorageService {
         .where('isRead', isEqualTo: false)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
-  }
-
-  /// 按類型獲取通知
-  Future<List<NotificationModel>> getNotificationsByType(String type) async {
-    final userId = _currentUserId;
-    if (userId == null) return [];
-
-    final snapshot = await _notificationsRef(userId)
-        .where('type', isEqualTo: type)
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    return snapshot.docs
-        .map((doc) => NotificationModel.fromFirestore(doc))
-        .toList();
-  }
-
-  /// 創建系統通知
-  Future<void> createSystemNotification({
-    required String title,
-    required String message,
-    String? imageUrl,
-    String? actionType,
-    String? actionData,
-  }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    final notification = NotificationModel(
-      id: '', // Will be set by Firestore
-      userId: userId,
-      type: 'system',
-      title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
-      isRead: false,
-      createdAt: DateTime.now(),
-    );
-
-    await _notificationsRef(userId).add(notification.toMap());
-  }
-
-  /// 創建配對通知
-  Future<void> createMatchNotification({
-    required String matchedUserName,
-    required String matchedUserId,
-    String? matchedUserPhotoUrl,
-  }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    final notification = NotificationModel(
-      id: '',
-      userId: userId,
-      type: 'match',
-      title: '新配對成功! 🎉',
-      message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
-      imageUrl: matchedUserPhotoUrl,
-      actionType: 'open_chat',
-      actionData: matchedUserId,
-      isRead: false,
-      createdAt: DateTime.now(),
-    );
-
-    await _notificationsRef(userId).add(notification.toMap());
-  }
-
-  /// 創建活動通知
-  Future<void> createEventNotification({
-    required String eventId,
-    required String eventTitle,
-    required String message,
-    String? imageUrl,
-  }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    final notification = NotificationModel(
-      id: '',
-      userId: userId,
-      type: 'event',
-      title: eventTitle,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: 'view_event',
-      actionData: eventId,
-      isRead: false,
-      createdAt: DateTime.now(),
-    );
-
-    await _notificationsRef(userId).add(notification.toMap());
-  }
-
-  /// 創建消息通知
-  Future<void> createMessageNotification({
-    required String senderName,
-    required String senderId,
-    required String messagePreview,
-    String? senderPhotoUrl,
-  }) async {
-    final userId = _currentUserId;
-    if (userId == null) return;
-
-    final notification = NotificationModel(
-      id: '',
-      userId: userId,
-      type: 'message',
-      title: senderName,
-      message: messagePreview,
-      imageUrl: senderPhotoUrl,
-      actionType: 'open_chat',
-      actionData: senderId,
-      isRead: false,
-      createdAt: DateTime.now(),
-    );
-
-    await _notificationsRef(userId).add(notification.toMap());
   }
 }
