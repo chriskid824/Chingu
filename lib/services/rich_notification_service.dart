@@ -77,8 +77,69 @@ class RichNotificationService {
     }
   }
 
+  /// 檢查是否是從通知啟動
+  Future<Map<String, dynamic>?> checkInitialLaunch() async {
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      final payload = notificationAppLaunchDetails!.notificationResponse?.payload;
+      if (payload != null) {
+        try {
+          final Map<String, dynamic> data = json.decode(payload);
+          final String? actionType = data['actionType'];
+          final String? actionData = data['actionData'];
+          final String? actionId =
+              notificationAppLaunchDetails.notificationResponse?.actionId;
+
+          // 優先處理按鈕點擊
+          if (actionId != null && actionId != 'default') {
+            return getRouteInfo(actionId, actionData);
+          }
+
+          if (actionType != null) {
+            return getRouteInfo(actionType, actionData);
+          }
+        } catch (e) {
+          debugPrint('Error parsing notification payload on launch: $e');
+        }
+      }
+    }
+    return null;
+  }
+
+  /// 獲取路由資訊
+  Map<String, dynamic>? getRouteInfo(String action, String? data) {
+    switch (action) {
+      case 'open_chat':
+        if (data != null) {
+          // data 預期是 userId 或 chatRoomId
+          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
+          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
+          // 暫時導航到聊天列表
+          return {'route': AppRoutes.chatList, 'arguments': null};
+        } else {
+          return {'route': AppRoutes.chatList, 'arguments': null};
+        }
+      case 'view_event':
+        if (data != null) {
+          // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
+          // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
+          // 但為了兼容性，我們先嘗試導航
+          return {'route': AppRoutes.eventDetail, 'arguments': null};
+        }
+        return {'route': AppRoutes.eventDetail, 'arguments': null};
+      case 'match_history':
+        return {'route': AppRoutes.matchesList, 'arguments': null};
+      default:
+        // 預設導航到通知頁面
+        return {'route': AppRoutes.notifications, 'arguments': null};
+    }
+  }
+
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void _handleNavigation(
+      String? actionType, String? actionData, String? actionId) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -95,33 +156,12 @@ class RichNotificationService {
   }
 
   void _performAction(String action, String? data, NavigatorState navigator) {
-    switch (action) {
-      case 'open_chat':
-        if (data != null) {
-          // data 預期是 userId 或 chatRoomId
-          // 這裡假設需要構建參數，具體視 ChatDetailScreen 需求
-          // 由於 ChatDetailScreen 需要 arguments (UserModel or Map)，這裡可能需要調整
-          // 暫時導航到聊天列表
-          navigator.pushNamed(AppRoutes.chatList);
-        } else {
-          navigator.pushNamed(AppRoutes.chatList);
-        }
-        break;
-      case 'view_event':
-        if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
-        }
-        break;
-      case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
-        break;
-      default:
-        // 預設導航到通知頁面
-        navigator.pushNamed(AppRoutes.notifications);
-        break;
+    final routeInfo = getRouteInfo(action, data);
+    if (routeInfo != null) {
+      navigator.pushNamed(
+        routeInfo['route'],
+        arguments: routeInfo['arguments'],
+      );
     }
   }
 
