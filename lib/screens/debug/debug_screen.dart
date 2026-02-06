@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/utils/database_seeder.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/services/rich_notification_service.dart';
+import 'package:chingu/models/notification_model.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -14,6 +16,8 @@ class DebugScreen extends StatefulWidget {
 class _DebugScreenState extends State<DebugScreen> {
   bool _isLoading = false;
   String _status = '';
+  String _selectedNotificationType = 'system';
+  final List<String> _notificationTypes = ['system', 'match', 'event', 'message', 'rating'];
 
   Future<void> _runSeeder() async {
     setState(() {
@@ -104,6 +108,67 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  Future<void> _sendTestNotification() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'test_user_id';
+
+    String title = '';
+    String message = '';
+    String? actionType;
+    String? actionData;
+    String type = _selectedNotificationType;
+
+    switch (type) {
+      case 'system':
+        title = '系統通知';
+        message = '這是一則測試用的系統通知。';
+        break;
+      case 'match':
+        title = '配對成功！';
+        message = '你與 [測試用戶] 配對成功了！';
+        actionType = 'match_history';
+        break;
+      case 'event':
+        title = '活動即將開始';
+        message = '您報名的 [測試晚餐] 將在 2 小時後開始。';
+        actionType = 'view_event';
+        actionData = 'test_event_id';
+        break;
+      case 'message':
+        title = '新訊息';
+        message = '[測試用戶] 傳送了一則訊息給您。';
+        actionType = 'open_chat';
+        actionData = 'test_chat_id';
+        break;
+      case 'rating':
+        title = '評價提醒';
+        message = '請為昨晚的晚餐活動留下評價。';
+        break;
+    }
+
+    final notification = NotificationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: currentUserId,
+      type: type,
+      title: title,
+      message: message,
+      actionType: actionType,
+      actionData: actionData,
+      createdAt: DateTime.now(),
+      isRead: false,
+    );
+
+    try {
+      await RichNotificationService().showNotification(notification);
+      setState(() {
+        _status = '✅ 已發送 $type 測試通知';
+      });
+    } catch (e) {
+      setState(() {
+        _status = '❌ 發送失敗: $e';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,6 +225,45 @@ class _DebugScreenState extends State<DebugScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+            const Divider(height: 48),
+            const Text('通知測試工具', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedNotificationType,
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedNotificationType = newValue;
+                      });
+                    }
+                  },
+                  items: _notificationTypes.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _sendTestNotification,
+              icon: const Icon(Icons.notifications_active_rounded),
+              label: const Text('發送測試通知'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
             const SizedBox(height: 24),
             Text(
               _status,
