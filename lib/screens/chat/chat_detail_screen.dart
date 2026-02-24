@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/widgets/dialogs/report_dialog.dart';
+
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -178,11 +180,56 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) async {
+              final currentUserId = context.read<AuthProvider>().uid;
+              if (currentUserId == null || _otherUser == null) return;
+
+              if (value == 'report') {
+                await ReportDialog.show(
+                  context,
+                  reporterId: currentUserId,
+                  reportedUserId: _otherUser!.uid,
+                  reportedUserName: _otherUser!.name,
+                );
+              } else if (value == 'block') {
+                final result = await BlockConfirmDialog.show(
+                  context,
+                  userId: currentUserId,
+                  blockedUserId: _otherUser!.uid,
+                  blockedUserName: _otherUser!.name,
+                );
+                if (result == true && mounted) {
+                  Navigator.of(context).pop(); // 封鎖後返回聊天列表
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_outlined, color: Colors.orange, size: 20),
+                    SizedBox(width: 12),
+                    Text('舉報用戶'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    Icon(Icons.block, color: Colors.red, size: 20),
+                    SizedBox(width: 12),
+                    Text('封鎖用戶'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
+
       ),
       body: Column(
         children: [

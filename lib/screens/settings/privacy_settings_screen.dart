@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
 class PrivacySettingsScreen extends StatelessWidget {
   const PrivacySettingsScreen({super.key});
@@ -108,21 +111,55 @@ class PrivacySettingsScreen extends StatelessWidget {
                 onTap: () {
                   showDialog(
                     context: context,
-                    builder: (context) => AlertDialog(
+                    builder: (dialogContext) => AlertDialog(
                       title: const Text('刪除帳號'),
                       content: const Text('您確定要刪除帳號嗎？所有資料將被永久刪除且無法復原。'),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pop(dialogContext),
                           child: const Text('取消'),
                         ),
                         TextButton(
-                          onPressed: () {
-                            // TODO: Implement delete account logic
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('功能尚未開放')),
+                          onPressed: () async {
+                            Navigator.pop(dialogContext);
+                            
+                            // 顯示載入指示器
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (loadingContext) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                             );
+                            
+                            // 執行刪除帳號
+                            final authProvider = context.read<AuthProvider>();
+                            final success = await authProvider.deleteAccount();
+                            
+                            // 關閉載入指示器
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                            
+                            if (success && context.mounted) {
+                              // 刪除成功，導航到登入頁
+                              Navigator.of(context).pushNamedAndRemoveUntil(
+                                AppRoutes.login,
+                                (route) => false,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('帳號已成功刪除')),
+                              );
+                            } else if (context.mounted) {
+                              // 刪除失敗
+                              final errorMsg = authProvider.errorMessage ?? '刪除帳號失敗';
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(errorMsg),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }
                           },
                           style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
                           child: const Text('刪除'),

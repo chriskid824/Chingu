@@ -43,6 +43,7 @@ import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
 import '../../screens/settings/help_center_screen.dart';
 import '../../screens/settings/about_screen.dart';
+import '../../screens/settings/blocked_users_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
 
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String helpCenter = '/help-center';
   static const String about = '/about';
   static const String reportUser = '/report-user';
+  static const String blockedUsers = '/blocked-users';
 }
 
 /// 應用程式路由配置
@@ -245,6 +247,9 @@ class AppRouter {
             reportedUserName: args['reportedUserName'],
           ),
         );
+
+      case AppRoutes.blockedUsers:
+        return MaterialPageRoute(builder: (_) => const BlockedUsersScreen());
       
       // ==================== 404 ====================
       default:

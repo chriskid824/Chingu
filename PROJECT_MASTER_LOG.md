@@ -61,12 +61,12 @@
   - [x] 實作即時訊息監聽 (Real-time listener)
   - [x] 實作發送訊息功能
   - [x] 修復 AppRouter settings 參數傳遞問題
-- [ ] **連接首頁活動資料**
-  - [ ] 從 Firestore 載入「即將到來的晚餐」
-  - [ ] 在首頁顯示真實活動列表
-- [ ] **配對成功流程**
-  - [ ] 在 `MatchingService` 中偵測雙向配對 (Mutual Match)
-  - [ ] 配對成功時自動建立聊天室 (Chat Room)
+- [x] **連接首頁活動資料** ✅
+  - [x] 從 Firestore 載入「即將到來的晚餐」
+  - [x] 在首頁顯示真實活動列表
+- [x] **配對成功流程** ✅
+  - [x] 在 `MatchingService` 中偵測雙向配對 (Mutual Match)
+  - [x] 配對成功時自動建立聊天室 (Chat Room)
 
 ### 🎯 階段 2：已完成的核心功能優化 (Phase 2 - Completed)
 歷史工作紀錄請見本文件後半部分。
