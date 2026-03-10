@@ -139,16 +139,16 @@ class RichNotificationService {
         styleInformation = BigPictureStyleInformation(
           bigPicture,
           contentTitle: notification.title,
-          summaryText: notification.message,
+          summaryText: notification.content,
           hideExpandedLargeIcon: true,
         );
       } catch (e) {
         debugPrint('Error downloading image for notification: $e');
         // 圖片下載失敗則降級為普通通知
-        styleInformation = BigTextStyleInformation(notification.message);
+        styleInformation = BigTextStyleInformation(notification.content);
       }
     } else {
-      styleInformation = BigTextStyleInformation(notification.message);
+      styleInformation = BigTextStyleInformation(notification.content);
     }
 
     // 定義操作按鈕
@@ -191,7 +191,7 @@ class RichNotificationService {
     await _flutterLocalNotificationsPlugin.show(
       notification.id.hashCode, // 使用 hashCode 作為 ID
       notification.title,
-      notification.message,
+      notification.content,
       platformChannelSpecifics,
       payload: json.encode(payload),
     );
