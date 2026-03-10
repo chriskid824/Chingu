@@ -38,6 +38,11 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知偏好
+  final bool pushNotificationsEnabled;
+  final bool notifyNewMatches;
+  final bool notifyNewMessages;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,6 +71,9 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
+    this.pushNotificationsEnabled = true,
+    this.notifyNewMatches = true,
+    this.notifyNewMessages = true,
   });
 
   /// 從 Firestore 文檔創建 UserModel
@@ -104,6 +112,9 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      pushNotificationsEnabled: map['pushNotificationsEnabled'] ?? true,
+      notifyNewMatches: map['notifyNewMatches'] ?? true,
+      notifyNewMessages: map['notifyNewMessages'] ?? true,
     );
   }
 
@@ -136,6 +147,9 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'notifyNewMatches': notifyNewMatches,
+      'notifyNewMessages': notifyNewMessages,
     };
   }
 
@@ -166,6 +180,9 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    bool? pushNotificationsEnabled,
+    bool? notifyNewMatches,
+    bool? notifyNewMessages,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +212,10 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      pushNotificationsEnabled:
+          pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      notifyNewMatches: notifyNewMatches ?? this.notifyNewMatches,
+      notifyNewMessages: notifyNewMessages ?? this.notifyNewMessages,
     );
   }
 
