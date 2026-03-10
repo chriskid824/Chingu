@@ -33,6 +33,12 @@ class UserModel {
   final int totalMatches;
   final double averageRating;
 
+  // 通知設定
+  final bool notificationMatches;
+  final bool notificationMessages;
+  final bool notificationEvents;
+  final bool showMessagePreview;
+
   // 2FA
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
@@ -63,6 +69,10 @@ class UserModel {
     this.totalDinners = 0,
     this.totalMatches = 0,
     this.averageRating = 0.0,
+    this.notificationMatches = true,
+    this.notificationMessages = true,
+    this.notificationEvents = true,
+    this.showMessagePreview = true,
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
@@ -101,6 +111,10 @@ class UserModel {
       totalDinners: map['totalDinners'] ?? 0,
       totalMatches: map['totalMatches'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      notificationMatches: map['notificationMatches'] ?? true,
+      notificationMessages: map['notificationMessages'] ?? true,
+      notificationEvents: map['notificationEvents'] ?? true,
+      showMessagePreview: map['showMessagePreview'] ?? true,
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
@@ -133,6 +147,10 @@ class UserModel {
       'totalDinners': totalDinners,
       'totalMatches': totalMatches,
       'averageRating': averageRating,
+      'notificationMatches': notificationMatches,
+      'notificationMessages': notificationMessages,
+      'notificationEvents': notificationEvents,
+      'showMessagePreview': showMessagePreview,
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
@@ -163,6 +181,10 @@ class UserModel {
     int? totalDinners,
     int? totalMatches,
     double? averageRating,
+    bool? notificationMatches,
+    bool? notificationMessages,
+    bool? notificationEvents,
+    bool? showMessagePreview,
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
@@ -192,6 +214,10 @@ class UserModel {
       totalDinners: totalDinners ?? this.totalDinners,
       totalMatches: totalMatches ?? this.totalMatches,
       averageRating: averageRating ?? this.averageRating,
+      notificationMatches: notificationMatches ?? this.notificationMatches,
+      notificationMessages: notificationMessages ?? this.notificationMessages,
+      notificationEvents: notificationEvents ?? this.notificationEvents,
+      showMessagePreview: showMessagePreview ?? this.showMessagePreview,
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
