@@ -1,5 +1,76 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// 通知設定模型
+class NotificationSettings {
+  final bool enablePushNotifications;
+  final bool newMatch;
+  final bool matchSuccess;
+  final bool newMessage;
+  final bool eventReminders;
+  final bool eventChanges;
+  final bool marketingPromotions;
+  final bool marketingNewsletter;
+
+  NotificationSettings({
+    this.enablePushNotifications = true,
+    this.newMatch = true,
+    this.matchSuccess = true,
+    this.newMessage = true,
+    this.eventReminders = true,
+    this.eventChanges = true,
+    this.marketingPromotions = false,
+    this.marketingNewsletter = false,
+  });
+
+  factory NotificationSettings.fromMap(Map<String, dynamic> map) {
+    return NotificationSettings(
+      enablePushNotifications: map['enablePushNotifications'] ?? true,
+      newMatch: map['newMatch'] ?? true,
+      matchSuccess: map['matchSuccess'] ?? true,
+      newMessage: map['newMessage'] ?? true,
+      eventReminders: map['eventReminders'] ?? true,
+      eventChanges: map['eventChanges'] ?? true,
+      marketingPromotions: map['marketingPromotions'] ?? false,
+      marketingNewsletter: map['marketingNewsletter'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'enablePushNotifications': enablePushNotifications,
+      'newMatch': newMatch,
+      'matchSuccess': matchSuccess,
+      'newMessage': newMessage,
+      'eventReminders': eventReminders,
+      'eventChanges': eventChanges,
+      'marketingPromotions': marketingPromotions,
+      'marketingNewsletter': marketingNewsletter,
+    };
+  }
+
+  NotificationSettings copyWith({
+    bool? enablePushNotifications,
+    bool? newMatch,
+    bool? matchSuccess,
+    bool? newMessage,
+    bool? eventReminders,
+    bool? eventChanges,
+    bool? marketingPromotions,
+    bool? marketingNewsletter,
+  }) {
+    return NotificationSettings(
+      enablePushNotifications: enablePushNotifications ?? this.enablePushNotifications,
+      newMatch: newMatch ?? this.newMatch,
+      matchSuccess: matchSuccess ?? this.matchSuccess,
+      newMessage: newMessage ?? this.newMessage,
+      eventReminders: eventReminders ?? this.eventReminders,
+      eventChanges: eventChanges ?? this.eventChanges,
+      marketingPromotions: marketingPromotions ?? this.marketingPromotions,
+      marketingNewsletter: marketingNewsletter ?? this.marketingNewsletter,
+    );
+  }
+}
+
 /// 用戶資料模型
 class UserModel {
   final String uid;
@@ -38,6 +109,9 @@ class UserModel {
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
 
+  // 通知設定
+  final NotificationSettings notificationSettings;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -66,7 +140,8 @@ class UserModel {
     this.isTwoFactorEnabled = false,
     this.twoFactorMethod = 'email',
     this.phoneNumber,
-  });
+    NotificationSettings? notificationSettings,
+  }) : notificationSettings = notificationSettings ?? NotificationSettings();
 
   /// 從 Firestore 文檔創建 UserModel
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -104,6 +179,9 @@ class UserModel {
       isTwoFactorEnabled: map['isTwoFactorEnabled'] ?? false,
       twoFactorMethod: map['twoFactorMethod'] ?? 'email',
       phoneNumber: map['phoneNumber'],
+      notificationSettings: map['notificationSettings'] != null
+          ? NotificationSettings.fromMap(map['notificationSettings'])
+          : null,
     );
   }
 
@@ -136,6 +214,7 @@ class UserModel {
       'isTwoFactorEnabled': isTwoFactorEnabled,
       'twoFactorMethod': twoFactorMethod,
       'phoneNumber': phoneNumber,
+      'notificationSettings': notificationSettings.toMap(),
     };
   }
 
@@ -166,6 +245,7 @@ class UserModel {
     bool? isTwoFactorEnabled,
     String? twoFactorMethod,
     String? phoneNumber,
+    NotificationSettings? notificationSettings,
   }) {
     return UserModel(
       uid: uid,
@@ -195,6 +275,7 @@ class UserModel {
       isTwoFactorEnabled: isTwoFactorEnabled ?? this.isTwoFactorEnabled,
       twoFactorMethod: twoFactorMethod ?? this.twoFactorMethod,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 
