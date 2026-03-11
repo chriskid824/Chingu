@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -22,20 +23,26 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 初始化 Crashlytics
-  await CrashReportingService().initialize();
+  // 平行初始化其他服務
+  await Future.wait([
+    CrashReportingService().initialize(),
+    initializeDateFormatting('zh_TW', null),
+    RichNotificationService().initialize(),
+  ]);
 
-  // 初始化日期格式化
-  await initializeDateFormatting('zh_TW', null);
+  // 檢查是否有啟動通知
+  final initialRoute = await RichNotificationService().checkLaunchNotification();
 
-  // 初始化豐富通知服務
-  await RichNotificationService().initialize();
+  // 請求通知權限（不等待）
+  RichNotificationService().requestPermissions();
 
-  runApp(const ChinguApp());
+  runApp(ChinguApp(initialRoute: initialRoute));
 }
 
 class ChinguApp extends StatelessWidget {
-  const ChinguApp({super.key});
+  final String? initialRoute;
+
+  const ChinguApp({super.key, this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +62,7 @@ class ChinguApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: AppRouter.navigatorKey,
             theme: themeController.theme,
-            initialRoute: AppRoutes.mainNavigation,
+            initialRoute: initialRoute ?? AppRoutes.mainNavigation,
             onGenerateRoute: AppRouter.generateRoute,
           );
         },
