@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/services/notification_service.dart';
 
 class NotificationPermissionScreen extends StatefulWidget {
   const NotificationPermissionScreen({super.key});
@@ -17,13 +17,8 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
     setState(() => _isRequesting = true);
 
     try {
-      final messaging = FirebaseMessaging.instance;
-      // Request permission
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await NotificationService().initialize();
+      await NotificationService().saveTokenToDatabase();
 
       // We proceed regardless of the result
     } catch (e) {

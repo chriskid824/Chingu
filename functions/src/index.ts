@@ -6,6 +6,7 @@
 
 // Export all functions
 export { sendBroadcast } from "./sendBroadcast";
+export { sendChatNotification } from "./sendChatNotification";
 
 // Future exports will be added here:
 // export {createWeeklyEvents} from "./createWeeklyEvents";
