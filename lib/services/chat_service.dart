@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 聊天服務 - 處理聊天室的創建與管理
@@ -95,6 +96,7 @@ class ChatService {
         'senderName': senderName,
         'senderAvatarUrl': senderAvatarUrl,
         'message': message, // Used to be 'text' but now standardizing on 'message'
+        'text': message, // Backward compatibility
         'type': type,
         'timestamp': timestamp,
         'readBy': [], // Empty list for readBy
@@ -105,7 +107,7 @@ class ChatService {
 
       // 2. 更新聊天室最後訊息
       await _chatRoomsCollection.doc(chatRoomId).update({
-        'lastMessage': type == 'text' ? message : '[${type}]',
+        'lastMessage': type == 'text' ? message : '[$type]',
         'lastMessageTime': timestamp,
         'lastMessageSenderId': senderId,
         // 使用 FieldValue.increment 更新接收者的未讀數
@@ -114,6 +116,58 @@ class ChatService {
         // 如果需要更新 unreadCount，我們需要讀取 chatRoom 獲取參與者。
         // 暫時保持簡單，只更新 lastMessage。
       });
+
+      // 3. 發送推播通知
+      try {
+        // 獲取聊天室參與者以確認接收者
+        final chatRoomDoc = await _chatRoomsCollection.doc(chatRoomId).get();
+        if (chatRoomDoc.exists) {
+            final data = chatRoomDoc.data() as Map<String, dynamic>;
+            final participants = List<String>.from(data['participantIds'] ?? []);
+
+            // 找到接收者 ID (非發送者)
+            final recipientId = participants.firstWhere(
+              (id) => id != senderId,
+              orElse: () => '',
+            );
+
+            if (recipientId.isNotEmpty) {
+              // 獲取接收者 token
+              final userDoc = await _firestore.collection('users').doc(recipientId).get();
+              if (userDoc.exists) {
+                final userData = userDoc.data() as Map<String, dynamic>;
+                final fcmToken = userData['fcmToken'] as String?;
+
+                if (fcmToken != null && fcmToken.isNotEmpty) {
+                  // 截取訊息預覽 (前 20 字)
+                  String preview = message;
+                  if (type != 'text') {
+                    preview = type == 'image' ? '[圖片]' : '[訊息]';
+                  } else if (preview.length > 20) {
+                    preview = '${preview.substring(0, 20)}...';
+                  }
+
+                  // 呼叫 Cloud Function
+                  await FirebaseFunctions.instance
+                      .httpsCallable('sendChatNotification')
+                      .call({
+                    'token': fcmToken,
+                    'title': senderName,
+                    'body': preview,
+                    'data': {
+                      'chatRoomId': chatRoomId,
+                      'type': 'chat',
+                    },
+                  });
+                }
+              }
+            }
+        }
+      } catch (e) {
+        // 通知發送失敗不應阻斷訊息流程，僅記錄錯誤
+        print('發送通知失敗: $e');
+      }
+
     } catch (e) {
       throw Exception('發送訊息失敗: $e');
     }

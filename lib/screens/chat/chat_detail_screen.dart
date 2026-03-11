@@ -60,6 +60,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
         text: text,
       );
       if (!mounted) return;
@@ -91,6 +93,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await context.read<ChatProvider>().sendMessage(
         chatRoomId: _chatRoomId!,
         senderId: currentUser.uid,
+        senderName: currentUser.name,
+        senderAvatarUrl: currentUser.avatarUrl,
         text: url,
         type: 'image',
       );
@@ -293,7 +297,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
-    final text = message['text'] ?? '';
+    final text = message['message'] ?? message['text'] ?? '';
     final type = message['type'] as String?;
     final isImage = (type == 'image' || type == 'gif') || (type == null && (text as String).endsWith('.gif'));
 
