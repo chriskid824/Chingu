@@ -11,6 +11,15 @@ class ABTestManager {
   FirebaseFirestore? _firestoreInstance;
   FirebaseAuth? _authInstance;
 
+  // For testing
+  void setFirestoreInstance(FirebaseFirestore instance) {
+    _firestoreInstance = instance;
+  }
+
+  void setAuthInstance(FirebaseAuth instance) {
+    _authInstance = instance;
+  }
+
   FirebaseFirestore get _firestore => 
       _firestoreInstance ??= FirebaseFirestore.instance;
   FirebaseAuth get _auth => 
@@ -38,14 +47,14 @@ class ABTestManager {
       }
 
       // 加載用戶的變體分配
-      await _loadUserVariants();
+      await loadUserVariants();
     } catch (e) {
       print('Failed to initialize ABTestManager: $e');
     }
   }
 
   /// 加載用戶已分配的變體
-  Future<void> _loadUserVariants() async {
+  Future<void> loadUserVariants() async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
@@ -63,6 +72,11 @@ class ABTestManager {
     } catch (e) {
       print('Failed to load user variants: $e');
     }
+  }
+
+  /// 清除用戶的變體分配緩存
+  void clearUserVariants() {
+    _userVariants.clear();
   }
 
   /// 獲取用戶在特定測試中的變體
