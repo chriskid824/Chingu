@@ -1,5 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum EventRegistrationStatus {
+  registered,
+  waitlist,
+  cancelled,
+  none,
+}
+
 /// 晚餐活動模型（固定6人）
 class DinnerEventModel {
   final String id;
@@ -10,10 +17,18 @@ class DinnerEventModel {
   final String district;
   final String? notes;
   
-  // 參與者（固定6人）
+  // 參與者
+  final int maxParticipants;
+  final int currentParticipants; // 冗餘欄位，用於查詢
   final List<String> participantIds; // 用戶 UID 列表
   final Map<String, String> participantStatus; // uid -> 'pending', 'confirmed', 'declined'
   
+  // 等候清單
+  final List<String> waitlistIds;
+
+  // 報名截止時間
+  final DateTime? registrationDeadline;
+
   // 餐廳資訊（系統推薦後確認）
   final String? restaurantName;
   final String? restaurantAddress;
@@ -41,8 +56,12 @@ class DinnerEventModel {
     required this.city,
     required this.district,
     this.notes,
+    this.maxParticipants = 6,
     required this.participantIds,
+    int? currentParticipants,
     required this.participantStatus,
+    this.waitlistIds = const [],
+    this.registrationDeadline,
     this.restaurantName,
     this.restaurantAddress,
     this.restaurantLocation,
@@ -54,7 +73,7 @@ class DinnerEventModel {
     this.icebreakerQuestions = const [],
     this.ratings,
     this.reviews,
-  });
+  }) : currentParticipants = currentParticipants ?? participantIds.length;
 
   /// 從 Firestore 文檔創建 DinnerEventModel
   factory DinnerEventModel.fromFirestore(DocumentSnapshot doc) {
@@ -72,8 +91,14 @@ class DinnerEventModel {
       city: map['city'] ?? '',
       district: map['district'] ?? '',
       notes: map['notes'],
+      maxParticipants: map['maxParticipants'] ?? 6,
       participantIds: List<String>.from(map['participantIds'] ?? []),
+      currentParticipants: map['currentParticipants'],
       participantStatus: Map<String, String>.from(map['participantStatus'] ?? {}),
+      waitlistIds: List<String>.from(map['waitlistIds'] ?? []),
+      registrationDeadline: map['registrationDeadline'] != null
+          ? (map['registrationDeadline'] as Timestamp).toDate()
+          : null,
       restaurantName: map['restaurantName'],
       restaurantAddress: map['restaurantAddress'],
       restaurantLocation: map['restaurantLocation'] as GeoPoint?,
@@ -105,8 +130,14 @@ class DinnerEventModel {
       'city': city,
       'district': district,
       'notes': notes,
+      'maxParticipants': maxParticipants,
       'participantIds': participantIds,
+      'currentParticipants': participantIds.length,
       'participantStatus': participantStatus,
+      'waitlistIds': waitlistIds,
+      'registrationDeadline': registrationDeadline != null
+          ? Timestamp.fromDate(registrationDeadline!)
+          : null,
       'restaurantName': restaurantName,
       'restaurantAddress': restaurantAddress,
       'restaurantLocation': restaurantLocation,
@@ -128,8 +159,11 @@ class DinnerEventModel {
     String? city,
     String? district,
     String? notes,
+    int? maxParticipants,
     List<String>? participantIds,
     Map<String, String>? participantStatus,
+    List<String>? waitlistIds,
+    DateTime? registrationDeadline,
     String? restaurantName,
     String? restaurantAddress,
     GeoPoint? restaurantLocation,
@@ -149,8 +183,12 @@ class DinnerEventModel {
       city: city ?? this.city,
       district: district ?? this.district,
       notes: notes ?? this.notes,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
       participantIds: participantIds ?? this.participantIds,
+      // currentParticipants updates automatically in constructor if participantIds changes
       participantStatus: participantStatus ?? this.participantStatus,
+      waitlistIds: waitlistIds ?? this.waitlistIds,
+      registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       restaurantName: restaurantName ?? this.restaurantName,
       restaurantAddress: restaurantAddress ?? this.restaurantAddress,
       restaurantLocation: restaurantLocation ?? this.restaurantLocation,
@@ -197,8 +235,8 @@ class DinnerEventModel {
     }
   }
 
-  /// 檢查是否已滿6人
-  bool get isFull => participantIds.length >= 6;
+  /// 檢查是否已滿
+  bool get isFull => participantIds.length >= maxParticipants;
 
   /// 獲取已確認人數
   int get confirmedCount {
@@ -219,7 +257,3 @@ class DinnerEventModel {
     return sum / ratings!.length;
   }
 }
-
-
-
-

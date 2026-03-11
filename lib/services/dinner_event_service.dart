@@ -3,7 +3,10 @@ import 'package:chingu/models/dinner_event_model.dart';
 
 /// 晚餐活動服務 - 處理晚餐活動的創建、查詢和管理
 class DinnerEventService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  DinnerEventService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // 集合引用
   CollectionReference get _eventsCollection => _firestore.collection('dinner_events');
@@ -81,7 +84,7 @@ class DinnerEventService {
     }
   }
 
-  /// 獲取用戶參與的活動列表
+  /// 獲取用戶參與的活動列表 (正式參加)
   /// 
   /// [userId] 用戶 ID
   /// [status] 活動狀態過濾（可選）
@@ -109,62 +112,29 @@ class DinnerEventService {
     }
   }
 
-  /// 加入活動
-  /// 
-  /// [eventId] 活動 ID
-  /// [userId] 用戶 ID
-  Future<void> joinEvent(String eventId, String userId) async {
+  /// 獲取用戶在等候清單中的活動
+  Future<List<DinnerEventModel>> getWaitlistedEvents(String userId) async {
     try {
-      // 使用事務確保數據一致性
-      await _firestore.runTransaction((transaction) async {
-        final docRef = _eventsCollection.doc(eventId);
-        final snapshot = await transaction.get(docRef);
+      final querySnapshot = await _eventsCollection
+          .where('waitlistIds', arrayContains: userId)
+          .get();
 
-        if (!snapshot.exists) {
-          throw Exception('活動不存在');
-        }
+      final events = querySnapshot.docs
+          .map((doc) => DinnerEventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
 
-        final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
-        
-        if (participantIds.contains(userId)) {
-          throw Exception('您已加入此活動');
-        }
-
-        if (participantIds.length >= 6) {
-          throw Exception('活動人數已滿');
-        }
-
-        // 更新參與者列表
-        participantIds.add(userId);
-        
-        // 更新參與者狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus[userId] = 'confirmed'; // 簡單起見，直接確認
-
-        final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
-        };
-
-        // 如果人數達到 6 人，自動確認活動
-        if (participantIds.length == 6) {
-          updates['status'] = 'confirmed';
-          updates['confirmedAt'] = FieldValue.serverTimestamp();
-        }
-
-        transaction.update(docRef, updates);
-      });
+      events.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+      return events;
     } catch (e) {
-      throw Exception('加入活動失敗: $e');
+      throw Exception('獲取等候清單失敗: $e');
     }
   }
 
-  /// 退出活動
+  /// 報名活動 (包含等候清單邏輯)
   /// 
   /// [eventId] 活動 ID
   /// [userId] 用戶 ID
-  Future<void> leaveEvent(String eventId, String userId) async {
+  Future<void> registerForEvent(String eventId, String userId) async {
     try {
       await _firestore.runTransaction((transaction) async {
         final docRef = _eventsCollection.doc(eventId);
@@ -175,39 +145,146 @@ class DinnerEventService {
         }
 
         final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        // 使用 updated model 解析
+        final event = DinnerEventModel.fromMap(data, eventId);
         
-        if (!participantIds.contains(userId)) {
-          throw Exception('您未加入此活動');
+        // 檢查重複報名
+        if (event.participantIds.contains(userId) ||
+            event.waitlistIds.contains(userId)) {
+          throw Exception('您已報名此活動');
         }
 
-        // 移除參與者
-        participantIds.remove(userId);
+        // 檢查截止時間 (如果有)
+        if (event.registrationDeadline != null &&
+            DateTime.now().isAfter(event.registrationDeadline!)) {
+          throw Exception('報名已截止');
+        }
+
+        // 檢查是否滿員
+        if (event.participantIds.length < event.maxParticipants) {
+          // 有名額，直接加入
+          final newIds = List<String>.from(event.participantIds)..add(userId);
+          final newStatus = Map<String, String>.from(event.participantStatus);
+          newStatus[userId] = EventRegistrationStatus.registered.name;
+
+          final updates = {
+            'participantIds': newIds,
+            'currentParticipants': newIds.length,
+            'participantStatus': newStatus,
+          };
+
+          // 如果滿員，且狀態為 pending，則轉為 confirmed
+          if (newIds.length >= event.maxParticipants && event.status == 'pending') {
+            updates['status'] = 'confirmed';
+            updates['confirmedAt'] = FieldValue.serverTimestamp();
+          }
+
+          transaction.update(docRef, updates);
+        } else {
+          // 滿員，加入候補
+          final newWaitlist = List<String>.from(event.waitlistIds)..add(userId);
+          final newStatus = Map<String, String>.from(event.participantStatus);
+          newStatus[userId] = EventRegistrationStatus.waitlist.name;
+
+          transaction.update(docRef, {
+            'waitlistIds': newWaitlist,
+            'participantStatus': newStatus,
+          });
+        }
+      });
+    } catch (e) {
+      throw Exception('報名失敗: $e');
+    }
+  }
+
+  /// 加入活動 (已棄用，請使用 registerForEvent)
+  @Deprecated('Use registerForEvent instead')
+  Future<void> joinEvent(String eventId, String userId) async {
+    return registerForEvent(eventId, userId);
+  }
+
+  /// 取消報名
+  /// 
+  /// [eventId] 活動 ID
+  /// [userId] 用戶 ID
+  Future<void> unregisterFromEvent(String eventId, String userId) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _eventsCollection.doc(eventId);
+        final snapshot = await transaction.get(docRef);
+
+        if (!snapshot.exists) {
+          throw Exception('活動不存在');
+        }
+
+        final data = snapshot.data() as Map<String, dynamic>;
+        final event = DinnerEventModel.fromMap(data, eventId);
         
-        // 移除狀態
-        final participantStatus = Map<String, dynamic>.from(data['participantStatus'] ?? {});
-        participantStatus.remove(userId);
+        final isParticipant = event.participantIds.contains(userId);
+        final isWaitlisted = event.waitlistIds.contains(userId);
+
+        if (!isParticipant && !isWaitlisted) {
+          throw Exception('您未報名此活動');
+        }
+
+        // 檢查 24 小時取消限制 (僅針對正式參與者)
+        if (isParticipant) {
+          final timeDifference = event.dateTime.difference(DateTime.now());
+          if (timeDifference.inHours < 24) {
+             throw Exception('活動開始前 24 小時內不可取消');
+          }
+        }
+
+        final newParticipantIds = List<String>.from(event.participantIds);
+        final newWaitlistIds = List<String>.from(event.waitlistIds);
+        final newStatus = Map<String, String>.from(event.participantStatus);
+
+        // 移除用戶
+        if (isParticipant) {
+          newParticipantIds.remove(userId);
+        } else {
+          newWaitlistIds.remove(userId);
+        }
+        newStatus.remove(userId);
+
+        // 自動遞補邏輯
+        if (isParticipant && newWaitlistIds.isNotEmpty) {
+          final nextUserId = newWaitlistIds.removeAt(0);
+          newParticipantIds.add(nextUserId);
+          newStatus[nextUserId] = EventRegistrationStatus.registered.name;
+          // TODO: 觸發通知給 nextUserId (透過 Cloud Function 監聽 update)
+        }
 
         final updates = {
-          'participantIds': participantIds,
-          'participantStatus': participantStatus,
+          'participantIds': newParticipantIds,
+          'waitlistIds': newWaitlistIds,
+          'currentParticipants': newParticipantIds.length,
+          'participantStatus': newStatus,
         };
 
-        // 如果活動人數少於 6 人且狀態為已確認，可能需要處理（暫時簡單處理：變回 pending）
-        if (data['status'] == 'confirmed' && participantIds.length < 6) {
-          updates['status'] = 'pending';
-        }
-
-        // 如果沒有參與者了，可以考慮刪除活動或標記為取消
-        if (participantIds.isEmpty) {
-          updates['status'] = 'cancelled';
+        // 狀態更新
+        if (newParticipantIds.isEmpty) {
+           // 如果沒人參加了
+           if (event.status != 'cancelled') {
+             updates['status'] = 'cancelled';
+           }
+        } else if (newParticipantIds.length < event.maxParticipants && event.status == 'confirmed') {
+           // 如果有人退出且無人遞補，變回 pending
+           updates['status'] = 'pending';
+           updates['confirmedAt'] = null;
         }
 
         transaction.update(docRef, updates);
       });
     } catch (e) {
-      throw Exception('退出活動失敗: $e');
+      throw Exception('取消報名失敗: $e');
     }
+  }
+
+  /// 退出活動 (已棄用，請使用 unregisterFromEvent)
+  @Deprecated('Use unregisterFromEvent instead')
+  Future<void> leaveEvent(String eventId, String userId) async {
+    return unregisterFromEvent(eventId, userId);
   }
 
   /// 獲取推薦的活動列表（用於配對）
