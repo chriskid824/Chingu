@@ -173,7 +173,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MatchingScreen());
       
       case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => UserDetailScreen(userId: args?['userId']),
+        );
       
       case AppRoutes.matchesList:
         return MaterialPageRoute(builder: (_) => const MatchesListScreen());
@@ -186,7 +189,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const EventsListScreen());
       
       case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => EventDetailScreen(eventId: args?['eventId']),
+        );
       
       case AppRoutes.eventConfirmation:
         return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());

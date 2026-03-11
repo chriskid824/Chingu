@@ -263,7 +263,7 @@ class NotificationStorageService {
       title: '新配對成功! 🎉',
       message: '你與 $matchedUserName 配對成功了！快去打個招呼吧',
       imageUrl: matchedUserPhotoUrl,
-      actionType: 'open_chat',
+      actionType: 'view_match',
       actionData: matchedUserId,
       isRead: false,
       createdAt: DateTime.now(),
