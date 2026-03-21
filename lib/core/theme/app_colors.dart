@@ -18,7 +18,7 @@ class AppColors {
     colors: [primary, Color(0xFFFF8C61)],
   );
   
-  static Color primaryLight = primary.withOpacity(0.1);
-  static Color shadowColor = Colors.black.withOpacity(0.1);
+  static Color primaryLight = primary.withValues(alpha: 0.1);
+  static Color shadowColor = Colors.black.withValues(alpha: 0.1);
   static const Color divider = Color(0xFFE5E7EB);
 }

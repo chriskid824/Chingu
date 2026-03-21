@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'home/home_screen.dart';
-import 'matching/matching_screen.dart';
-import 'explore/explore_screen.dart';
 import 'chat/chat_list_screen.dart';
 import 'profile/profile_detail_screen.dart';
 
@@ -20,28 +18,51 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   late int _currentIndex;
+  late AnimationController _bounceController;
+  late Animation<double> _bounceAnimation;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex ?? 0;
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _bounceAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.15), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 30),
+    ]).animate(CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
   }
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const MatchingScreen(),
-    const ExploreScreen(),
     const ChatListScreen(),
     const ProfileDetailScreen(),
   ];
 
+  void _onTabTapped(int index) {
+    if (index != _currentIndex) {
+      setState(() => _currentIndex = index);
+      _bounceController.reset();
+      _bounceController.forward();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
-
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -49,10 +70,10 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
+          color: AppColorsMinimal.background,
           boxShadow: [
             BoxShadow(
-              color: chinguTheme?.shadowMedium ?? Colors.black.withOpacity(0.1),
+              color: AppColorsMinimal.shadowMedium,
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -60,15 +81,11 @@ class _MainScreenState extends State<MainScreen> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
+          onTap: _onTabTapped,
           type: BottomNavigationBarType.fixed,
-          backgroundColor: theme.scaffoldBackgroundColor,
-          selectedItemColor: theme.colorScheme.primary,
-          unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.4),
+          backgroundColor: AppColorsMinimal.background,
+          selectedItemColor: AppColorsMinimal.primary,
+          unselectedItemColor: AppColorsMinimal.textTertiary,
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 12,
@@ -79,45 +96,17 @@ class _MainScreenState extends State<MainScreen> {
           ),
           elevation: 0,
           items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
+            _buildNavItem(
+              index: 0,
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
               label: '首頁',
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded),
-              activeIcon: Icon(Icons.favorite_rounded),
-              label: '配對',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore_rounded),
-              label: '探索',
-            ),
-            BottomNavigationBarItem(
-              icon: Consumer<ChatProvider>(
-                builder: (context, chatProvider, child) {
-                  return _buildBadgeIcon(
-                    context,
-                    const Icon(Icons.chat_bubble_outline_rounded),
-                    chatProvider.totalUnreadCount,
-                  );
-                },
-              ),
-              activeIcon: Consumer<ChatProvider>(
-                builder: (context, chatProvider, child) {
-                  return _buildBadgeIcon(
-                    context,
-                    const Icon(Icons.chat_bubble_rounded),
-                    chatProvider.totalUnreadCount,
-                  );
-                },
-              ),
-              label: '聊天',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
+            _buildChatNavItem(),
+            _buildNavItem(
+              index: 2,
+              icon: Icons.person_outline_rounded,
+              activeIcon: Icons.person_rounded,
               label: '我的',
             ),
           ],
@@ -126,10 +115,81 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  BottomNavigationBarItem _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final isSelected = _currentIndex == index;
+    return BottomNavigationBarItem(
+      icon: isSelected
+          ? AnimatedBuilder(
+              animation: _bounceAnimation,
+              builder: (_, child) => Transform.scale(
+                scale: _bounceAnimation.value,
+                child: child,
+              ),
+              child: Icon(activeIcon),
+            )
+          : Icon(icon),
+      activeIcon: AnimatedBuilder(
+        animation: _bounceAnimation,
+        builder: (_, child) => Transform.scale(
+          scale: _bounceAnimation.value,
+          child: child,
+        ),
+        child: Icon(activeIcon),
+      ),
+      label: label,
+    );
+  }
+
+  BottomNavigationBarItem _buildChatNavItem() {
+    final isSelected = _currentIndex == 1;
+    return BottomNavigationBarItem(
+      icon: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          final badge = _buildBadgeIcon(
+            context,
+            Icon(isSelected ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded),
+            chatProvider.totalUnreadCount,
+          );
+          if (isSelected) {
+            return AnimatedBuilder(
+              animation: _bounceAnimation,
+              builder: (_, child) => Transform.scale(
+                scale: _bounceAnimation.value,
+                child: child,
+              ),
+              child: badge,
+            );
+          }
+          return badge;
+        },
+      ),
+      activeIcon: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          return AnimatedBuilder(
+            animation: _bounceAnimation,
+            builder: (_, child) => Transform.scale(
+              scale: _bounceAnimation.value,
+              child: child,
+            ),
+            child: _buildBadgeIcon(
+              context,
+              const Icon(Icons.chat_bubble_rounded),
+              chatProvider.totalUnreadCount,
+            ),
+          );
+        },
+      ),
+      label: '聊天',
+    );
+  }
+
   Widget _buildBadgeIcon(BuildContext context, Widget icon, int count) {
     if (count <= 0) return icon;
-
-    final theme = Theme.of(context);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -140,8 +200,8 @@ class _MainScreenState extends State<MainScreen> {
           top: -2,
           child: Container(
             padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.error,
+            decoration: const BoxDecoration(
+              color: AppColorsMinimal.error,
               shape: BoxShape.circle,
             ),
             constraints: const BoxConstraints(

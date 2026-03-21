@@ -34,7 +34,7 @@ class SettingsScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: theme.colorScheme.primary.withOpacity(0.3),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -54,7 +54,7 @@ class SettingsScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'user@example.com',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
@@ -166,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
             height: 140,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.primary.withOpacity(0.03),
+              color: theme.colorScheme.primary.withValues(alpha: 0.03),
             ),
           ),
           Container(
@@ -174,7 +174,7 @@ class SettingsScreen extends StatelessWidget {
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.primary.withOpacity(0.08),
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
             ),
           ),
           // Main Icon
@@ -187,7 +187,7 @@ class SettingsScreen extends StatelessWidget {
                   LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -214,7 +214,7 @@ class SettingsScreen extends StatelessWidget {
                       child: Icon(
                         Icons.notifications_none_rounded,
                         size: 24,
-                        color: theme.colorScheme.primary.withOpacity(0.4),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.4),
                       ),
                     ),
                     Positioned(
@@ -223,7 +223,7 @@ class SettingsScreen extends StatelessWidget {
                       child: Icon(
                         Icons.shield_outlined,
                         size: 20,
-                        color: theme.colorScheme.primary.withOpacity(0.3),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
                       ),
                     ),
                  ]
@@ -242,7 +242,7 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         title,
         style: theme.textTheme.labelLarge?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -260,16 +260,16 @@ class SettingsScreen extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? theme.colorScheme.onSurface.withOpacity(0.7)),
+      leading: Icon(icon, color: iconColor ?? theme.colorScheme.onSurface.withValues(alpha: 0.7)),
       title: Text(
         title,
         style: theme.textTheme.bodyLarge?.copyWith(color: textColor),
       ),
       trailing: trailing is String
-          ? Text(trailing, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.5)))
+          ? Text(trailing, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)))
           : trailing is Widget
               ? trailing
-              : Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+              : Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
       onTap: onTap,
     );
   }

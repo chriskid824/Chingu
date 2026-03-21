@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
-import '../../widgets/gradient_header.dart';
 
 class ProfileDetailScreenDemo extends StatelessWidget {
   const ProfileDetailScreenDemo({super.key});
@@ -16,7 +15,11 @@ class ProfileDetailScreenDemo extends StatelessWidget {
         child: Column(
           children: [
             // 頂部個人資料卡片
-            GradientHeader(
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: chinguTheme?.primaryGradient,
+              ),
               child: SafeArea(
                 bottom: false,
                 child: Column(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_theme.dart';
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
@@ -20,14 +19,14 @@ class LoadingScreen extends StatelessWidget {
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
                 strokeWidth: 4,
-                backgroundColor: theme.colorScheme.outline.withOpacity(0.2),
+                backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             const SizedBox(height: 24),
             Text(
               '載入中...',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],

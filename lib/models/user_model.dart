@@ -6,7 +6,7 @@ class UserModel {
   final String name;
   final String email;
   final int age;
-  final String gender; // 'male' or 'female'
+  final String gender; // 'male', 'female', 'non_binary', 'undisclosed'
   final String job;
   final List<String> interests;
   final String country;
@@ -15,11 +15,12 @@ class UserModel {
   final String? bio;
   final String? avatarUrl;
   
-  // 配對偏好
-  final String preferredMatchType; // 'opposite', 'same', 'any'
+  // 用餐偏好
+  final String diningPreference; // 'male', 'female', 'any', 'no_preference'
   final int minAge;
   final int maxAge;
   final int budgetRange; // 0: 300-500, 1: 500-800, 2: 800-1200, 3: 1200+
+  final List<String> dietaryPreferences; // e.g., 'none', 'vegetarian', 'vegan', 'no_beef', 'no_pork', 'halal'
   
   // 系統欄位
   final bool isActive;
@@ -51,10 +52,11 @@ class UserModel {
     required this.district,
     this.bio,
     this.avatarUrl,
-    required this.preferredMatchType,
+    required this.diningPreference,
     required this.minAge,
     required this.maxAge,
     required this.budgetRange,
+    this.dietaryPreferences = const ['none'],
     this.isActive = true,
     required this.createdAt,
     required this.lastLogin,
@@ -89,10 +91,11 @@ class UserModel {
       district: map['district'] ?? '',
       bio: map['bio'],
       avatarUrl: map['avatarUrl'],
-      preferredMatchType: map['preferredMatchType'] ?? 'any',
+      diningPreference: map['diningPreference'] ?? map['preferredMatchType'] ?? 'any',
       minAge: map['minAge'] ?? 18,
       maxAge: map['maxAge'] ?? 60,
       budgetRange: map['budgetRange'] ?? 1,
+      dietaryPreferences: List<String>.from(map['dietaryPreferences'] ?? ['none']),
       isActive: map['isActive'] ?? true,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       lastLogin: (map['lastLogin'] as Timestamp).toDate(),
@@ -121,10 +124,11 @@ class UserModel {
       'district': district,
       'bio': bio,
       'avatarUrl': avatarUrl,
-      'preferredMatchType': preferredMatchType,
+      'diningPreference': diningPreference,
       'minAge': minAge,
       'maxAge': maxAge,
       'budgetRange': budgetRange,
+      'dietaryPreferences': dietaryPreferences,
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastLogin': Timestamp.fromDate(lastLogin),
@@ -152,10 +156,11 @@ class UserModel {
     String? district,
     String? bio,
     String? avatarUrl,
-    String? preferredMatchType,
+    String? diningPreference,
     int? minAge,
     int? maxAge,
     int? budgetRange,
+    List<String>? dietaryPreferences,
     bool? isActive,
     DateTime? lastLogin,
     GeoPoint? locationGeo,
@@ -180,10 +185,11 @@ class UserModel {
       district: district ?? this.district,
       bio: bio ?? this.bio,
       avatarUrl: avatarUrl ?? this.avatarUrl,
-      preferredMatchType: preferredMatchType ?? this.preferredMatchType,
+      diningPreference: diningPreference ?? this.diningPreference,
       minAge: minAge ?? this.minAge,
       maxAge: maxAge ?? this.maxAge,
       budgetRange: budgetRange ?? this.budgetRange,
+      dietaryPreferences: dietaryPreferences ?? this.dietaryPreferences,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt,
       lastLogin: lastLogin ?? this.lastLogin,
@@ -198,38 +204,47 @@ class UserModel {
     );
   }
 
-  /// 獲取預算範圍文字
-  String get budgetRangeText {
-    switch (budgetRange) {
-      case 0:
-        return 'NT\$ 300-500';
-      case 1:
-        return 'NT\$ 500-800';
-      case 2:
-        return 'NT\$ 800-1200';
-      case 3:
-        return 'NT\$ 1200+';
-      default:
-        return 'NT\$ 500-800';
-    }
-  }
+
 
   /// 獲取性別文字
   String get genderText {
-    return gender == 'male' ? '男性' : '女性';
+    switch (gender) {
+      case 'male':
+        return '男性';
+      case 'female':
+        return '女性';
+      case 'non_binary':
+        return '非二元';
+      case 'undisclosed':
+        return '不公開';
+      default:
+        return '不公開';
+    }
   }
 
-  /// 獲取配對類型文字
-  String get preferredMatchTypeText {
-    switch (preferredMatchType) {
-      case 'opposite':
-        return '異性配對';
-      case 'same':
-        return '同性配對';
+  /// 獲取用餐偏好文字
+  String get diningPreferenceText {
+    switch (diningPreference) {
+      case 'male':
+        return '男性為主';
+      case 'female':
+        return '女性為主';
       case 'any':
-        return '不限';
+        return '都喜歡';
+      case 'no_preference':
+        return '隨緣';
       default:
-        return '不限';
+        return '隨緣';
     }
+  }
+
+  /// 個人資料是否填寫完整（用於 Onboarding 流程判斷）
+  bool get isProfileComplete {
+    return name.isNotEmpty &&
+        age > 0 &&
+        gender.isNotEmpty &&
+        job.isNotEmpty &&
+        interests.isNotEmpty &&
+        city.isNotEmpty;
   }
 }

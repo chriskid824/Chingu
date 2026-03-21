@@ -65,7 +65,7 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   ),
                   child: Icon(
                     Icons.notifications_active_rounded,
@@ -89,7 +89,7 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
               Text(
                 '開啟通知以即時接收配對成功、新訊息以及活動更新。我們會妥善控制通知頻率，不打擾您的生活。',
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -104,7 +104,7 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -142,7 +142,7 @@ class _NotificationPermissionScreenState extends State<NotificationPermissionScr
                   '暫不開啟',
                   style: TextStyle(
                     fontSize: 16,
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ),

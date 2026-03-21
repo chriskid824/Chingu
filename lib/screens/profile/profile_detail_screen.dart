@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/widgets/gradient_header.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -13,12 +14,9 @@ class ProfileDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('ProfileDetailScreen building...');
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: AppColorsMinimal.background,
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           final user = authProvider.userModel;
@@ -83,14 +81,28 @@ class ProfileDetailScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            // 設定按鈕
                             IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.settings_outlined, color: Colors.white),
+                              onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
+                              tooltip: '設定',
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.visibility_outlined, color: Colors.white),
-                              onPressed: () => Navigator.pushNamed(context, AppRoutes.profilePreview),
-                              tooltip: '預覽',
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 編輯資料按鈕
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                                  onPressed: () => Navigator.pushNamed(context, AppRoutes.editProfile),
+                                  tooltip: '編輯資料',
+                                ),
+                                // 預覽按鈕
+                                IconButton(
+                                  icon: const Icon(Icons.visibility_outlined, color: Colors.white),
+                                  onPressed: () => Navigator.pushNamed(context, AppRoutes.profilePreview),
+                                  tooltip: '預覽',
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -98,7 +110,7 @@ class ProfileDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             shape: BoxShape.circle,
                           ),
                           child: Container(
@@ -119,7 +131,7 @@ class ProfileDetailScreen extends StatelessWidget {
                                 : Icon(
                                     Icons.person,
                                     size: 60,
-                                    color: theme.colorScheme.primary,
+                                    color: AppColorsMinimal.primary,
                                   ),
                           ),
                         ),
@@ -136,7 +148,7 @@ class ProfileDetailScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -166,34 +178,34 @@ class ProfileDetailScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-                        // Debug Button
-                        // Debug Button
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.pushNamed(context, AppRoutes.debug);
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.bug_report_rounded, size: 16, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '開發者工具',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
+                        // Debug Button — 僅開發模式顯示
+                        if (kDebugMode)
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pushNamed(context, AppRoutes.debug);
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.bug_report_rounded, size: 16, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      '開發者工具',
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         const SizedBox(height: 24),
                       ],
                     ),
@@ -210,9 +222,10 @@ class ProfileDetailScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         user.bio ?? '這個人很懶，什麼都沒寫...',
-                        style: theme.textTheme.bodyLarge?.copyWith(
+                        style: TextStyle(
+                          fontSize: 16,
                           height: 1.5,
-                          color: theme.colorScheme.onSurface.withOpacity(0.8),
+                          color: AppColorsMinimal.textSecondary,
                         ),
                       ),
                       
@@ -233,8 +246,7 @@ class ProfileDetailScreen extends StatelessWidget {
                       _buildSectionTitle(context, '基本資料'),
                       const SizedBox(height: 12),
                       _buildInfoRow(context, Icons.location_on_outlined, '居住地', '${user.city} ${user.district}'),
-                      _buildInfoRow(context, Icons.person_outline, '性別', user.gender == 'male' ? '男' : '女'),
-                      _buildInfoRow(context, Icons.monetization_on_outlined, '預算', user.budgetRangeText),
+                      _buildInfoRow(context, Icons.person_outline, '性別', user.genderText),
                       
                       const SizedBox(height: 40),
                       
@@ -243,22 +255,17 @@ class ProfileDetailScreen extends StatelessWidget {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: () async {
+                            // 只 signOut，AuthGate 會自動導到 LoginScreen
                             await context.read<AuthProvider>().signOut();
-                            if (context.mounted) {
-                              Navigator.of(context).pushNamedAndRemoveUntil(
-                                AppRoutes.login,
-                                (route) => false,
-                              );
-                            }
                           },
-                          icon: Icon(Icons.logout_rounded, color: theme.colorScheme.error),
-                          label: Text('登出', style: TextStyle(color: theme.colorScheme.error)),
+                          icon: Icon(Icons.logout_rounded, color: AppColorsMinimal.error),
+                          label: Text('登出', style: TextStyle(color: AppColorsMinimal.error)),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: theme.colorScheme.error,
-                            side: BorderSide(color: theme.colorScheme.error.withOpacity(0.5)),
+                            foregroundColor: AppColorsMinimal.error,
+                            side: BorderSide(color: AppColorsMinimal.error.withValues(alpha: 0.5)),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
                             ),
                           ),
                         ),
@@ -276,30 +283,26 @@ class ProfileDetailScreen extends StatelessWidget {
   }
 
   Widget _buildSectionTitle(BuildContext context, String title) {
-    final theme = Theme.of(context);
     return Text(
       title,
-      style: theme.textTheme.titleLarge?.copyWith(
+      style: TextStyle(
+        fontSize: 20,
         fontWeight: FontWeight.bold,
+        color: AppColorsMinimal.textPrimary,
       ),
     );
   }
 
   Widget _buildInterestChip(BuildContext context, String label, IconData icon) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
-    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: chinguTheme?.surfaceVariant ?? Colors.grey[200]!,
-        ),
+        color: AppColorsMinimal.surface,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+        border: Border.all(color: AppColorsMinimal.surfaceVariant),
         boxShadow: [
           BoxShadow(
-            color: chinguTheme?.shadowLight ?? Colors.black12,
+            color: AppColorsMinimal.shadowLight,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -308,12 +311,12 @@ class ProfileDetailScreen extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: theme.colorScheme.primary),
+          Icon(icon, size: 18, color: AppColorsMinimal.primary),
           const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(
-              color: theme.colorScheme.onSurface,
+              color: AppColorsMinimal.textPrimary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -323,7 +326,6 @@ class ProfileDetailScreen extends StatelessWidget {
   }
 
   Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -331,10 +333,10 @@ class ProfileDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: AppColorsMinimal.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+            child: Icon(icon, color: AppColorsMinimal.primary, size: 20),
           ),
           const SizedBox(width: 16),
           Column(
@@ -342,12 +344,14 @@ class ProfileDetailScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: theme.textTheme.bodySmall,
+                style: TextStyle(fontSize: 12, color: AppColorsMinimal.textTertiary),
               ),
               Text(
                 value,
-                style: theme.textTheme.bodyLarge?.copyWith(
+                style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
+                  color: AppColorsMinimal.textPrimary,
                 ),
               ),
             ],
@@ -373,7 +377,7 @@ class ProfileDetailScreen extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
             fontSize: 12,
           ),
         ),
@@ -385,7 +389,7 @@ class ProfileDetailScreen extends StatelessWidget {
     return Container(
       height: 24,
       width: 1,
-      color: Colors.white.withOpacity(0.3),
+      color: Colors.white.withValues(alpha: 0.3),
     );
   }
 }

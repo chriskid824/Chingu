@@ -104,6 +104,30 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  Future<void> _runE2ESeeder() async {
+    setState(() {
+      _isLoading = true;
+      _status = '🚀 正在生成 E2E 完整流程資料...';
+    });
+
+    try {
+      final seeder = DatabaseSeeder();
+      await seeder.seedE2EFlow();
+      
+      setState(() {
+        _status = '✅ E2E 資料生成成功！12 用戶 / 2 桌 / 3 次免費';
+      });
+    } catch (e) {
+      setState(() {
+        _status = '❌ E2E 生成失敗: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,6 +170,17 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.pink,
                   side: const BorderSide(color: Colors.pink),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _isLoading ? null : _runE2ESeeder,
+                icon: const Icon(Icons.rocket_launch_rounded),
+                label: const Text('🚀 E2E 完整流程測試'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),

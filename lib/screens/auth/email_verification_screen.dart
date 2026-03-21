@@ -37,8 +37,8 @@ class EmailVerificationScreen extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        theme.colorScheme.primaryContainer.withOpacity(0.3),
-                        theme.colorScheme.primaryContainer.withOpacity(0.1),
+                        theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
                       ],
                     ),
                     shape: BoxShape.circle,
@@ -59,7 +59,7 @@ class EmailVerificationScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: chinguTheme?.success.withOpacity(0.3) ?? Colors.green.withOpacity(0.3),
+                          color: chinguTheme?.success.withValues(alpha: 0.3) ?? Colors.green.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -100,7 +100,7 @@ class EmailVerificationScreen extends StatelessWidget {
               '我們已發送驗證郵件至',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             
@@ -113,7 +113,7 @@ class EmailVerificationScreen extends StatelessWidget {
                 gradient: chinguTheme?.transparentGradient,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -131,7 +131,7 @@ class EmailVerificationScreen extends StatelessWidget {
               '請檢查您的收件匣並點擊驗證連結',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
             
@@ -144,7 +144,7 @@ class EmailVerificationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.3),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -211,7 +211,7 @@ class EmailVerificationScreen extends StatelessWidget {
               child: Text(
                 '稍後再說',
                 style: TextStyle(
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ),

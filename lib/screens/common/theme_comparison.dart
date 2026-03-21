@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
-import 'package:chingu/core/theme/app_colors.dart';
 
 /// 主題對比預覽頁面
 /// 左側：原本的橙色風格
@@ -447,7 +446,7 @@ class _ThemePreview extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: chinguTheme.transparentGradient,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
           ),
           child: Center(
             child: Text(
@@ -464,7 +463,7 @@ class _ThemePreview extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: chinguTheme.glassGradient,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.5)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
           ),
           child: Center(
             child: Text(

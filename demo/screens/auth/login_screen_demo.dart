@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
-import '../../widgets/gradient_button.dart';
 
 class LoginScreenDemo extends StatelessWidget {
   const LoginScreenDemo({super.key});
@@ -145,10 +144,22 @@ class LoginScreenDemo extends StatelessWidget {
               const SizedBox(height: 24),
               
               // 登入按鈕
-              GradientButton(
-                text: '登入',
-                onPressed: () {},
-                gradient: chinguTheme?.primaryGradient,
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: chinguTheme?.primaryGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('登入', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                ),
               ),
               
               const SizedBox(height: 24),

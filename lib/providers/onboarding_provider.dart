@@ -6,7 +6,7 @@ class OnboardingProvider with ChangeNotifier {
   // Step 1: 基本資料
   String? _name;
   int? _age;
-  String? _gender; // 'male' or 'female'
+  String? _gender; // 'male', 'female', 'non_binary', 'undisclosed'
   String? _job;
   String? _avatarUrl;
 
@@ -14,8 +14,8 @@ class OnboardingProvider with ChangeNotifier {
   List<String> _interests = [];
   String? _bio;
 
-  // Step 3: 配對偏好
-  String _preferredMatchType = 'any'; // 'opposite', 'same', 'any'
+  // Step 3: 用餐偏好
+  String _diningPreference = 'any'; // 'male', 'female', 'any', 'no_preference'
   int _minAge = 18;
   int _maxAge = 100;
   int _budgetRange = 1; // 0: 300-500, 1: 500-800, 2: 800-1200, 3: 1200+
@@ -33,7 +33,7 @@ class OnboardingProvider with ChangeNotifier {
   String? get avatarUrl => _avatarUrl;
   List<String> get interests => _interests;
   String? get bio => _bio;
-  String get preferredMatchType => _preferredMatchType;
+  String get diningPreference => _diningPreference;
   int get minAge => _minAge;
   int get maxAge => _maxAge;
   int get budgetRange => _budgetRange;
@@ -66,12 +66,12 @@ class OnboardingProvider with ChangeNotifier {
 
   // Setters for Step 3
   void setPreferences({
-    required String preferredMatchType,
+    required String diningPreference,
     required int minAge,
     required int maxAge,
     required int budgetRange,
   }) {
-    _preferredMatchType = preferredMatchType;
+    _diningPreference = diningPreference;
     _minAge = minAge;
     _maxAge = maxAge;
     _budgetRange = budgetRange;
@@ -115,7 +115,7 @@ class OnboardingProvider with ChangeNotifier {
       'country': _country,
       'city': _city,
       'district': _district,
-      'preferredMatchType': _preferredMatchType,
+      'diningPreference': _diningPreference,
       'minAge': _minAge,
       'maxAge': _maxAge,
       'budgetRange': _budgetRange,
@@ -150,7 +150,7 @@ class OnboardingProvider with ChangeNotifier {
     _avatarUrl = null;
     _interests = [];
     _bio = null;
-    _preferredMatchType = 'any';
+    _diningPreference = 'any';
     _minAge = 18;
     _maxAge = 100;
     _budgetRange = 1;

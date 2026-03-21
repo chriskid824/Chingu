@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/models/notification_model.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -75,7 +75,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -126,8 +125,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          theme.colorScheme.primary.withOpacity(0.2),
-                          theme.colorScheme.primary.withOpacity(0.1),
+                          theme.colorScheme.primary.withValues(alpha: 0.2),
+                          theme.colorScheme.primary.withValues(alpha: 0.1),
                         ],
                       ),
                       shape: BoxShape.circle,
@@ -151,7 +150,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     '您目前沒有任何通知消息',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                   ),
@@ -175,7 +174,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel notification,
   ) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     // 根據類型決定圖標和顏色
     IconData icon;
@@ -189,7 +187,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         break;
       case 'match_request': // 假設新增此類型對應 "想要與您配對"
         icon = Icons.person_add_rounded;
-        color = chinguTheme?.secondary ?? Colors.purple;
+        color = AppColorsMinimal.secondary;
         break;
       case 'message':
         icon = Icons.chat_bubble_rounded;
@@ -197,7 +195,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         break;
       case 'event':
         icon = Icons.event_available_rounded;
-        color = chinguTheme?.success ?? Colors.green;
+        color = AppColorsMinimal.success;
         break;
       case 'event_reminder': // 假設新增此類型對應 "晚餐報名截止"
         icon = Icons.restaurant_rounded;
@@ -205,13 +203,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         break;
       case 'rating':
         icon = Icons.stars_rounded;
-        color = chinguTheme?.warning ?? Colors.amber;
+        color = AppColorsMinimal.warning;
         break;
       default:
         // 如果是 match 但 title 包含 "配對" (fallback for existing data)
         if (notification.type == 'match' && notification.title.contains('配對')) {
           icon = Icons.person_add_rounded;
-          color = chinguTheme?.secondary ?? Colors.purple;
+          color = AppColorsMinimal.secondary;
         } else if (notification.type == 'event' &&
             notification.title.contains('晚餐')) {
           icon = Icons.restaurant_rounded;
@@ -236,12 +234,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: !notification.isRead ? theme.colorScheme.primary.withOpacity(0.05) : theme.cardColor,
+        color: !notification.isRead ? theme.colorScheme.primary.withValues(alpha: 0.05) : theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: !notification.isRead
-              ? theme.colorScheme.primary.withOpacity(0.2)
-              : chinguTheme?.surfaceVariant ?? theme.dividerColor,
+              ? theme.colorScheme.primary.withValues(alpha: 0.2)
+              : AppColorsMinimal.divider,
           width: 1,
         ),
       ),
@@ -252,8 +250,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                color.withOpacity(0.2),
-                color.withOpacity(0.1),
+                color.withValues(alpha: 0.2),
+                color.withValues(alpha: 0.1),
               ],
             ),
             shape: BoxShape.circle,
@@ -274,7 +272,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             timeStr,
             style: TextStyle(
               fontSize: 13,
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -283,7 +281,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  gradient: chinguTheme?.primaryGradient,
+                  gradient: AppColorsMinimal.primaryGradient,
                   shape: BoxShape.circle,
                 ),
               )

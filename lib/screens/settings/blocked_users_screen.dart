@@ -148,14 +148,14 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
           Icon(
             Icons.block_outlined,
             size: 80,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.3),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
             '沒有已封鎖的用戶',
             style: TextStyle(
               fontSize: 18,
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
@@ -163,7 +163,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
             '您封鎖的用戶會顯示在這裡',
             style: TextStyle(
               fontSize: 14,
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
             ),
           ),
         ],

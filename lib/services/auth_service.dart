@@ -1,5 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
@@ -103,6 +107,67 @@ class AuthService {
       return userCredential.user!;
     } catch (e) {
       throw Exception('Google 登入失敗: $e');
+    }
+  }
+
+  /// 產生隨機 nonce 字串
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  /// SHA256 雜湊
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// Apple 登入
+  ///
+  /// 返回 User 或拋出異常
+  Future<User> signInWithApple() async {
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(oauthCredential);
+
+      if (userCredential.user == null) {
+        throw Exception('Apple 登入失敗');
+      }
+
+      // Apple 只在首次登入時提供名字
+      final displayName = [
+        appleCredential.givenName,
+        appleCredential.familyName,
+      ].where((n) => n != null && n.isNotEmpty).join(' ');
+
+      if (displayName.isNotEmpty && userCredential.user!.displayName == null) {
+        await userCredential.user!.updateDisplayName(displayName);
+      }
+
+      return userCredential.user!;
+    } catch (e) {
+      if (e.toString().contains('AuthorizationErrorCode.canceled')) {
+        throw Exception('Apple 登入已取消');
+      }
+      throw Exception('Apple 登入失敗: $e');
     }
   }
 

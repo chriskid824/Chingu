@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
@@ -9,8 +10,7 @@ class ChatProvider with ChangeNotifier {
   List<Map<String, dynamic>> _chatRooms = [];
   bool _isLoading = false;
   String? _errorMessage;
-  // TODO: 實作真實的未讀訊息計數。目前預設為 0，等待後端支援。
-  final int _totalUnreadCount = 0;
+  int _totalUnreadCount = 0;
 
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
   bool get isLoading => _isLoading;
@@ -23,8 +23,10 @@ class ChatProvider with ChangeNotifier {
       _setLoading(true);
       _errorMessage = null;
 
-      print('=== ChatProvider.loadChatRooms ===');
-      print('用戶 ID: $userId');
+      if (kDebugMode) {
+        debugPrint('=== ChatProvider.loadChatRooms ===');
+        debugPrint('用戶 ID: $userId');
+      }
 
       // 查詢包含該用戶的聊天室（暫時移除 orderBy 避免需要索引）
       final chatRoomsQuery = await _firestore
@@ -32,7 +34,7 @@ class ChatProvider with ChangeNotifier {
           .where('participantIds', arrayContains: userId)
           .get();
 
-      print('找到 ${chatRoomsQuery.docs.length} 個聊天室');
+      debugPrint('找到 ${chatRoomsQuery.docs.length} 個聊天室');
 
       _chatRooms = [];
       int totalUnreadCount = 0;
@@ -74,13 +76,18 @@ class ChatProvider with ChangeNotifier {
       }
 
       // 更新 App Badge
+      _totalUnreadCount = totalUnreadCount;
       await BadgeCountService().updateCount(totalUnreadCount);
 
-      print('成功載入 ${_chatRooms.length} 個聊天室');
+      if (kDebugMode) {
+        debugPrint('成功載入 ${_chatRooms.length} 個聊天室');
+      }
 
       _setLoading(false);
     } catch (e) {
-      print('載入聊天室錯誤: $e');
+      if (kDebugMode) {
+        debugPrint('載入聊天室錯誤: $e');
+      }
       _errorMessage = e.toString();
       _setLoading(false);
       notifyListeners();
@@ -112,7 +119,6 @@ class ChatProvider with ChangeNotifier {
     });
   }
 
-  /// 發送訊息
   Future<void> sendMessage({
     required String chatRoomId,
     required String senderId,
@@ -137,8 +143,25 @@ class ChatProvider with ChangeNotifier {
         'lastMessage': text,
         'lastMessageAt': timestamp,
       });
+
+      // 3. 遞增對方的 unreadCount
+      final chatRoomDoc = await _firestore.collection('chat_rooms').doc(chatRoomId).get();
+      if (chatRoomDoc.exists) {
+        final participantIds = List<String>.from(chatRoomDoc.data()?['participantIds'] ?? []);
+        final otherUserId = participantIds.firstWhere(
+          (id) => id != senderId,
+          orElse: () => '',
+        );
+        if (otherUserId.isNotEmpty) {
+          await _firestore.collection('chat_rooms').doc(chatRoomId).update({
+            'unreadCount.$otherUserId': FieldValue.increment(1),
+          });
+        }
+      }
     } catch (e) {
-      print('發送訊息失敗: $e');
+      if (kDebugMode) {
+        debugPrint('發送訊息失敗: $e');
+      }
       rethrow;
     }
   }

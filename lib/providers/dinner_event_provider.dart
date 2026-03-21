@@ -20,7 +20,7 @@ class DinnerEventProvider with ChangeNotifier {
 
   /// 創建活動
   Future<bool> createEvent({
-    required String creatorId,
+    required String userId,
     required DateTime dateTime,
     required int budgetRange,
     required String city,
@@ -32,7 +32,7 @@ class DinnerEventProvider with ChangeNotifier {
       _errorMessage = null;
 
       await _dinnerEventService.createEvent(
-        creatorId: creatorId,
+        userId: userId,
         dateTime: dateTime,
         budgetRange: budgetRange,
         city: city,
@@ -41,7 +41,7 @@ class DinnerEventProvider with ChangeNotifier {
       );
 
       // 創建成功後刷新我的活動列表
-      await fetchMyEvents(creatorId);
+      await fetchMyEvents(userId);
 
       _setLoading(false);
       return true;
@@ -155,7 +155,7 @@ class DinnerEventProvider with ChangeNotifier {
       // 2. 檢查是否已參加
       // 檢查 myEvents 中是否有同日期的活動
       final isJoined = _myEvents.any((event) {
-        final eventDate = event.dateTime;
+        final eventDate = event.eventDate;
         return eventDate.year == date.year && 
                eventDate.month == date.month && 
                eventDate.day == date.day;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:chingu/services/auth_service.dart';
 import 'package:chingu/services/firestore_service.dart';
+import 'package:chingu/services/push_notification_service.dart';
 import 'package:chingu/models/user_model.dart';
 
 /// 認證狀態枚舉
@@ -38,18 +39,39 @@ class AuthProvider with ChangeNotifier {
 
   /// 處理認證狀態變化
   Future<void> _onAuthStateChanged(firebase_auth.User? firebaseUser) async {
-    if (firebaseUser == null) {
-      // 用戶登出
-      _status = AuthStatus.unauthenticated;
-      _firebaseUser = null;
-      _userModel = null;
-    } else {
-      // 用戶登入
-      _firebaseUser = firebaseUser;
-      await _loadUserData(firebaseUser.uid);
-      _status = AuthStatus.authenticated;
+    try {
+      if (firebaseUser == null) {
+        // 用戶登出
+        debugPrint('🔐 _onAuthStateChanged: 用戶登出');
+        _status = AuthStatus.unauthenticated;
+        _firebaseUser = null;
+        _userModel = null;
+      } else {
+        // 用戶登入
+        debugPrint('🔐 _onAuthStateChanged: 用戶登入 ${firebaseUser.uid}');
+        _firebaseUser = firebaseUser;
+        await _loadUserData(firebaseUser.uid);
+        _status = AuthStatus.authenticated;
+
+        // 註冊 FCM token 用於推播通知（模擬器上會失敗，不影響登入）
+        try {
+          await PushNotificationService().registerUserToken();
+        } catch (e) {
+          debugPrint('⚠️ FCM token 註冊失敗（不影響登入）: $e');
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ _onAuthStateChanged 發生錯誤: $e');
+      // 即使出錯也要保持可用狀態
+      if (firebaseUser != null) {
+        _firebaseUser = firebaseUser;
+        _status = AuthStatus.authenticated;
+      } else {
+        _status = AuthStatus.unauthenticated;
+      }
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   /// 載入用戶資料
@@ -108,7 +130,7 @@ class AuthProvider with ChangeNotifier {
         country: '台灣', // 預設值
         city: '', // 將在 onboarding 中設置
         district: '', // 將在 onboarding 中設置
-        preferredMatchType: 'any', // 預設值
+        diningPreference: 'any', // 預設值
         minAge: 18, // 預設值
         maxAge: 100, // 預設值
         budgetRange: 1, // 預設值
@@ -184,10 +206,56 @@ class AuthProvider with ChangeNotifier {
           country: '台灣', // 預設值
           city: '', // 將在 onboarding 中設置
           district: '', // 將在 onboarding 中設置
-          preferredMatchType: 'any', // 預設值
+          diningPreference: 'any', // 預設值
           minAge: 18, // 預設值
           maxAge: 100, // 預設值
           budgetRange: 1, // 預設值
+          createdAt: DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+
+        await _firestoreService.createUser(userModel);
+      }
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setLoading(false);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Apple 登入
+  Future<bool> signInWithApple() async {
+    try {
+      _setLoading(true);
+      _errorMessage = null;
+
+      final firebaseUser = await _authService.signInWithApple();
+
+      // 檢查是否為新用戶
+      final exists = await _firestoreService.userExists(firebaseUser.uid);
+
+      if (!exists) {
+        // 為新的 Apple 用戶創建 Firestore 資料
+        final userModel = UserModel(
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'User',
+          email: firebaseUser.email ?? '',
+          avatarUrl: firebaseUser.photoURL,
+          age: 0,
+          gender: '',
+          job: '',
+          interests: [],
+          country: '台灣',
+          city: '',
+          district: '',
+          diningPreference: 'any',
+          minAge: 18,
+          maxAge: 100,
+          budgetRange: 1,
           createdAt: DateTime.now(),
           lastLogin: DateTime.now(),
         );
@@ -209,6 +277,8 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     try {
       _setLoading(true);
+      // 移除 FCM token
+      await PushNotificationService().unregisterUserToken();
       await _authService.signOut();
       _setLoading(false);
     } catch (e) {

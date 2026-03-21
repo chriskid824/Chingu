@@ -32,7 +32,7 @@ class OnboardingProgressBar extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   gradient: isActive ? chinguTheme?.primaryGradient : null,
-                  color: isActive ? null : theme.colorScheme.outline.withOpacity(0.3),
+                  color: isActive ? null : theme.colorScheme.outline.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -43,7 +43,7 @@ class OnboardingProgressBar extends StatelessWidget {
         Text(
           '步驟 $currentStep/$totalSteps',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],

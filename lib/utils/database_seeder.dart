@@ -1,4 +1,5 @@
 
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chingu/models/user_model.dart';
@@ -14,27 +15,27 @@ class DatabaseSeeder {
   /// 生成並寫入測試數據
   Future<void> seedData() async {
     try {
-      print('開始清理並生成測試數據...');
+      debugPrint('開始清理並生成測試數據...');
       await clearAllData();
       
-      print('步驟 1/3: 生成用戶數據...');
+      debugPrint('步驟 1/3: 生成用戶數據...');
       await _seedUsers();
       
-      print('步驟 2/3: 生成活動數據...');
+      debugPrint('步驟 2/3: 生成活動數據...');
       try {
         await _seedEvents();
-        print('✓ 活動數據生成完成');
+        debugPrint('✓ 活動數據生成完成');
       } catch (e, stackTrace) {
-        print('✗ 活動數據生成失敗: $e');
-        print('Stack trace: $stackTrace');
+        debugPrint('✗ 活動數據生成失敗: $e');
+        debugPrint('Stack trace: $stackTrace');
       }
       
-      print('步驟 3/3: 生成配對和聊天數據...');
+      debugPrint('步驟 3/3: 生成配對和聊天數據...');
       await _seedTestMatchesAndChats();
       
-      print('測試數據生成完成！');
+      debugPrint('測試數據生成完成！');
     } catch (e) {
-      print('生成測試數據失敗: $e');
+      debugPrint('生成測試數據失敗: $e');
       rethrow;
     }
   }
@@ -42,7 +43,7 @@ class DatabaseSeeder {
   /// 清除所有數據
   Future<void> clearAllData() async {
     try {
-      print('正在清理舊數據...');
+      debugPrint('正在清理舊數據...');
       
       // 只刪除測試數據，保留真實用戶（有 email 的）
       // 1. 刪除沒有 email 或 email 包含 dummy 的測試用戶
@@ -54,7 +55,7 @@ class DatabaseSeeder {
       for (var doc in usersQuery.docs) {
         // 如果是當前用戶，跳過
         if (doc.id == currentUserId) {
-          print('跳過當前用戶: ${doc.id}');
+          debugPrint('跳過當前用戶: ${doc.id}');
           continue;
         }
 
@@ -65,7 +66,7 @@ class DatabaseSeeder {
           await doc.reference.delete();
         }
       }
-      print('已清空測試用戶（保留當前用戶）');
+      debugPrint('已清空測試用戶（保留當前用戶）');
       
       // 2. 清空其他集合
       final collections = ['dinner_events', 'swipes', 'chat_rooms', 'messages'];
@@ -75,12 +76,12 @@ class DatabaseSeeder {
         for (var doc in snapshot.docs) {
           await doc.reference.delete();
         }
-        print('已清空集合: $collection');
+        debugPrint('已清空集合: $collection');
       }
       
-      print('舊數據清理完成！');
+      debugPrint('舊數據清理完成！');
     } catch (e) {
-      print('清理數據失敗: $e');
+      debugPrint('清理數據失敗: $e');
       rethrow;
     }
   }
@@ -90,7 +91,7 @@ class DatabaseSeeder {
   /// 當 test@gmail.com 喜歡他們時，就會觸發配對成功
   Future<void> seedMutualLikes() async {
     try {
-      print('開始生成互相喜歡的測試數據...');
+      debugPrint('開始生成互相喜歡的測試數據...');
       
       // 1. 查找測試用戶
       final testUserQuery = await _firestore
@@ -100,14 +101,14 @@ class DatabaseSeeder {
           .get();
 
       if (testUserQuery.docs.isEmpty) {
-        print('❌ 找不到 test@gmail.com 用戶');
-        print('請確認您已經用 test@gmail.com 登入並完成個人資料設定');
+        debugPrint('❌ 找不到 test@gmail.com 用戶');
+        debugPrint('請確認您已經用 test@gmail.com 登入並完成個人資料設定');
         return;
       }
 
       final testUserId = testUserQuery.docs.first.id;
       final testUserData = testUserQuery.docs.first.data();
-      print('✓ 找到測試用戶: ${testUserData['name']} ($testUserId)');
+      debugPrint('✓ 找到測試用戶: ${testUserData['name']} ($testUserId)');
 
       // 2. 獲取其他用戶（排除測試用戶和已經滑過的）
       final allUsersQuery = await _firestore
@@ -117,18 +118,18 @@ class DatabaseSeeder {
           .get();
 
       if (allUsersQuery.docs.isEmpty) {
-        print('❌ 沒有其他用戶可以配對');
-        print('請先運行 Seeder 生成測試用戶');
+        debugPrint('❌ 沒有其他用戶可以配對');
+        debugPrint('請先運行 Seeder 生成測試用戶');
         return;
       }
 
       // 3. 選擇 3 個用戶來喜歡測試用戶（但測試用戶還沒喜歡他們）
       final candidateUsers = allUsersQuery.docs.take(3).toList();
-      print('\n準備創建 ${candidateUsers.length} 個單向喜歡記錄：');
+      debugPrint('\n準備創建 ${candidateUsers.length} 個單向喜歡記錄：');
 
       for (var i = 0; i < candidateUsers.length; i++) {
         final candidateId = candidateUsers[i].id;
-        final candidateData = candidateUsers[i].data() as Map<String, dynamic>;
+        final candidateData = candidateUsers[i].data();
         final candidateName = candidateData['name'] ?? '用戶${i + 1}';
 
         // 創建單向 swipe 記錄：對方喜歡測試用戶
@@ -139,18 +140,18 @@ class DatabaseSeeder {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        print('  ${i + 1}. $candidateName (ID: ${candidateId.substring(0, 8)}...) 已喜歡你');
+        debugPrint('  ${i + 1}. $candidateName (ID: ${candidateId.substring(0, 8)}...) 已喜歡你');
       }
 
-      print('\n✅ 成功生成測試數據！');
-      print('\n📱 測試步驟：');
-      print('1. 進入配對頁面（Matching Screen）');
-      print('2. 找到以上用戶並滑動喜歡（或點擊愛心按鈕）');
-      print('3. 應該立即彈出 "It\'s a Match!" 慶祝畫面');
-      print('4. 並自動創建聊天室\n');
+      debugPrint('\n✅ 成功生成測試數據！');
+      debugPrint('\n📱 測試步驟：');
+      debugPrint('1. 進入配對頁面（Matching Screen）');
+      debugPrint('2. 找到以上用戶並滑動喜歡（或點擊愛心按鈕）');
+      debugPrint('3. 應該立即彈出 "It\'s a Match!" 慶祝畫面');
+      debugPrint('4. 並自動創建聊天室\n');
     } catch (e, stackTrace) {
-      print('❌ 生成測試數據失敗: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('❌ 生成測試數據失敗: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -176,7 +177,7 @@ class DatabaseSeeder {
           final userData = userDoc.data();
           if (userData != null && userData['city'] != null && userData['city'].toString().isNotEmpty) {
             targetCity = userData['city'];
-            print('✓ 將為當前用戶所在城市生成數據: $targetCity');
+            debugPrint('✓ 將為當前用戶所在城市生成數據: $targetCity');
             
             // 如果不是台北市，使用通用的區域名稱或單一區域
             if (targetCity != '台北市') {
@@ -186,10 +187,10 @@ class DatabaseSeeder {
         }
       }
     } catch (e) {
-      print('獲取當前用戶城市失敗，使用預設值: $e');
+      debugPrint('獲取當前用戶城市失敗，使用預設值: $e');
     }
 
-    print('正在生成 20 個測試用戶 ($targetCity)...');
+    debugPrint('正在生成 20 個測試用戶 ($targetCity)...');
 
     for (int i = 0; i < 20; i++) {
       final isMale = _random.nextBool();
@@ -217,18 +218,18 @@ class DatabaseSeeder {
         budgetRange: _random.nextInt(4), // 0-3
         createdAt: DateTime.now(),
         lastLogin: DateTime.now(),
-        preferredMatchType: 'any',
+        diningPreference: 'any',
         minAge: 18,
         maxAge: 50,
       );
 
       await usersCollection.doc(uid).set(user.toMap());
     }
-    print('已生成 20 個測試用戶。');
+    debugPrint('已生成 20 個測試用戶。');
   }
 
   Future<void> _seedEvents() async {
-    print('=== 開始生成活動資料 ===');
+    debugPrint('=== 開始生成活動資料 ===');
     final eventsCollection = _firestore.collection('dinner_events');
     String? targetUserId;
     
@@ -236,7 +237,7 @@ class DatabaseSeeder {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       targetUserId = currentUser.uid;
-      print('使用當前登入用戶 ID: $targetUserId');
+      debugPrint('使用當前登入用戶 ID: $targetUserId');
     } else {
       // 2. 否則查找 test@gmail.com
       final testUserQuery = await _firestore
@@ -247,16 +248,16 @@ class DatabaseSeeder {
 
       if (testUserQuery.docs.isNotEmpty) {
         targetUserId = testUserQuery.docs.first.id;
-        print('使用 test@gmail.com 用戶 ID: $targetUserId');
+        debugPrint('使用 test@gmail.com 用戶 ID: $targetUserId');
       }
     }
 
     if (targetUserId == null) {
-      print('警告：找不到目標用戶，跳過活動生成');
+      debugPrint('警告：找不到目標用戶，跳過活動生成');
       return;
     }
 
-    print('為用戶 $targetUserId 創建活動...');
+    debugPrint('為用戶 $targetUserId 創建活動...');
 
     // 創建 3 個測試活動
     final events = [
@@ -285,38 +286,34 @@ class DatabaseSeeder {
 
     for (var eventData in events) {
       final eventId = _uuid.v4();
+      final eventDateTime = eventData['dateTime'] as DateTime;
       final event = DinnerEventModel(
         id: eventId,
-        creatorId: targetUserId,
-        dateTime: eventData['dateTime'] as DateTime,
-        budgetRange: eventData['budgetRange'] as int,
+        eventDate: eventDateTime,
+        signupDeadline: eventDateTime.subtract(const Duration(days: 1)),
         city: eventData['city'] as String,
-        district: eventData['district'] as String,
-        notes: eventData['notes'] as String,
-        participantIds: [targetUserId],
-        participantStatus: {targetUserId: 'confirmed'},
-        status: 'pending',
+        signedUpUsers: [targetUserId],
+        status: 'open',
         createdAt: DateTime.now(),
-        icebreakerQuestions: ['大家最近有什麼有趣的事情分享嗎？'],
       );
 
       await eventsCollection.doc(eventId).set(event.toMap());
     }
     
-    print('已為測試用戶生成 ${events.length} 個活動。');
+    debugPrint('已為測試用戶生成 ${events.length} 個活動。');
   }
 
   /// 為測試用戶創建配對和聊天室
   Future<void> _seedTestMatchesAndChats() async {
     try {
-      print('開始為 test@gmail.com 創建測試配對...');
+      debugPrint('開始為 test@gmail.com 創建測試配對...');
       
       // 調試：先列出所有用戶和他們的 email
       final allUsers = await _firestore.collection('users').get();
-      print('資料庫中總共有 ${allUsers.docs.length} 個用戶：');
+      debugPrint('資料庫中總共有 ${allUsers.docs.length} 個用戶：');
       for (var doc in allUsers.docs) {
         final data = doc.data();
-        print('  - ID: ${doc.id}, Email: ${data['email']}, Name: ${data['name']}');
+        debugPrint('  - ID: ${doc.id}, Email: ${data['email']}, Name: ${data['name']}');
       }
       
       // 1. 查找測試用戶
@@ -326,18 +323,18 @@ class DatabaseSeeder {
           .limit(1)
           .get();
 
-      print('查詢 email=test@gmail.com 的結果：${testUserQuery.docs.length} 個文檔');
+      debugPrint('查詢 email=test@gmail.com 的結果：${testUserQuery.docs.length} 個文檔');
 
       if (testUserQuery.docs.isEmpty) {
-        print('警告：找不到 test@gmail.com 用戶，跳過配對生成');
-        print('請確認：');
-        print('1. 您是否用 test@gmail.com 註冊？');
-        print('2. 註冊時是否成功保存到 Firestore？');
+        debugPrint('警告：找不到 test@gmail.com 用戶，跳過配對生成');
+        debugPrint('請確認：');
+        debugPrint('1. 您是否用 test@gmail.com 註冊？');
+        debugPrint('2. 註冊時是否成功保存到 Firestore？');
         return;
       }
 
       final testUserId = testUserQuery.docs.first.id;
-      print('找到測試用戶 ID: $testUserId');
+      debugPrint('找到測試用戶 ID: $testUserId');
 
       // 2. 獲取 3 個隨機測試用戶進行配對
       final allUsersQuery = await _firestore
@@ -347,17 +344,17 @@ class DatabaseSeeder {
           .get();
 
       if (allUsersQuery.docs.isEmpty) {
-        print('警告：沒有其他用戶可以配對');
+        debugPrint('警告：沒有其他用戶可以配對');
         return;
       }
 
       final matchUsers = allUsersQuery.docs.take(3).toList();
-      print('選擇了 ${matchUsers.length} 個用戶進行配對');
+      debugPrint('選擇了 ${matchUsers.length} 個用戶進行配對');
 
       // 3. 為每個用戶創建雙向喜歡記錄和聊天室
       for (var i = 0; i < matchUsers.length; i++) {
         final matchUserId = matchUsers[i].id;
-        final matchUserData = matchUsers[i].data() as Map<String, dynamic>;
+        final matchUserData = matchUsers[i].data();
         final matchUserName = matchUserData['name'] ?? '用戶${i + 1}';
 
         // 3.1 創建雙向 swipe 記錄
@@ -375,7 +372,7 @@ class DatabaseSeeder {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        print('✓ 創建了與 $matchUserName 的配對記錄');
+        debugPrint('✓ 創建了與 $matchUserName 的配對記錄');
 
         // 3.2 創建聊天室
         final chatRoomId = _uuid.v4();
@@ -388,7 +385,7 @@ class DatabaseSeeder {
         };
 
         await _firestore.collection('chat_rooms').doc(chatRoomId).set(chatRoomData);
-        print('✓ 創建了與 $matchUserName 的聊天室: $chatRoomId');
+        debugPrint('✓ 創建了與 $matchUserName 的聊天室: $chatRoomId');
 
         // 3.3 添加測試訊息
         final messages = [
@@ -412,15 +409,266 @@ class DatabaseSeeder {
           await _firestore.collection('messages').add(message);
         }
 
-        print('✓ 添加了測試訊息');
+        debugPrint('✓ 添加了測試訊息');
       }
 
-      print('成功為 test@gmail.com 創建了 ${matchUsers.length} 個配對和聊天室！');
+      debugPrint('成功為 test@gmail.com 創建了 ${matchUsers.length} 個配對和聊天室！');
     } catch (e) {
-      print('創建測試配對失敗: $e');
-      print('錯誤堆疊: ${StackTrace.current}');
+      debugPrint('創建測試配對失敗: $e');
+      debugPrint('錯誤堆疊: ${StackTrace.current}');
       // 不拋出異常，允許其他數據生成繼續
     }
   }
-}
 
+  /// 生成餐廳種子資料（台北市信義區為主）
+  Future<void> seedRestaurants() async {
+    debugPrint('開始生成餐廳種子資料...');
+    final collection = _firestore.collection('restaurants');
+
+    // 先清除舊的種子餐廳
+    final existing = await collection.get();
+    for (var doc in existing.docs) {
+      await doc.reference.delete();
+    }
+
+    final restaurants = [
+      // ── budgetLevel 0: NT$ 300-500（平價）──
+      _restaurant('小巷食堂', '台北市信義區松仁路 28 號', 25.0330, 121.5654,
+          '02-2720-0001', 0, ['no_beef', 'vegetarian'], '信義區'),
+      _restaurant('暖心拉麵屋', '台北市信義區忠孝東路五段 15 號', 25.0410, 121.5670,
+          '02-2720-0002', 0, [], '信義區'),
+      _restaurant('POKE BOWL 波奇', '台北市信義區基隆路一段 155 號', 25.0380, 121.5620,
+          '02-2720-0003', 0, ['no_pork', 'no_beef'], '信義區'),
+      _restaurant('阿嬤的味道', '台北市信義區莊敬路 178 號', 25.0295, 121.5580,
+          '02-2720-0004', 0, ['vegetarian'], '信義區'),
+      _restaurant('元氣咖哩', '台北市信義區永吉路 120 號', 25.0445, 121.5710,
+          '02-2720-0005', 0, [], '信義區'),
+
+      // ── budgetLevel 1: NT$ 500-800（中價位）──
+      _restaurant('山海樓台菜', '台北市信義區松壽路 12 號', 25.0360, 121.5675,
+          '02-2720-0101', 1, ['no_beef'], '信義區'),
+      _restaurant('初心居酒屋', '台北市信義區松德路 65 號', 25.0315, 121.5710,
+          '02-2720-0102', 1, [], '信義區'),
+      _restaurant('GREEN LIGHT 蔬食', '台北市信義區信義路五段 20 號', 25.0335, 121.5640,
+          '02-2720-0103', 1, ['vegetarian', 'vegan'], '信義區'),
+      _restaurant('泰正點', '台北市信義區松仁路 100 號', 25.0350, 121.5660,
+          '02-2720-0104', 1, ['halal', 'no_pork'], '信義區'),
+      _restaurant('麵道場', '台北市信義區忠孝東路四段 559 號', 25.0420, 121.5630,
+          '02-2720-0105', 1, [], '信義區'),
+
+      // ── budgetLevel 2: NT$ 800-1200（中高價位）──
+      _restaurant('和牛燒肉 WAGYU+', '台北市信義區松壽路 22 號', 25.0365, 121.5680,
+          '02-2720-0201', 2, [], '信義區'),
+      _restaurant('義大利麵工房 Pasta Lab', '台北市信義區松高路 19 號', 25.0355, 121.5690,
+          '02-2720-0202', 2, ['vegetarian'], '信義區'),
+      _restaurant('鮮定味生魚片', '台北市信義區基隆路二段 39 號', 25.0300, 121.5615,
+          '02-2720-0203', 2, [], '信義區'),
+      _restaurant('品川懷石', '台北市信義區忠孝東路五段 68 號', 25.0415, 121.5685,
+          '02-2720-0204', 2, ['no_pork'], '信義區'),
+      _restaurant('The Lounge 餐酒館', '台北市信義區松智路 1 號', 25.0340, 121.5670,
+          '02-2720-0205', 2, [], '信義區'),
+
+      // ── budgetLevel 3: NT$ 1200+（高價位）──
+      _restaurant('鳥苑法式料理', '台北市信義區松仁路 38 號', 25.0325, 121.5650,
+          '02-2720-0301', 3, ['no_pork'], '信義區'),
+      _restaurant('但馬家涮涮鍋', '台北市信義區松壽路 9 號', 25.0370, 121.5695,
+          '02-2720-0302', 3, [], '信義區'),
+      _restaurant('天空餐廳 SKY DINING', '台北市信義區信義路五段 7 號', 25.0332, 121.5645,
+          '02-2720-0303', 3, ['vegetarian'], '信義區'),
+      _restaurant('米其林壽司 OMAKASE', '台北市信義區松高路 11 號', 25.0358, 121.5688,
+          '02-2720-0304', 3, [], '信義區'),
+      _restaurant('頂級牛排館 PRIME', '台北市信義區松智路 17 號', 25.0345, 121.5672,
+          '02-2720-0305', 3, ['halal'], '信義區'),
+    ];
+
+    for (var r in restaurants) {
+      final id = _uuid.v4();
+      r['id'] = id;
+      await collection.doc(id).set(r);
+    }
+
+    debugPrint('✓ 已生成 ${restaurants.length} 家餐廳種子資料');
+  }
+
+  /// Helper: 建立餐廳 Map
+  Map<String, dynamic> _restaurant(
+    String name,
+    String address,
+    double lat,
+    double lng,
+    String phone,
+    int budgetLevel,
+    List<String> dietaryTags,
+    String district,
+  ) {
+    return {
+      'name': name,
+      'address': address,
+      'location': GeoPoint(lat, lng),
+      'phone': phone,
+      'imageUrl': null,
+      'budgetLevel': budgetLevel,
+      'maxGroupSize': 8,
+      'dietaryTags': dietaryTags,
+      'city': '台北市',
+      'district': district,
+      'isActive': true,
+      'lastBookedAt': null,
+      'createdAt': Timestamp.now(),
+    };
+  }
+
+  /// E2E 整合測試：建立完整流程種子資料
+  /// 12 用戶 → 報名同一活動 → 2 桌 dinner_groups → 各狀態覆蓋
+  Future<void> seedE2EFlow() async {
+    try {
+      debugPrint('🚀 E2E 整合測試：開始生成完整流程資料...');
+
+      // 清理舊的 E2E 資料
+      debugPrint('清理舊的 E2E 資料...');
+      final oldUsers = await _firestore.collection('users')
+          .where('bio', isEqualTo: 'E2E 測試用戶').get();
+      for (var doc in oldUsers.docs) {
+        await doc.reference.delete();
+      }
+      final oldGroups = await _firestore.collection('dinner_groups').get();
+      for (var doc in oldGroups.docs) {
+        await doc.reference.delete();
+      }
+      debugPrint('✓ 舊資料清理完成');
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ 請先登入');
+        return;
+      }
+      final myUid = currentUser.uid;
+
+      // 1. 生成 11 個測試用戶（加上自己 = 12 人 = 2 桌）
+      debugPrint('步驟 1/5: 生成 11 個測試用戶...');
+      final userIds = <String>[myUid]; // 自己排第一
+      final interestsPool = ['設計', '咖啡', '攝影', '科技', '美食', '旅行', '音樂', '閱讀'];
+      final maleNames = ['Kevin', 'Jason', 'Eric', 'Ryan', 'Alex'];
+      final femaleNames = ['Sophie', 'Tina', 'Grace', 'Kelly', 'Yuki', 'Emily'];
+
+      for (int i = 0; i < 11; i++) {
+        final uid = _uuid.v4();
+        final isMale = i < 5; // 5 男 6 女（加上自己的性別）
+        final name = isMale ? maleNames[i % 5] : femaleNames[i % 6];
+        final shuffled = List<String>.from(interestsPool)..shuffle(_random);
+
+        await _firestore.collection('users').doc(uid).set({
+          'uid': uid,
+          'email': 'e2e_${uid.substring(0, 5)}@test.com',
+          'name': '$name (E2E)',
+          'gender': isMale ? 'male' : 'female',
+          'age': 24 + _random.nextInt(10),
+          'job': '測試用戶',
+          'city': '台北市',
+          'district': '信義區',
+          'interests': shuffled.take(3 + _random.nextInt(3)).toList(),
+          'budgetRange': 1,
+          'bio': 'E2E 測試用戶',
+          'createdAt': Timestamp.now(),
+          'lastLogin': Timestamp.now(),
+        });
+        userIds.add(uid);
+      }
+      debugPrint('✓ 已生成 11 個測試用戶（共 12 人）');
+
+      // 2. 建立一個已截止活動（本週四）
+      debugPrint('步驟 2/5: 建立測試活動...');
+      final eventId = _uuid.v4();
+      final thursday = DateTime.now().add(const Duration(days: 1));
+      await _firestore.collection('dinner_events').doc(eventId).set({
+        'id': eventId,
+        'eventDate': Timestamp.fromDate(thursday),
+        'signupDeadline': Timestamp.fromDate(thursday.subtract(const Duration(hours: 24))),
+        'city': '台北市',
+        'signedUpUsers': userIds,
+        'status': 'closed',
+        'createdAt': Timestamp.now(),
+      });
+      debugPrint('✓ 已建立活動（12 人報名）');
+
+      // 3. 建立 2 桌 dinner_groups（各 6 人）
+      debugPrint('步驟 3/5: 建立 2 桌 dinner_groups...');
+
+      // 桌 1: pending 狀態（自己在這桌）
+      final group1Id = _uuid.v4();
+      final group1Members = userIds.sublist(0, 6);
+      await _firestore.collection('dinner_groups').doc(group1Id).set({
+        'id': group1Id,
+        'eventId': eventId,
+        'memberIds': group1Members,
+        'status': 'pending', // 等待揭曉
+        'district': '信義區',
+        'restaurantId': null,
+        'restaurantName': null,
+        'companionPreviews': [],
+        'icebreakerQuestions': ['如果有一天不用工作，你最想做什麼？', '最近看的一部好電影？'],
+        'attendanceConfirmed': {},
+        'createdAt': Timestamp.now(),
+      });
+
+      // 桌 2: location_revealed 狀態
+      final group2Id = _uuid.v4();
+      final group2Members = userIds.sublist(6, 12);
+      await _firestore.collection('dinner_groups').doc(group2Id).set({
+        'id': group2Id,
+        'eventId': eventId,
+        'memberIds': group2Members,
+        'status': 'location_revealed',
+        'district': '信義區',
+        'restaurantId': 'test-restaurant',
+        'restaurantName': '山海樓台菜',
+        'restaurantAddress': '台北市信義區松壽路 12 號',
+        'companionPreviews': group2Members.map((uid) => {
+          'uid': uid,
+          'initial': 'T',
+          'ageRange': '25-30',
+          'sharedInterests': ['美食', '旅行'],
+        }).toList(),
+        'icebreakerQuestions': ['你的旅行清單上排第一的地方？', '最喜歡的料理類型？'],
+        'attendanceConfirmed': {},
+        'createdAt': Timestamp.now(),
+      });
+      debugPrint('✓ 桌 1: pending（你的桌）/ 桌 2: location_revealed');
+
+      // 4. 建立 subscription（3 次免費）
+      debugPrint('步驟 4/5: 建立訂閱資料...');
+      await _firestore.collection('subscriptions').doc(myUid).set({
+        'plan': 'free',
+        'freeTrialsRemaining': 3,
+        'singleTickets': 0,
+      });
+      debugPrint('✓ 已設定 3 次免費體驗');
+
+      // 5. 建立餐廳資料（如果沒有）
+      debugPrint('步驟 5/5: 確認餐廳資料...');
+      final restaurantCount = await _firestore.collection('restaurants').count().get();
+      if (restaurantCount.count == 0) {
+        await seedRestaurants();
+      } else {
+        debugPrint('✓ 餐廳資料已存在（${restaurantCount.count} 家）');
+      }
+
+      debugPrint('\n🎉 E2E 種子資料生成完成！');
+      debugPrint('┌─────────────────────────────────┐');
+      debugPrint('│ 12 個用戶（5 男 + 6 女 + 你）     │');
+      debugPrint('│ 1 個活動（12 人報名）              │');
+      debugPrint('│ 2 桌群組（pending + revealed）    │');
+      debugPrint('│ 你的訂閱（3 次免費）               │');
+      debugPrint('│ 20 家餐廳                         │');
+      debugPrint('└─────────────────────────────────┘');
+      debugPrint('\n📱 測試路徑：');
+      debugPrint('1. 首頁 → 看到「我的群組」（pending 狀態）');
+      debugPrint('2. 點群組 → 看到配對說明（🧠 我們如何配對）');
+      debugPrint('3. 報名新活動 → 看到費用說明 + 付費檢查');
+      debugPrint('4. 互評 → 體驗回饋 BottomSheet');
+    } catch (e) {
+      debugPrint('❌ E2E 種子資料生成失敗: $e');
+      rethrow;
+    }
+  }
+}

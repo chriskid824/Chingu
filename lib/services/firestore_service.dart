@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 
@@ -119,9 +120,9 @@ class FirestoreService {
     int limit = 20,
   }) async {
     try {
-      print('=== FirestoreService.queryMatchingUsers ===');
-      print('查詢城市: $city');
-      print('limit: $limit');
+      debugPrint('=== FirestoreService.queryMatchingUsers ===');
+      debugPrint('查詢城市: $city');
+      debugPrint('limit: $limit');
       
       // 放寬查詢條件：只過濾城市和活躍狀態
       // 預算和其他條件在內存中進行評分和過濾
@@ -131,16 +132,16 @@ class FirestoreService {
           .limit(limit);
 
       final querySnapshot = await query.get();
-      print('Firestore 查詢返回 ${querySnapshot.docs.length} 個文檔');
+      debugPrint('Firestore 查詢返回 ${querySnapshot.docs.length} 個文檔');
 
       List<UserModel> users = querySnapshot.docs
           .map((doc) =>
               UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
 
-      print('成功解析 ${users.length} 個 UserModel');
+      debugPrint('成功解析 ${users.length} 個 UserModel');
       if (users.isNotEmpty) {
-        print('第一個用戶: ${users.first.name}, 城市: ${users.first.city}');
+        debugPrint('第一個用戶: ${users.first.name}, 城市: ${users.first.city}');
       }
 
       // 在客戶端進行額外的過濾（因為 Firestore 查詢限制）
@@ -154,10 +155,10 @@ class FirestoreService {
             .toList();
       }
 
-      print('過濾後剩餘 ${users.length} 個用戶');
+      debugPrint('過濾後剩餘 ${users.length} 個用戶');
       return users;
     } catch (e) {
-      print('FirestoreService.queryMatchingUsers 錯誤: $e');
+      debugPrint('FirestoreService.queryMatchingUsers 錯誤: $e');
       throw Exception('查詢用戶失敗: $e');
     }
   }

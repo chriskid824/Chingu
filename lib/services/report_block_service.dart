@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/report_model.dart';
 
@@ -119,7 +120,7 @@ class ReportBlockService {
 
       return List<String>.from(data['blockedUserIds'] ?? []);
     } catch (e) {
-      print('獲取封鎖列表失敗: $e');
+      debugPrint('獲取封鎖列表失敗: $e');
       return [];
     }
   }

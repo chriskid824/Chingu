@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_theme.dart';
 import 'home/home_screen_demo.dart';
-import 'matching/matching_screen_demo.dart';
-import 'explore/explore_screen_demo.dart';
 import 'chat/chat_list_screen_demo.dart';
 import 'profile/profile_detail_screen_demo.dart';
 
@@ -18,8 +15,6 @@ class _MainScreenDemoState extends State<MainScreenDemo> {
 
   final List<Widget> _screens = [
     const HomeScreenDemo(),
-    const MatchingScreenDemo(),
-    const ExploreScreenDemo(),
     const ChatListScreenDemo(),
     const ProfileDetailScreenDemo(),
   ];
@@ -27,7 +22,6 @@ class _MainScreenDemoState extends State<MainScreenDemo> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       body: IndexedStack(
@@ -39,7 +33,7 @@ class _MainScreenDemoState extends State<MainScreenDemo> {
           color: theme.scaffoldBackgroundColor,
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.1),
+              color: theme.shadowColor.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -55,7 +49,7 @@ class _MainScreenDemoState extends State<MainScreenDemo> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: theme.scaffoldBackgroundColor,
           selectedItemColor: theme.colorScheme.primary,
-          unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.4),
+          unselectedItemColor: theme.colorScheme.onSurface.withValues(alpha: 0.4),
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 12,
@@ -70,16 +64,6 @@ class _MainScreenDemoState extends State<MainScreenDemo> {
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home_rounded),
               label: '首頁',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded),
-              activeIcon: Icon(Icons.favorite_rounded),
-              label: '配對',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore_rounded),
-              label: '探索',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.chat_bubble_outline_rounded),

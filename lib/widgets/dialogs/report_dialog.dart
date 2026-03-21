@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/models/report_model.dart';
 import 'package:chingu/services/report_block_service.dart';
-import 'package:chingu/core/theme/app_theme.dart';
 
 /// 舉報對話框
 ///
@@ -133,7 +132,7 @@ class _ReportDialogState extends State<ReportDialog> {
             Text(
               '舉報 ${widget.reportedUserName}',
               style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -190,7 +189,7 @@ class _ReportDialogState extends State<ReportDialog> {
           child: Text(
             '取消',
             style: TextStyle(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -275,7 +274,7 @@ class BlockConfirmDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: Colors.red.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Column(
@@ -300,7 +299,7 @@ class BlockConfirmDialog extends StatelessWidget {
           child: Text(
             '取消',
             style: TextStyle(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
           ),
         ),

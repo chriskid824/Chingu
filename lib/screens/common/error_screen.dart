@@ -30,8 +30,8 @@ class ErrorScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      theme.colorScheme.error.withOpacity(0.2),
-                      theme.colorScheme.error.withOpacity(0.1),
+                      theme.colorScheme.error.withValues(alpha: 0.2),
+                      theme.colorScheme.error.withValues(alpha: 0.1),
                     ],
                   ),
                   shape: BoxShape.circle,
@@ -55,7 +55,7 @@ class ErrorScreen extends StatelessWidget {
                 '很抱歉，發生了一些問題\n請稍後再試',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
               ),
@@ -66,7 +66,7 @@ class ErrorScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -87,7 +87,7 @@ class ErrorScreen extends StatelessWidget {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () {},
-                child: Text('返回首頁', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                child: Text('返回首頁', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
               ),
               ],
             ),

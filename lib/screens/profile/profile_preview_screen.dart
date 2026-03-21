@@ -38,7 +38,7 @@ class ProfilePreviewScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                     ),
                   ],
@@ -54,7 +54,7 @@ class ProfilePreviewScreen extends StatelessWidget {
             title: Container(
                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                decoration: BoxDecoration(
-                 color: theme.cardColor.withOpacity(0.9),
+                 color: theme.cardColor.withValues(alpha: 0.9),
                  borderRadius: BorderRadius.circular(20),
                ),
                child: Text(
@@ -114,7 +114,7 @@ class ProfilePreviewScreen extends StatelessWidget {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            theme.scaffoldBackgroundColor.withOpacity(0.8),
+                            theme.scaffoldBackgroundColor.withValues(alpha: 0.8),
                             theme.scaffoldBackgroundColor,
                           ],
                         ),
@@ -165,7 +165,7 @@ class ProfilePreviewScreen extends StatelessWidget {
                                 user.job,
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -199,17 +199,17 @@ class ProfilePreviewScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
-                    Icons.payments_rounded,
-                    '預算範圍',
-                    user.budgetRangeText,
+                    Icons.restaurant_menu_rounded,
+                    '用餐偏好',
+                    user.diningPreferenceText,
                     chinguTheme?.secondary ?? theme.colorScheme.secondary,
                     theme,
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
-                    Icons.favorite_rounded,
-                    '配對類型',
-                    user.preferredMatchTypeText,
+                    Icons.restaurant_rounded,
+                    '用餐偏好',
+                    user.diningPreferenceText,
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -248,7 +248,7 @@ class ProfilePreviewScreen extends StatelessWidget {
                         user.bio!,
                         style: TextStyle(
                           fontSize: 15,
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                           height: 1.6,
                         ),
                       ),
@@ -296,9 +296,9 @@ class ProfilePreviewScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                      color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+                      border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -331,13 +331,13 @@ class ProfilePreviewScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
+            color.withValues(alpha: 0.1),
+            color.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -345,7 +345,7 @@ class ProfilePreviewScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 22, color: color),
@@ -386,13 +386,13 @@ class ProfilePreviewScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.15),
-            color.withOpacity(0.05),
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
         ),
       ),
       child: Row(

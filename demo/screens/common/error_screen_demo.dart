@@ -27,8 +27,8 @@ class ErrorScreenDemo extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColorsMinimal.error.withOpacity(0.2),
-                      AppColorsMinimal.error.withOpacity(0.1),
+                      AppColorsMinimal.error.withValues(alpha: 0.2),
+                      AppColorsMinimal.error.withValues(alpha: 0.1),
                     ],
                   ),
                   shape: BoxShape.circle,
@@ -63,7 +63,7 @@ class ErrorScreenDemo extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColorsMinimal.primary.withOpacity(0.3),
+                      color: AppColorsMinimal.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),

@@ -98,7 +98,7 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
     );
   }
 
-  // Factory for Minimal Theme
+  // Factory for Minimal Theme (now warm apricot/coral)
   static const minimal = ChinguTheme(
     primaryGradient: AppColorsMinimal.primaryGradient,
     secondaryGradient: AppColorsMinimal.secondaryGradient,
@@ -115,21 +115,21 @@ class ChinguTheme extends ThemeExtension<ChinguTheme> {
     error: AppColorsMinimal.error,
   );
 
-  // Factory for Orange Theme (Default) - Placeholder values for now
+  // Factory for Orange Theme (warm blue variant)
   static const orange = ChinguTheme(
-    primaryGradient: LinearGradient(colors: [Color(0xFFFF6B35), Color(0xFFFF8C61)]),
-    secondaryGradient: LinearGradient(colors: [Color(0xFF004E89), Color(0xFF0066B2)]),
-    transparentGradient: LinearGradient(colors: [Color(0x20FF6B35), Color(0x10FF6B35)]),
-    successGradient: LinearGradient(colors: [Color(0xFF06A77D), Color(0xFF08C996)]),
+    primaryGradient: LinearGradient(colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)]),
+    secondaryGradient: LinearGradient(colors: [Color(0xFF80CBC4), Color(0xFFB2DFDB)]),
+    transparentGradient: LinearGradient(colors: [Color(0x2064B5F6), Color(0x1064B5F6)]),
+    successGradient: LinearGradient(colors: [Color(0xFFA5D6A7), Color(0xFF66BB6A)]),
     glassGradient: LinearGradient(colors: [Color(0x30FFFFFF), Color(0x10FFFFFF)]),
-    surfaceVariant: Color(0xFFEEEEEE),
-    shadowLight: Color(0x0A000000),
-    shadowMedium: Color(0x14000000),
-    secondary: Color(0xFF004E89),
-    info: Color(0xFF0066B2),
-    success: Color(0xFF06A77D),
-    warning: Color(0xFFF4D35E),
-    error: Color(0xFFEF476F),
+    surfaceVariant: Color(0xFFECF0F6),
+    shadowLight: Color(0x0A78909C),
+    shadowMedium: Color(0x1478909C),
+    secondary: Color(0xFF80CBC4),
+    info: Color(0xFF42A5F5),
+    success: Color(0xFF66BB6A),
+    warning: Color(0xFFFFB74D),
+    error: Color(0xFFEF5350),
   );
 }
 
@@ -164,7 +164,7 @@ class AppTheme {
       scaffoldBackgroundColor: preset == AppThemePreset.minimal 
           ? AppColorsMinimal.background 
           : (brightness == Brightness.light ? colorScheme.background : colorScheme.surface),
-      fontFamily: 'Roboto',
+      fontFamily: 'NotoSansTC',
       extensions: [chinguTheme], // Register the extension
       
       appBarTheme: AppBarTheme(
@@ -179,7 +179,7 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
@@ -189,7 +189,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
           side: BorderSide(color: colorScheme.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
@@ -197,17 +197,17 @@ class AppTheme {
       
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surfaceVariant.withOpacity(0.3),
+        fillColor: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surfaceVariant.withValues(alpha: 0.3),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
           borderSide: BorderSide(color: preset == AppThemePreset.minimal ? AppColorsMinimal.surfaceVariant : colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: preset == AppThemePreset.minimal ? AppColorsMinimal.surfaceVariant : colorScheme.outline.withOpacity(0.5)),
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+          borderSide: BorderSide(color: preset == AppThemePreset.minimal ? AppColorsMinimal.surfaceVariant : colorScheme.outline.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -217,7 +217,7 @@ class AppTheme {
         elevation: 0,
         color: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
           side: preset == AppThemePreset.minimal ? const BorderSide(color: AppColorsMinimal.surfaceVariant) : BorderSide.none,
         ),
         margin: const EdgeInsets.all(8),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:chingu/core/theme/app_theme.dart';
 
 class ChatListScreenDemo extends StatelessWidget {
   const ChatListScreenDemo({super.key});

@@ -12,19 +12,8 @@ import 'screens/profile/preferences_screen_demo.dart';
 import 'screens/profile/profile_detail_screen_demo.dart';
 import 'screens/home/home_screen_demo.dart';
 import 'screens/home/notifications_screen_demo.dart';
-import 'screens/home/search_screen_demo.dart';
 import 'screens/home/bottom_nav_demo.dart';
 import 'screens/main_screen_demo.dart';
-import 'screens/matching/matching_screen_demo.dart';
-import 'screens/matching/user_detail_screen_demo.dart';
-import 'screens/matching/matches_list_screen_demo.dart';
-import 'screens/matching/filter_screen_demo.dart';
-import 'screens/matching/match_success_screen_demo.dart';
-import 'screens/events/events_list_screen_demo.dart';
-import 'screens/events/event_detail_screen_demo.dart';
-import 'screens/events/create_event_screen_demo.dart';
-import 'screens/events/event_confirmation_screen_demo.dart';
-import 'screens/events/event_rating_screen_demo.dart';
 import 'screens/chat/chat_list_screen_demo.dart';
 import 'screens/chat/chat_detail_screen_demo.dart';
 import 'screens/chat/icebreaker_screen_demo.dart';
@@ -100,7 +89,7 @@ class DemoGalleryScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -177,31 +166,8 @@ class DemoGalleryScreen extends StatelessWidget {
             items: [
               _DemoItem('首頁', 'Home Screen', () => _nav(context, const HomeScreenDemo())),
               _DemoItem('通知頁面', 'Notifications', () => _nav(context, const NotificationsScreenDemo())),
-              _DemoItem('搜尋頁面', 'Search', () => _nav(context, const SearchScreenDemo())),
               _DemoItem('底部導航欄', 'Bottom Navigation', () => _nav(context, const BottomNavDemo())),
               _DemoItem('主程式框架', 'Main App Shell', () => _nav(context, const MainScreenDemo())),
-            ],
-          ),
-          _buildSection(
-            context,
-            title: '💕 配對模組 (5個)',
-            items: [
-              _DemoItem('配對頁面', 'Matching Screen', () => _nav(context, const MatchingScreenDemo())),
-              _DemoItem('用戶詳情', 'User Detail', () => _nav(context, const UserDetailScreenDemo())),
-              _DemoItem('配對列表', 'Matches List', () => _nav(context, const MatchesListScreenDemo())),
-              _DemoItem('篩選條件', 'Filter', () => _nav(context, const FilterScreenDemo())),
-              _DemoItem('配對成功', 'Match Success', () => _nav(context, const MatchSuccessScreenDemo())),
-            ],
-          ),
-          _buildSection(
-            context,
-            title: '🍽️ 活動模組 (5個)',
-            items: [
-              _DemoItem('活動列表', 'Events List', () => _nav(context, const EventsListScreenDemo())),
-              _DemoItem('活動詳情', 'Event Detail', () => _nav(context, const EventDetailScreenDemo())),
-              _DemoItem('建立活動', 'Create Event', () => _nav(context, const CreateEventScreenDemo())),
-              _DemoItem('預約確認', 'Event Confirmation', () => _nav(context, const EventConfirmationScreenDemo())),
-              _DemoItem('活動評價', 'Event Rating', () => _nav(context, const EventRatingScreenDemo())),
             ],
           ),
           _buildSection(
@@ -246,7 +212,7 @@ class DemoGalleryScreen extends StatelessWidget {
             child: const Column(
               children: [
                 Text(
-                  '✨ 總計 35 個介面',
+                  '✨ 總計 25 個介面',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

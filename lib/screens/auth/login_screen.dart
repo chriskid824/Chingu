@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
@@ -14,10 +15,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'test@gmail.com');
-  final _passwordController = TextEditingController(text: '111111');
+  // 正式版不預填帳密
+  final _emailController = TextEditingController(
+    text: kDebugMode ? 'test@gmail.com' : '',
+  );
+  final _passwordController = TextEditingController(
+    text: kDebugMode ? '111111' : '',
+  );
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String? _loginError;
 
   @override
   void dispose() {
@@ -27,48 +34,99 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading) return;
+    debugPrint('📧 Email 登入按鈕被點擊');
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('📧 表單驗證失敗');
+      return;
+    }
 
+    setState(() {
+      _isLoading = true;
+      _loginError = null;
+    });
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (!success) {
+        setState(() {
+          _loginError = authProvider.errorMessage ?? '登入失敗，請檢查帳號密碼';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loginError = '登入發生錯誤，請稍後再試';
+      });
+    }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    if (_isLoading) return;
+    debugPrint('🔵 Google 登入按鈕被點擊');
     setState(() => _isLoading = true);
 
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.signIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.signInWithGoogle();
 
-    if (!mounted) return;
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    setState(() => _isLoading = false);
-
-    if (success) {
-      Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
-    } else {
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? 'Google 登入失敗'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? '登入失敗，請稍後再試'),
+          content: Text('Google 登入發生錯誤: $e'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  Future<void> _handleGoogleLogin() async {
+  Future<void> _handleAppleLogin() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
 
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.signInWithGoogle();
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.signInWithApple();
 
-    if (!mounted) return;
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    setState(() => _isLoading = false);
-
-    if (success) {
-      Navigator.pushReplacementNamed(context, AppRoutes.mainNavigation);
-    } else {
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? 'Apple 登入失敗'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Google 登入失敗'),
+          content: Text('Apple 登入發生錯誤: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -92,12 +150,11 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 20),
                 
-                // Logo 帶裝飾
+                // Logo
                 Center(
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // 背景光暈
                       Container(
                         width: 100,
                         height: 100,
@@ -105,13 +162,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              theme.colorScheme.primary.withOpacity(0.2),
+                              theme.colorScheme.primary.withValues(alpha: 0.2),
                               Colors.transparent,
                             ],
                           ),
                         ),
                       ),
-                      // Logo 容器
                       Container(
                         width: 80,
                         height: 80,
@@ -120,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary.withOpacity(0.3),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -138,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 32),
                 
-                // 標題
+                // Title
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -158,14 +214,44 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   '登入以繼續您的晚餐之旅',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
+
+                // ===== Social Login =====
+                // Apple Sign-In
+                _buildAppleButton(),
+                const SizedBox(height: 12),
+
+                // Google Sign-In
+                _buildGoogleButton(theme, chinguTheme),
+
+                const SizedBox(height: 24),
                 
-                // Email 輸入框
+                // Divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: theme.dividerTheme.color)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        '或使用電子郵件',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: theme.dividerTheme.color)),
+                  ],
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -191,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // 密碼輸入框
+                // Password
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -206,7 +292,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                       onPressed: () {
                         setState(() {
@@ -230,9 +316,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 
+                // 登入錯誤提示
+                if (_loginError != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _loginError!,
+                            style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 8),
                 
-                // 忘記密碼
+                // Forgot password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -246,83 +357,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 24),
                 
-                // 登入按鈕
+                // Login button
                 GradientButton(
                   text: _isLoading ? '登入中...' : '登入',
                   onPressed: _isLoading ? () {} : _handleLogin,
                 ),
 
-                // 暫時的開發者工具入口
-                const SizedBox(height: 20),
-                TextButton.icon(
-                  icon: const Icon(Icons.bug_report, color: Colors.grey),
-                  label: const Text('開發者工具 (生成假數據)', style: TextStyle(color: Colors.grey)),
-                  onPressed: _isLoading ? null : () => Navigator.pushNamed(context, AppRoutes.debug),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // 分隔線
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: theme.dividerTheme.color)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        '或',
-                        style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: theme.dividerTheme.color)),
-                  ],
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Google 登入按鈕
-                OutlinedButton(
-                  onPressed: _isLoading ? null : _handleGoogleLogin,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(color: chinguTheme?.surfaceVariant ?? Colors.grey),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.g_mobiledata,
-                          size: 24,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '使用 Google 登入',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+
                 
                 const SizedBox(height: 32),
                 
-                // 註冊連結
+                // Register link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       '還沒有帳號？',
-                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     TextButton(
                       onPressed: _isLoading ? null : () => Navigator.pushNamed(context, AppRoutes.register),
@@ -339,6 +390,77 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Apple 登入按鈕
+  Widget _buildAppleButton() {
+    return SizedBox(
+      height: 54,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleAppleLogin,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 3),
+              child: Icon(Icons.apple, size: 30),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              '使用 Apple 登入',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Google 登入按鈕
+  Widget _buildGoogleButton(ThemeData theme, ChinguTheme? chinguTheme) {
+    return SizedBox(
+      height: 54,
+      child: OutlinedButton(
+        onPressed: _isLoading ? null : _handleGoogleLogin,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: chinguTheme?.surfaceVariant ?? Colors.grey.shade300),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Google 官方彩色 logo
+            Image.asset(
+              'assets/images/google_logo.png',
+              width: 36,
+              height: 36,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '使用 Google 登入',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
         ),
       ),
     );

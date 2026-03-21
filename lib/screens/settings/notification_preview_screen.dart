@@ -39,13 +39,13 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-      color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+      color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),
       child: Column(
         children: [
           Text(
             '預覽',
             style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -58,7 +58,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -70,7 +70,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -99,7 +99,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
                             '現在',
                             style: TextStyle(
                               fontSize: 12,
-                              color: theme.colorScheme.onSurface.withOpacity(0.5),
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -109,7 +109,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
                         _selectedIndex == 0 ? '哈囉！這週末有空一起吃飯嗎？' : '新訊息',
                         style: TextStyle(
                           fontSize: 14,
-                          color: theme.colorScheme.onSurface.withOpacity(0.8),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -177,7 +177,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 14,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

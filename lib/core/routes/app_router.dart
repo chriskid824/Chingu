@@ -9,7 +9,6 @@ import '../../screens/auth/email_verification_screen.dart';
 import '../../screens/main_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/home/notifications_screen.dart';
-import '../../screens/home/search_screen.dart';
 // 個人資料模組
 import '../../screens/profile/profile_setup_screen.dart';
 import '../../screens/profile/interests_selection_screen.dart';
@@ -19,22 +18,12 @@ import '../../screens/profile/profile_preview_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
-// 配對模組
-import '../../screens/matching/matching_screen.dart';
-import '../../screens/matching/user_detail_screen.dart';
-import '../../screens/matching/matches_list_screen.dart';
-import '../../screens/matching/filter_screen.dart';
-import '../../screens/matching/match_success_screen.dart';
-// 活動模組
-import '../../screens/events/events_list_screen.dart';
-import '../../screens/events/event_detail_screen.dart';
-import '../../screens/events/event_confirmation_screen.dart';
-import '../../screens/events/event_rating_screen.dart';
 // 聊天模組
 import '../../screens/chat/chat_list_screen.dart';
 import '../../screens/chat/chat_detail_screen.dart';
 import '../../screens/chat/icebreaker_screen.dart';
-import '../../screens/chat/sticker_manager_screen.dart';
+// 評價模組
+import '../../screens/review/review_screen.dart';
 // 設定模組
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
@@ -46,6 +35,11 @@ import '../../screens/settings/about_screen.dart';
 import '../../screens/settings/blocked_users_screen.dart';
 import '../../screens/debug/debug_screen.dart';
 import '../../screens/profile/report_user_screen.dart';
+// 群組模組
+import '../../screens/group/group_detail_screen.dart';
+import '../../models/dinner_group_model.dart';
+// 訂閱模組
+import '../../screens/subscription/paywall_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -61,7 +55,6 @@ class AppRoutes {
   static const String mainNavigation = '/main';
   static const String home = '/home';
   static const String notifications = '/notifications';
-  static const String search = '/search';
   
   // 個人資料設置流程
   static const String profileSetup = '/profile-setup';
@@ -72,24 +65,11 @@ class AppRoutes {
   static const String profileDetail = '/profile-detail';
   static const String profilePreview = '/profile-preview';
   
-  // 配對模組
-  static const String matching = '/matching';
-  static const String userDetail = '/user-detail';
-  static const String matchesList = '/matches-list';
-  static const String filter = '/filter';
-  static const String matchSuccess = '/match-success';
-  
-  // 活動模組
-  static const String eventsList = '/events-list';
-  static const String eventDetail = '/event-detail';
-  static const String eventConfirmation = '/event-confirmation';
-  static const String eventRating = '/event-rating';
-  
   // 聊天模組
   static const String chatList = '/chat-list';
   static const String chatDetail = '/chat-detail';
   static const String icebreaker = '/icebreaker';
-  static const String stickerManager = '/sticker-manager';
+  static const String review = '/review';
   
   // 設定模組
   static const String settings = '/settings';
@@ -101,6 +81,12 @@ class AppRoutes {
   static const String about = '/about';
   static const String reportUser = '/report-user';
   static const String blockedUsers = '/blocked-users';
+  
+  // 群組模組
+  static const String groupDetail = '/group-detail';
+  
+  // 訂閱模組
+  static const String paywall = '/paywall';
 }
 
 /// 應用程式路由配置
@@ -143,8 +129,7 @@ class AppRouter {
       case AppRoutes.notifications:
         return MaterialPageRoute(builder: (_) => const NotificationsScreen());
       
-      case AppRoutes.search:
-        return MaterialPageRoute(builder: (_) => const SearchScreen());
+
       
       // ==================== 個人資料流程 ====================
       case AppRoutes.profileSetup:
@@ -168,32 +153,6 @@ class AppRouter {
       case AppRoutes.profilePreview:
         return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
 
-      // ==================== 配對模組 ====================
-      case AppRoutes.matching:
-        return MaterialPageRoute(builder: (_) => const MatchingScreen());
-      
-      case AppRoutes.userDetail:
-        return MaterialPageRoute(builder: (_) => const UserDetailScreen());
-      
-      case AppRoutes.matchesList:
-        return MaterialPageRoute(builder: (_) => const MatchesListScreen());
-      
-      case AppRoutes.filter:
-        return MaterialPageRoute(builder: (_) => const FilterScreen());
-      
-      // ==================== 活動模組 ====================
-      case AppRoutes.eventsList:
-        return MaterialPageRoute(builder: (_) => const EventsListScreen());
-      
-      case AppRoutes.eventDetail:
-        return MaterialPageRoute(builder: (_) => const EventDetailScreen());
-      
-      case AppRoutes.eventConfirmation:
-        return MaterialPageRoute(builder: (_) => const EventConfirmationScreen());
-      
-      case AppRoutes.eventRating:
-        return MaterialPageRoute(builder: (_) => const EventRatingScreen());
-      
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
         return MaterialPageRoute(builder: (_) => const ChatListScreen());
@@ -206,9 +165,13 @@ class AppRouter {
       
       case AppRoutes.icebreaker:
         return MaterialPageRoute(builder: (_) => const IcebreakerScreen());
+
+      case AppRoutes.review:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const ReviewScreen(),
+        );
       
-      case AppRoutes.stickerManager:
-        return MaterialPageRoute(builder: (_) => const StickerManagerScreen());
 
       // ==================== 設定模組 ====================
       case AppRoutes.settings:
@@ -250,7 +213,16 @@ class AppRouter {
 
       case AppRoutes.blockedUsers:
         return MaterialPageRoute(builder: (_) => const BlockedUsersScreen());
-      
+
+      // ==================== 群組路由 ====================
+      case AppRoutes.groupDetail:
+        final args = settings.arguments as Map<String, dynamic>;
+        final group = args['group'] as DinnerGroupModel;
+        return slideRoute(GroupDetailScreen(group: group));
+
+      case AppRoutes.paywall:
+        return slideRoute(const PaywallScreen());
+
       // ==================== 404 ====================
       default:
         return MaterialPageRoute(

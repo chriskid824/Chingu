@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class BadgeCountService {
   static final BadgeCountService _instance = BadgeCountService._internal();
 
@@ -7,6 +9,7 @@ class BadgeCountService {
 
   BadgeCountService._internal();
 
+  // ignore: unused_field
   int _currentCount = 0;
 
   /// Updates the application badge count.
@@ -18,7 +21,7 @@ class BadgeCountService {
     // if (await FlutterAppBadger.isAppBadgeSupported()) {
     //   FlutterAppBadger.updateBadgeCount(count);
     // }
-    print('BadgeCountService: Updated badge count to $count');
+    debugPrint('BadgeCountService: Updated badge count to $count');
   }
 
   /// Removes the application badge.
@@ -27,7 +30,7 @@ class BadgeCountService {
     // if (await FlutterAppBadger.isAppBadgeSupported()) {
     //   FlutterAppBadger.removeBadge();
     // }
-    print('BadgeCountService: Removed badge');
+    debugPrint('BadgeCountService: Removed badge');
   }
 
   /// Resets the count to 0.

@@ -52,7 +52,7 @@ test/
 ├── providers/              # 12 tests
 │   ├── auth_provider_test.dart
 │   └── dinner_event_provider_test.dart
-├── widgets/                # 27 tests
+├── widgets/                # 27 testswalkthrough.mdwalkthrough.md
 │   ├── avatar_badge_test.dart
 │   ├── custom_bottom_sheet_test.dart
 │   └── empty_state_test.dart

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -127,13 +127,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+
 
     if (_chatRoomId == null || _otherUser == null) {
       return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+        backgroundColor: AppColorsMinimal.background,
+        body: const Center(child: CircularProgressIndicator(color: AppColorsMinimal.primary)),
       );
     }
 
@@ -141,7 +140,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final currentUserId = authProvider.uid;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: AppColorsMinimal.background,
       appBar: AppBar(
         title: Row(
           children: [
@@ -149,7 +148,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: chinguTheme?.primaryGradient,
+                gradient: AppColorsMinimal.primaryGradient,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
@@ -166,22 +165,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             const SizedBox(width: 12),
             Text(
               _otherUser!.name,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: AppColorsMinimal.textPrimary,
               ),
             ),
           ],
         ),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 1,
-        shadowColor: theme.shadowColor.withOpacity(0.1),
+        backgroundColor: AppColorsMinimal.background,
+        elevation: 0,
+        shadowColor: AppColorsMinimal.shadowLight,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: theme.colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back_ios_rounded, color: AppColorsMinimal.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, color: theme.colorScheme.onSurface),
+            icon: Icon(Icons.more_vert_rounded, color: AppColorsMinimal.textSecondary),
             onSelected: (value) async {
               final currentUserId = context.read<AuthProvider>().uid;
               if (currentUserId == null || _otherUser == null) return;
@@ -249,13 +250,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         Icon(
                           Icons.chat_bubble_outline_rounded,
                           size: 60,
-                          color: theme.colorScheme.onSurface.withOpacity(0.2),
+                          color: AppColorsMinimal.primary.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '開始聊天吧！',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColorsMinimal.textTertiary,
                           ),
                         ),
                       ],
@@ -286,8 +288,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildMessageBubble(BuildContext context, Map<String, dynamic> message, bool isMe) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+
+
     final timestamp = message['timestamp'] as Timestamp?;
     final timeText = timestamp != null
         ? DateFormat('HH:mm').format(timestamp.toDate())
@@ -308,8 +310,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ? const EdgeInsets.all(4)
             : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: (isMe && !isImage) ? chinguTheme?.primaryGradient : null,
-          color: (isMe && !isImage) ? null : theme.cardColor,
+          gradient: (isMe && !isImage) ? AppColorsMinimal.primaryGradient : null,
+          color: (isMe && !isImage) ? null : AppColorsMinimal.surface,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
@@ -318,7 +320,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.05),
+              color: AppColorsMinimal.shadowLight,
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -335,13 +337,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   placeholder: (context, url) => Container(
                     height: 150,
                     width: 150,
-                    color: theme.colorScheme.surfaceVariant,
+                    color: AppColorsMinimal.surfaceVariant,
                     child: const Center(child: CircularProgressIndicator()),
                   ),
                   errorWidget: (context, url, error) => Container(
                     height: 150,
                     width: 150,
-                    color: theme.colorScheme.surfaceVariant,
+                    color: AppColorsMinimal.surfaceVariant,
                     child: const Icon(Icons.error),
                   ),
                 ),
@@ -349,8 +351,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             else
               Text(
                 text,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isMe ? Colors.white : AppColorsMinimal.textPrimary,
                 ),
               ),
             const SizedBox(height: 4),
@@ -358,8 +361,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               padding: isImage ? const EdgeInsets.only(left: 8, right: 8, bottom: 4) : EdgeInsets.zero,
               child: Text(
                 timeText,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: (isMe && !isImage) ? Colors.white.withOpacity(0.7) : theme.colorScheme.onSurface.withOpacity(0.5),
+                style: TextStyle(
+                  color: (isMe && !isImage) ? Colors.white.withValues(alpha: 0.7) : AppColorsMinimal.textTertiary,
                   fontSize: 10,
                 ),
               ),
@@ -371,16 +374,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildMessageInput(BuildContext context) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+
+
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: AppColorsMinimal.background,
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withOpacity(0.05),
+            color: AppColorsMinimal.shadowLight,
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -393,41 +396,40 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
+                  color: AppColorsMinimal.surfaceVariant,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
                 ),
                 child: TextField(
                   controller: _messageController,
                   decoration: InputDecoration(
                     hintText: '輸入訊息...',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                    hintStyle: TextStyle(color: AppColorsMinimal.textTertiary),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  style: theme.textTheme.bodyLarge,
+                  style: TextStyle(fontSize: 16, color: AppColorsMinimal.textPrimary),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
+                color: AppColorsMinimal.surfaceVariant,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
                 onPressed: _openGifPicker,
-                icon: Icon(Icons.gif_box_outlined, color: theme.colorScheme.primary, size: 20),
+                icon: Icon(Icons.gif_box_outlined, color: AppColorsMinimal.primary, size: 20),
               ),
             ),
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                gradient: chinguTheme?.primaryGradient,
+                gradient: AppColorsMinimal.primaryGradient,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.3),
+                    color: AppColorsMinimal.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

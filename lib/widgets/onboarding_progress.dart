@@ -30,7 +30,7 @@ class OnboardingProgress extends StatelessWidget {
                   gradient: isCompleted ? chinguTheme?.primaryGradient : null,
                   color: isCompleted
                       ? null
-                      : theme.colorScheme.outline.withOpacity(0.3),
+                      : theme.colorScheme.outline.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -41,7 +41,7 @@ class OnboardingProgress extends StatelessWidget {
         Text(
           '步驟 $currentStep/$totalSteps',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],

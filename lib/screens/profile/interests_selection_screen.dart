@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/widgets/gradient_button.dart';
@@ -131,7 +130,7 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
           Icon(
             interest['icon'] as IconData,
             size: 18,
-            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.6),
+            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 6),
           Text(interest['name'] as String),
@@ -153,7 +152,7 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       side: BorderSide(
-        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline.withOpacity(0.5),
+        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline.withValues(alpha: 0.5),
       ),
     );
   }
@@ -161,7 +160,6 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -193,7 +191,7 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
             const SizedBox(height: 8),
             Text(
               '選擇您的興趣，讓我們為您找到志同道合的朋友',
-              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(height: 24),
 
@@ -202,7 +200,7 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: '搜尋興趣...',
-                prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                 filled: true,
                 fillColor: theme.cardColor,
                 border: OutlineInputBorder(
@@ -273,7 +271,7 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
+                  borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

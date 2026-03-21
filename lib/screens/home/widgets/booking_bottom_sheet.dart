@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/providers/subscription_provider.dart';
+import 'package:chingu/core/routes/app_router.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class BookingBottomSheet extends StatefulWidget {
   const BookingBottomSheet({super.key});
@@ -47,28 +49,54 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
 
     try {
       final authProvider = context.read<AuthProvider>();
-      final eventProvider = context.read<DinnerEventProvider>();
 
       if (authProvider.uid == null) {
         throw Exception('請先登入');
       }
 
-      final success = await eventProvider.bookEvent(
-        userId: authProvider.uid!,
-        date: _selectedDate!,
-        city: _selectedCity,
-        district: _selectedDistrict,
-      );
+      // 客戶端付費檢查（免費版暫時 bypass，未來接 IAP 再啟用）
+      // final subProvider = context.read<SubscriptionProvider>();
+      // if (!subProvider.canBook) {
+      //   if (mounted) {
+      //     Navigator.pop(context);
+      //     Navigator.pushNamed(context, AppRoutes.paywall);
+      //   }
+      //   return;
+      // }
+
+      // 呼叫伺服器端 Cloud Function（原子操作：驗證+報名+消耗票券）
+      final callable = FirebaseFunctions.instance.httpsCallable('bookWithValidation');
+      final result = await callable.call<Map<String, dynamic>>({
+        'date': _selectedDate!.toIso8601String(),
+        'city': _selectedCity,
+        'district': _selectedDistrict,
+      });
+
+      // 同步客戶端狀態
+      final subscriptionProv = context.read<SubscriptionProvider>();
+      await subscriptionProv.loadSubscription(authProvider.uid!);
+      final eventProvider = context.read<DinnerEventProvider>();
+      await eventProvider.fetchMyEvents(authProvider.uid!);
 
       if (mounted) {
-        if (success) {
+        Navigator.pop(context);
+        final ticketType = result.data?['ticketType'] ?? '';
+        final remaining = result.data?['remaining'];
+        final msg = ticketType == 'free' && remaining != null
+            ? '報名成功！剩餘免費次數：$remaining'
+            : '報名成功！';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        if (e.code == 'permission-denied') {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('報名成功！')),
-          );
+          Navigator.pushNamed(context, AppRoutes.paywall);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(eventProvider.errorMessage ?? '報名失敗')),
+            SnackBar(content: Text(e.message ?? '報名失敗')),
           );
         }
       }
@@ -90,7 +118,6 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
     final provider = context.read<DinnerEventProvider>();
     final allThursdayDates = provider.getThursdayDates();
 
@@ -197,7 +224,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: theme.colorScheme.primary.withOpacity(0.3),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               )
@@ -218,7 +245,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                         Text(
                           dateStr,
                           style: TextStyle(
-                            color: isSelected ? Colors.white.withOpacity(0.9) : Colors.grey,
+                            color: isSelected ? Colors.white.withValues(alpha: 0.9) : Colors.grey,
                             fontSize: 14,
                           ),
                         ),
@@ -322,8 +349,56 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
             ],
           ),
           
-          const SizedBox(height: 32),
-          
+          const SizedBox(height: 24),
+
+          // 用餐說明精簡版
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.payments_rounded,
+                        size: 16, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '餐費各付各的（Go Dutch），App 僅負責配對',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.auto_awesome_rounded,
+                        size: 16, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '🧠 智能配對 · 👫 性別平衡 · 🔒 匿名保護',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // 確認按鈕
           SizedBox(
             width: double.infinity,

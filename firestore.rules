@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== 輔助函數 =====
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // ===== 用戶 =====
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // ===== 訂閱 =====
+    match /subscriptions/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      // 不允許客戶端刪除訂閱
+    }
+
+    // ===== 晚餐活動 =====
+    match /dinnerEvents/{eventId} {
+      allow read: if isAuthenticated();
+      // 報名/取消報名由 Cloud Function 處理
+      allow create: if false;
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // ===== 群組 =====
+    match /dinnerGroups/{groupId} {
+      allow read: if isAuthenticated()
+        && request.auth.uid in resource.data.participantIds;
+      allow create: if false; // 由 Cloud Function 建立
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.participantIds;
+      allow delete: if false;
+    }
+
+    // ===== 聊天室 =====
+    match /chat_rooms/{chatRoomId} {
+      allow read: if isAuthenticated()
+        && request.auth.uid in resource.data.participantIds;
+      allow create: if false; // 由 Cloud Function 建立
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.participantIds;
+      allow delete: if false;
+    }
+
+    // ===== 訊息 =====
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.senderId;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ===== 評價 =====
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.reviewerId;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ===== 檢舉 =====
+    match /reports/{reportId} {
+      allow read: if false; // 只有後台管理員可看
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ===== 餐廳 =====
+    match /restaurants/{restaurantId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // 只有管理員可修改
+    }
+
+    // ===== 通知 =====
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated()
+        && request.auth.uid == resource.data.userId;
+      allow create: if false; // 由 Cloud Function 建立
+      allow update: if isAuthenticated()
+        && request.auth.uid == resource.data.userId;
+      allow delete: if false;
+    }
+
+    // ===== 預設：拒絕所有未列出的集合 =====
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

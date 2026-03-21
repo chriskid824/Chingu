@@ -54,6 +54,32 @@ class RichNotificationService {
 
     if (androidImplementation != null) {
       await androidImplementation.requestNotificationsPermission();
+
+      // 建立 FCM 所需的 Android Notification Channels
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'chingu_chat',
+          'Chat Messages',
+          description: 'Notifications for new chat messages',
+          importance: Importance.high,
+        ),
+      );
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'chingu_match',
+          'Match Notifications',
+          description: 'Notifications for mutual matches',
+          importance: Importance.high,
+        ),
+      );
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'chingu_events',
+          'Event Notifications',
+          description: 'Notifications for dinner events and companion reveals',
+          importance: Importance.high,
+        ),
+      );
     }
 
     _isInitialized = true;
@@ -109,14 +135,11 @@ class RichNotificationService {
         break;
       case 'view_event':
         if (data != null) {
-           // 這裡應該是 eventId，但 EventDetailScreen 目前似乎不接受參數
-           // 根據 memory 描述，EventDetailScreen 使用 hardcoded data
-           // 但為了兼容性，我們先嘗試導航
-          navigator.pushNamed(AppRoutes.eventDetail);
+          navigator.pushNamed(AppRoutes.home);
         }
         break;
       case 'match_history':
-        navigator.pushNamed(AppRoutes.matchesList); // 根據 memory 修正路徑
+        navigator.pushNamed(AppRoutes.chatList);
         break;
       default:
         // 預設導航到通知頁面

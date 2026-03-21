@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_theme.dart';
-import '../../widgets/user_card.dart';
 
 class HomeScreenDemo extends StatelessWidget {
   const HomeScreenDemo({super.key});
@@ -250,30 +249,9 @@ class HomeScreenDemo extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
-                      UserCard(
-                        name: '李小美',
-                        age: 26,
-                        job: '設計師',
-                        jobIcon: Icons.palette,
-                        color: theme.colorScheme.primary,
-                        matchScore: 92,
-                      ),
-                      UserCard(
-                        name: '陳大明',
-                        age: 30,
-                        job: '工程師',
-                        jobIcon: Icons.code,
-                        color: theme.colorScheme.secondary,
-                        matchScore: 88,
-                      ),
-                      UserCard(
-                        name: '林小芳',
-                        age: 27,
-                        job: '行銷專員',
-                        jobIcon: Icons.campaign,
-                        color: chinguTheme?.success ?? Colors.green,
-                        matchScore: 85,
-                      ),
+                      _buildUserCard(context, '李小美', 26, '設計師', Icons.palette, theme.colorScheme.primary, 92),
+                      _buildUserCard(context, '陳大明', 30, '工程師', Icons.code, theme.colorScheme.secondary, 88),
+                      _buildUserCard(context, '林小芳', 27, '行銷專員', Icons.campaign, chinguTheme?.success ?? Colors.green, 85),
                     ],
                   ),
                 ),
@@ -495,6 +473,30 @@ class HomeScreenDemo extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserCard(BuildContext context, String name, int age, String job, IconData jobIcon, Color color, int matchScore) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(radius: 32, backgroundColor: color, child: Icon(jobIcon, color: Colors.white, size: 28)),
+          const SizedBox(height: 12),
+          Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('$age 歲 · $job', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          Text('$matchScore% 匹配', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
         ],
       ),
     );

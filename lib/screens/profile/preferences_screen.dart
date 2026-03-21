@@ -31,8 +31,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   String? _selectedDistrict;
   List<String> _availableDistricts = cityDistrictMap['台北市']!;
   
-  // 配對偏好
-  String _preferredMatchType = 'any';
+  // 用餐偏好
+  String _diningPreference = 'any';
   double _minAge = 18;
   double _maxAge = 50;
   int _budgetRange = 1;
@@ -79,7 +79,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     
     // 設置配對偏好
     onboardingProvider.setPreferences(
-      preferredMatchType: _preferredMatchType,
+      diningPreference: _diningPreference,
       minAge: _minAge.toInt(),
       maxAge: _maxAge.toInt(),
       budgetRange: _budgetRange,
@@ -158,9 +158,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               const SizedBox(height: 24),
               
-              // 配對類型
+              // 用餐偏好
               Text(
-                '配對類型',
+                '你期待和什麼樣的人一起用餐？',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -172,34 +172,43 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
                     RadioListTile<String>(
-                      title: const Text('異性配對'),
-                      value: 'opposite',
-                      groupValue: _preferredMatchType,
+                      title: const Text('男性為主'),
+                      value: 'male',
+                      groupValue: _diningPreference,
                       onChanged: (value) {
-                        setState(() => _preferredMatchType = value!);
+                        setState(() => _diningPreference = value!);
                       },
                       activeColor: theme.colorScheme.primary,
                     ),
                     RadioListTile<String>(
-                      title: const Text('同性配對'),
-                      value: 'same',
-                      groupValue: _preferredMatchType,
+                      title: const Text('女性為主'),
+                      value: 'female',
+                      groupValue: _diningPreference,
                       onChanged: (value) {
-                        setState(() => _preferredMatchType = value!);
+                        setState(() => _diningPreference = value!);
                       },
                       activeColor: theme.colorScheme.primary,
                     ),
                     RadioListTile<String>(
-                      title: const Text('不限'),
+                      title: const Text('都喜歡'),
                       value: 'any',
-                      groupValue: _preferredMatchType,
+                      groupValue: _diningPreference,
                       onChanged: (value) {
-                        setState(() => _preferredMatchType = value!);
+                        setState(() => _diningPreference = value!);
+                      },
+                      activeColor: theme.colorScheme.primary,
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('隨緣'),
+                      value: 'no_preference',
+                      groupValue: _diningPreference,
+                      onChanged: (value) {
+                        setState(() => _diningPreference = value!);
                       },
                       activeColor: theme.colorScheme.primary,
                     ),
@@ -223,7 +232,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -266,7 +275,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -296,7 +305,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -328,7 +337,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -364,7 +373,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: (chinguTheme?.success ?? Colors.green).withOpacity(0.3),
+                      color: (chinguTheme?.success ?? Colors.green).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
