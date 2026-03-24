@@ -44,7 +44,6 @@ jobs:
           npm install -g firebase-tools
           firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
             --app "$FIREBASE_APP_ID" \
-            --groups "Chingu-Team, QA" \
             --release-notes "由 GitHub Actions 自動發佈的最新建置版本 🚀" \
             --token "$FIREBASE_TOKEN"
         env:
