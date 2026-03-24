@@ -73,7 +73,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleLogin() async {
     if (_isLoading) return;
     debugPrint('🔵 Google 登入按鈕被點擊');
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loginError = null;
+    });
 
     try {
       final authProvider = context.read<AuthProvider>();
@@ -83,15 +86,18 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
 
       if (!success) {
+        final errorMsg = authProvider.errorMessage ?? 'Google 登入失敗';
+        debugPrint('🔴 Google 登入失敗: $errorMsg');
         setState(() {
-          _loginError = authProvider.errorMessage ?? 'Google 登入失敗，請稍後再試';
+          _loginError = errorMsg;
         });
       }
     } catch (e) {
+      debugPrint('🔴 Google 登入異常: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _loginError = 'Google 登入發生錯誤，請稍後再試';
+        _loginError = 'Google 登入發生錯誤: ${e.toString().replaceAll('Exception: ', '')}';
       });
     }
   }
@@ -401,7 +407,10 @@ class _LoginScreenState extends State<LoginScreen> {
       child: OutlinedButton(
         onPressed: _isLoading ? null : _handleGoogleLogin,
         style: OutlinedButton.styleFrom(
-          side: BorderSide(color: chinguTheme?.surfaceVariant ?? Colors.grey.shade300),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          side: BorderSide(color: Colors.grey.shade300),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -417,13 +426,12 @@ class _LoginScreenState extends State<LoginScreen> {
               height: 30,
             ),
             const SizedBox(width: 10),
-            Text(
+            const Text(
               '使用 Google 登入',
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.2,
-                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
               ),
             ),
           ],
