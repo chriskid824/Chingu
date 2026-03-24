@@ -182,60 +182,7 @@ class _LocationScreenState extends State<LocationScreen> {
     }
   }
 
-  void _showComingSoonDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🚀', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 16),
-            const Text(
-              '即將開放！',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$_selectedCity $_selectedDistrict 目前尚未開放晚餐活動\n我們會在開放時通知你！',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '目前開放：$activeCity ${activeDistricts.join("、")}',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _selectedCity = activeCity;
-                _selectedDistrict = activeDistricts.first;
-              });
-            },
-            child: Text('切換到$activeCity${activeDistricts.first}'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('我知道了'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {

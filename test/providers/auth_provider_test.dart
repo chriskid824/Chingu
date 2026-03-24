@@ -38,11 +38,8 @@ void main() {
     group('Error Handling', () {
       test('should handle null user case', () {
         String? errorMessage;
-        dynamic firebaseUser;
-
-        if (firebaseUser == null) {
-          errorMessage = '用戶未登入';
-        }
+        // 模擬用戶未登入的場景
+        errorMessage = '用戶未登入';
 
         expect(errorMessage, equals('用戶未登入'));
       });

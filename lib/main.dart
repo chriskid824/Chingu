@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
@@ -32,13 +31,15 @@ void main() async {
   );
 
   // 依照你的開發偏好，我們關閉本地模擬器連線，全部直連真實雲端 (Production)
+  // ignore: dead_code
   const bool useFirebaseEmulator = false;
 
+  // ignore: dead_code
   if (kDebugMode && useFirebaseEmulator) {
     try {
       // 若要用「實體手機」測試，必須填入這台 Mac 電腦的 Wi-Fi 區網 IP
       // 目前自動偵測為 192.168.1.119
-      final String host = '192.168.1.119'; 
+      final String host = '192.168.1.119';
       await FirebaseAuth.instance.useAuthEmulator(host, 9099);
       FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
       FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);

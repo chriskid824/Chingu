@@ -96,7 +96,9 @@ void main() {
 
     group('Auth State', () {
       test('should handle null user state', () {
-        dynamic currentUser;
+        // 模擬未登入狀態
+        Map<String, String>? currentUser;
+        // ignore: unnecessary_null_comparison
         final isLoggedIn = currentUser != null;
         expect(isLoggedIn, isFalse);
       });

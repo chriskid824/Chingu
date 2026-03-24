@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
@@ -363,7 +362,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// Apple 登入按鈕
   Widget _buildAppleButton() {
-    final theme = Theme.of(context);
     return SizedBox(
       height: 54,
       child: OutlinedButton(

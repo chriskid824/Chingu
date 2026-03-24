@@ -1,11 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 
 class DatabaseSeeder {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   
   // 假資料常數
   final List<String> _firstNames = ['王', '李', '陳', '林', '張', '劉', '郭', '蔡', '楊', '許'];

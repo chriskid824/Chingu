@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/models/user_model.dart';
 import 'package:chingu/services/badge_count_service.dart';
@@ -38,7 +37,7 @@ class ChatProvider with ChangeNotifier {
 
       // 取得封鎖名單以過濾聊天列表
       final userDoc = await _firestore.collection('users').doc(userId).get();
-      final userData = userDoc.data() as Map<String, dynamic>?;
+      final userData = userDoc.data();
       final blockedUserIds = Set<String>.from(userData?['blockedUserIds'] ?? []);
 
       _chatRooms = [];
@@ -65,7 +64,7 @@ class ChatProvider with ChangeNotifier {
         if (!otherUserDoc.exists) continue;
 
         // 檢查對方是否也封鎖了我
-        final otherUserData = otherUserDoc.data() as Map<String, dynamic>?;
+        final otherUserData = otherUserDoc.data();
         final otherBlockedIds = List<String>.from(otherUserData?['blockedUserIds'] ?? []);
         if (otherBlockedIds.contains(userId)) continue;
 

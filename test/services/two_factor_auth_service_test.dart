@@ -112,7 +112,7 @@ void main() {
           '0912-345-678',
         ];
 
-        final phoneRegex = RegExp(r'^(\+886|0)9\d{8}$');
+        // phoneRegex 不在此處使用，改用簡化驗證
         
         // 移除所有非數字字符後驗證
         for (final number in validNumbers) {
