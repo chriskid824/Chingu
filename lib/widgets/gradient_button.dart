@@ -32,7 +32,7 @@ class GradientButton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         gradient: effectiveGradient,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: effectiveGradient.colors.first.withValues(alpha: 0.3),
@@ -47,7 +47,7 @@ class GradientButton extends StatelessWidget {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(28),
           ),
           padding: EdgeInsets.zero,
         ),

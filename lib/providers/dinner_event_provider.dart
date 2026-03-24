@@ -58,6 +58,8 @@ class DinnerEventProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _myEvents = await _dinnerEventService.getUserEvents(userId);
+      // 按日期升序排列，最近的在前
+      _myEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
       _setLoading(false);
     } catch (e) {
       debugPrint('獲取我的活動失敗: $e');
@@ -134,34 +136,20 @@ class DinnerEventProvider with ChangeNotifier {
 
   /// 獲取可預約的日期
   /// 過濾規則：
-  /// 1. 如果已經是週一（含）以後，不能預約本週四
-  /// 2. 如果已經參加了該日期的活動，不能重複預約
+  /// 1. 報名截止時間：該週週二中午 12:00
+  /// 2. 同時未完成報名上限：3 場
   List<DateTime> getBookableDates() {
     final dates = _dinnerEventService.getThursdayDates();
     final now = DateTime.now();
     
     return dates.where((date) {
-      // 1. 檢查截止時間
-      // 計算該日期所在週的週一
-      // date.weekday: 4 (Thursday)
-      // Monday is date - 3 days
-      final monday = DateTime(date.year, date.month, date.day).subtract(const Duration(days: 3));
+      // 1. 檢查截止時間（該週二中午 12:00）
+      // Thursday.weekday = 4, Tuesday.weekday = 2 → 差 2 天
+      final tuesday = DateTime(date.year, date.month, date.day)
+          .subtract(const Duration(days: 2));
+      final deadline = DateTime(tuesday.year, tuesday.month, tuesday.day, 12, 0);
       
-      // 如果現在已經過了週一 00:00，則該日期不可預約
-      if (now.isAfter(monday)) {
-        return false;
-      }
-
-      // 2. 檢查是否已參加
-      // 檢查 myEvents 中是否有同日期的活動
-      final isJoined = _myEvents.any((event) {
-        final eventDate = event.eventDate;
-        return eventDate.year == date.year && 
-               eventDate.month == date.month && 
-               eventDate.day == date.day;
-      });
-
-      if (isJoined) {
+      if (now.isAfter(deadline)) {
         return false;
       }
 
@@ -169,8 +157,30 @@ class DinnerEventProvider with ChangeNotifier {
     }).toList();
   }
 
-  /// 是否還有可預約的場次
-  bool get canBookMore => getBookableDates().isNotEmpty;
+  /// 檢查某日期是否已報名
+  bool isDateBooked(DateTime date) {
+    return _myEvents.any((event) {
+      final eventDate = event.eventDate;
+      return eventDate.year == date.year &&
+             eventDate.month == date.month &&
+             eventDate.day == date.day;
+    });
+  }
+
+  /// 同時未完成報名上限
+  static const int maxActiveBookings = 3;
+
+  /// 目前的有效報名數（未來的 open/matching 活動）
+  int get activeBookingCount {
+    final now = DateTime.now();
+    return _myEvents.where((event) {
+      return event.eventDate.isAfter(now) &&
+             (event.status == 'open' || event.status == 'matching');
+    }).length;
+  }
+
+  /// 是否還能報名
+  bool get canBookMore => activeBookingCount < maxActiveBookings;
 
   /// 預約活動
   Future<bool> bookEvent({

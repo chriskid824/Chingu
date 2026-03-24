@@ -174,11 +174,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final myEvents = eventProvider.myEvents;
     if (myEvents.isEmpty) {
-      // 未報名
+      // 未報名 — 截止時間是本週二中午 12:00
       final now = DateTime.now();
-      final daysUntilFriday = (DateTime.friday - now.weekday + 7) % 7;
-      if (daysUntilFriday == 0) return '今天是報名截止日，快來報名！';
-      return '本週還有 $daysUntilFriday 天可以報名！';
+      // 計算本週二
+      final daysUntilTuesday = (DateTime.tuesday - now.weekday + 7) % 7;
+      final nextTuesday = DateTime(now.year, now.month, now.day + daysUntilTuesday, 12, 0);
+      
+      // 如果現在已經過了本週二中午，顯示下週二
+      final deadline = now.isAfter(nextTuesday)
+          ? nextTuesday.add(const Duration(days: 7))
+          : nextTuesday;
+      
+      final remaining = deadline.difference(now);
+      
+      if (remaining.inHours < 1) return '報名即將截止，快來報名！🔥';
+      if (remaining.inHours < 24) return '報名倒數 ${remaining.inHours} 小時，快來報名！';
+      return '距報名截止還有 ${remaining.inDays} 天';
     }
 
     // 找最近的活動
@@ -216,9 +227,16 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildInviteCard(theme, chinguTheme);
         }
 
-        // 取最近一場活動
-        final event = eventProvider.myEvents.first;
+        // 取最近的未來活動（列表已按日期升序排列）
         final now = DateTime.now();
+        final futureEvents = eventProvider.myEvents
+            .where((e) => e.eventDate.isAfter(now))
+            .toList();
+        
+        // 如果沒有未來活動，用最後一個（已過期的）
+        final event = futureEvents.isNotEmpty 
+            ? futureEvents.first 
+            : eventProvider.myEvents.last;
         final diff = event.eventDate.difference(now);
 
         if (diff.isNegative) {
@@ -324,81 +342,162 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCountdownCard(ThemeData theme, ChinguTheme? chinguTheme, dynamic event) {
     final dateStr = DateFormat('MM/dd (E)', 'zh_TW').format(event.eventDate);
     final timeStr = DateFormat('HH:mm').format(event.eventDate);
+    final eventProvider = context.read<DinnerEventProvider>();
+    final allFutureEvents = eventProvider.myEvents
+        .where((e) => e.eventDate.isAfter(DateTime.now()))
+        .toList();
 
-    return Container(
-      padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColorsMinimal.surface,
-            AppColorsMinimal.primaryBackground,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-        border: Border.all(color: AppColorsMinimal.surfaceVariant.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorsMinimal.shadowMedium,
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // 倒數圓環
-          CountdownRing(
-            targetDate: event.eventDate,
-            size: 160,
-            strokeWidth: 8,
-          ),
-          const SizedBox(height: AppColorsMinimal.spaceLG),
-          // 活動資訊列
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildInfoChip(Icons.calendar_today_rounded, dateStr),
-              const SizedBox(width: AppColorsMinimal.spaceMD),
-              _buildInfoChip(Icons.access_time_rounded, timeStr),
-              const SizedBox(width: AppColorsMinimal.spaceMD),
-              _buildInfoChip(Icons.check_circle_rounded, '已報名 ✓'),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColorsMinimal.surface,
+                AppColorsMinimal.primaryBackground,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+            border: Border.all(color: AppColorsMinimal.surfaceVariant.withValues(alpha: 0.6)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColorsMinimal.shadowMedium,
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
-          const SizedBox(height: AppColorsMinimal.spaceLG),
-          // 地點保密提示
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppColorsMinimal.spaceLG,
-              vertical: AppColorsMinimal.spaceSM,
-            ),
-            decoration: BoxDecoration(
-              color: AppColorsMinimal.primaryBackground,
-              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.lock_rounded,
-                  size: 14,
-                  color: AppColorsMinimal.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '🔮 驚喜地點倒數揭曉中',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColorsMinimal.primary,
-                    fontWeight: FontWeight.w500,
+          child: Column(
+            children: [
+              // 倒數圓環
+              CountdownRing(
+                targetDate: event.eventDate,
+                size: 160,
+                strokeWidth: 8,
+              ),
+              const SizedBox(height: AppColorsMinimal.spaceLG),
+              // 活動資訊列
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: AppColorsMinimal.spaceSM,
+                runSpacing: AppColorsMinimal.spaceSM,
+                children: [
+                  _buildInfoChip(Icons.calendar_today_rounded, dateStr),
+                  _buildInfoChip(Icons.access_time_rounded, timeStr),
+                  _buildInfoChip(Icons.check_circle_rounded, '已報名 ✓'),
+                ],
+              ),
+
+              // 多場已報名小列表
+              if (allFutureEvents.length > 1) ...[
+                const SizedBox(height: AppColorsMinimal.spaceLG),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppColorsMinimal.spaceMD),
+                  decoration: BoxDecoration(
+                    color: AppColorsMinimal.surface,
+                    borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '已報名 ${allFutureEvents.length} 場',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColorsMinimal.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...allFutureEvents.map((e) {
+                        final d = DateFormat('MM/dd (E)', 'zh_TW').format(e.eventDate);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.event_rounded, size: 14, color: AppColorsMinimal.primary),
+                              const SizedBox(width: 6),
+                              Text(d, style: TextStyle(fontSize: 13, color: AppColorsMinimal.textPrimary)),
+                              const SizedBox(width: 6),
+                              Text('19:00', style: TextStyle(fontSize: 12, color: AppColorsMinimal.textTertiary)),
+                              const Spacer(),
+                              Text('✅', style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ],
+
+              const SizedBox(height: AppColorsMinimal.spaceLG),
+              // 地點保密提示
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppColorsMinimal.spaceLG,
+                  vertical: AppColorsMinimal.spaceSM,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColorsMinimal.primaryBackground,
+                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_rounded,
+                      size: 14,
+                      color: AppColorsMinimal.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '🔮 驚喜地點倒數揭曉中',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColorsMinimal.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 報名更多場次按鈕
+        if (eventProvider.canBookMore) ...[
+          const SizedBox(height: AppColorsMinimal.spaceMD),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const BookingBottomSheet(),
+                );
+              },
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text('報名更多場次 (${eventProvider.activeBookingCount}/${DinnerEventProvider.maxActiveBookings})'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColorsMinimal.primary,
+                side: BorderSide(color: AppColorsMinimal.primary.withValues(alpha: 0.4)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+                ),
+              ),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 

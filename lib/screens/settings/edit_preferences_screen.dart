@@ -1,43 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chingu/core/routes/app_router.dart';
-import 'package:chingu/providers/onboarding_provider.dart';
-import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
-import 'package:chingu/widgets/onboarding_progress_bar.dart';
+import 'package:chingu/providers/auth_provider.dart';
 
-class PreferencesScreen extends StatefulWidget {
-  const PreferencesScreen({super.key});
+/// 從設定頁進入的配對偏好編輯（獨立於 onboarding）
+class EditPreferencesScreen extends StatefulWidget {
+  const EditPreferencesScreen({super.key});
 
   @override
-  State<PreferencesScreen> createState() => _PreferencesScreenState();
+  State<EditPreferencesScreen> createState() => _EditPreferencesScreenState();
 }
 
-class _PreferencesScreenState extends State<PreferencesScreen> {
-  // 用餐偏好
-  String _diningPreference = 'any';
-  int _budgetRange = 1;
+class _EditPreferencesScreenState extends State<EditPreferencesScreen> {
+  late String _diningPreference;
+  late int _budgetRange;
+  bool _isSaving = false;
 
-  bool _isSubmitting = false;
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<AuthProvider>().userModel;
+    _diningPreference = user?.diningPreference ?? 'any';
+    _budgetRange = user?.budgetRange ?? 1;
+  }
 
-  Future<void> _handleComplete() async {
-    setState(() => _isSubmitting = true);
+  Future<void> _handleSave() async {
+    setState(() => _isSaving = true);
 
-    final onboardingProvider = context.read<OnboardingProvider>();
-
-    // 設置配對偏好
-    onboardingProvider.setPreferences(
-      diningPreference: _diningPreference,
-      budgetRange: _budgetRange,
-    );
-
-    // 提交所有數據到 Firestore
     final authProvider = context.read<AuthProvider>();
-    final success = await onboardingProvider.submitOnboardingData(authProvider);
-
-    setState(() => _isSubmitting = false);
+    final success = await authProvider.updateUserData({
+      'diningPreference': _diningPreference,
+      'budgetRange': _budgetRange,
+    });
 
     if (!mounted) return;
+    setState(() => _isSaving = false);
 
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
@@ -45,18 +42,15 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('個人資料設定完成！🎉'),
+          content: const Text('偏好已更新 ✅'),
           backgroundColor: chinguTheme?.success ?? Colors.green,
         ),
       );
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.notificationPermission,
-        (route) => false,
-      );
+      Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('提交失敗，請稍後再試'),
+          content: const Text('更新失敗，請稍後再試'),
           backgroundColor: theme.colorScheme.error,
         ),
       );
@@ -71,34 +65,19 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('完成個人資料', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('配對偏好', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
         backgroundColor: theme.scaffoldBackgroundColor,
         foregroundColor: theme.colorScheme.onSurface,
         elevation: 0,
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Progress Bar - Step 3 of 3
-            const OnboardingProgressBar(
-              totalSteps: 3,
-              currentStep: 3,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '用餐偏好',
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ===== 用餐對象偏好 =====
-            _buildSectionTitle('你期待和什麼樣的人一起用餐？', theme),
+            // 用餐對象偏好
+            Text('你期待和什麼樣的人一起用餐？',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
@@ -120,8 +99,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ===== 預算範圍 =====
-            _buildSectionTitle('預算範圍', theme),
+            // 預算範圍
+            Text('預算範圍',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
@@ -143,56 +123,41 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ),
             const SizedBox(height: 32),
 
-            // ===== 完成按鈕 =====
-            Container(
+            // 儲存按鈕
+            SizedBox(
+              width: double.infinity,
               height: 56,
-              decoration: BoxDecoration(
-                gradient: chinguTheme?.successGradient,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: (chinguTheme?.success ?? Colors.green).withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _handleComplete,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: chinguTheme?.primaryGradient,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _handleSave,
+                  icon: _isSaving
+                      ? const SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                      : const Icon(Icons.check_circle_outline, color: Colors.white),
+                  label: Text(_isSaving ? '儲存中...' : '儲存偏好',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
-                child: _isSubmitting
-                    ? const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      )
-                    : const Text(
-                        '完成設定 🎉',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, ThemeData theme) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurface,
       ),
     );
   }
@@ -203,13 +168,10 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       onTap: () => setState(() => _diningPreference = value),
       leading: Icon(icon,
           color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-      title: Text(
-        label,
+      title: Text(label,
         style: TextStyle(
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-        ),
-      ),
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface)),
       trailing: isSelected
           ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
           : Icon(Icons.circle_outlined, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
@@ -220,20 +182,12 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     final isSelected = _budgetRange == value;
     return ListTile(
       onTap: () => setState(() => _budgetRange = value),
-      title: Text(
-        label,
+      title: Text(label,
         style: TextStyle(
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-        ),
-      ),
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface)),
+      subtitle: Text(subtitle,
+        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
       trailing: isSelected
           ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
           : Icon(Icons.circle_outlined, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),

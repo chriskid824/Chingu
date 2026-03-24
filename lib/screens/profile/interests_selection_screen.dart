@@ -177,7 +177,7 @@ class _InterestsSelectionScreenState extends State<InterestsSelectionScreen> {
           children: [
             // Progress Indicator
             const OnboardingProgressBar(
-              totalSteps: 4,
+              totalSteps: 3,
               currentStep: 2,
             ),
             const SizedBox(height: 8),

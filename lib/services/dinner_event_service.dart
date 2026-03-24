@@ -226,23 +226,14 @@ class DinnerEventService {
     });
   }
 
-  /// 計算本週四和下週四的日期
+  /// 計算未來 3 個週四的日期（本週 + 下週 + 下下週）
   List<DateTime> getThursdayDates() {
     final now = DateTime.now();
-    
-    // 計算本週四
-    // weekday: Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6, Sun=7
-    // 如果今天是週四(4)，本週四就是今天
-    // 如果今天是週五(5)，本週四是昨天（但我們只顯示未來的，所以這裡只計算日期，過濾邏輯在 UI）
-    // 為了簡單，我們定義：
-    // 如果今天是週四之前或週四當天，本週四 = now + (4 - weekday)
-    // 如果今天是週五之後，本週四 = 下週四
     
     DateTime thisThursday;
     if (now.weekday <= DateTime.thursday) {
       thisThursday = now.add(Duration(days: DateTime.thursday - now.weekday));
     } else {
-      // 已經過了週四，本週四算下週的
       thisThursday = now.add(Duration(days: DateTime.thursday - now.weekday + 7));
     }
     
@@ -255,10 +246,10 @@ class DinnerEventService {
       0,
     );
     
-    // 下週四 = 本週四 + 7天
     final nextThursday = thisThursday.add(const Duration(days: 7));
+    final thirdThursday = thisThursday.add(const Duration(days: 14));
     
-    return [thisThursday, nextThursday];
+    return [thisThursday, nextThursday, thirdThursday];
   }
 
   /// 加入或創建活動（智慧配對）

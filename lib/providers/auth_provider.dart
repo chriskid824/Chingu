@@ -140,7 +140,10 @@ class AuthProvider with ChangeNotifier {
 
       await _firestoreService.createUser(userModel);
 
-      // 4. 立即重新載入用戶資料，確保 _userModel 不為空
+      // 4. 發送 Email 驗證信
+      await firebaseUser.sendEmailVerification();
+
+      // 5. 立即重新載入用戶資料，確保 _userModel 不為空
       // 這解決了註冊後立即跳轉導致資料尚未載入的競態條件
       await _loadUserData(firebaseUser.uid);
 
@@ -218,6 +221,7 @@ class AuthProvider with ChangeNotifier {
       }
 
       _setLoading(false);
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -277,9 +281,17 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     try {
       _setLoading(true);
-      // 移除 FCM token
-      await PushNotificationService().unregisterUserToken();
+      _errorMessage = null;
+      // 移除 FCM token（失敗不影響登出）
+      try {
+        await PushNotificationService().unregisterUserToken();
+      } catch (e) {
+        debugPrint('⚠️ FCM token 移除失敗（不影響登出）: $e');
+      }
       await _authService.signOut();
+      _userModel = null;
+      _firebaseUser = null;
+      _status = AuthStatus.unauthenticated;
       _setLoading(false);
     } catch (e) {
       _errorMessage = e.toString();
@@ -339,8 +351,7 @@ class AuthProvider with ChangeNotifier {
     // 檢查必填欄位是否已填寫
     return _userModel!.age > 0 &&
         _userModel!.gender.isNotEmpty &&
-        _userModel!.job.isNotEmpty &&
-        _userModel!.city.isNotEmpty;
+        _userModel!.job.isNotEmpty;
   }
 
   /// 刪除用戶帳號

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -25,6 +30,23 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 依照你的開發偏好，我們關閉本地模擬器連線，全部直連真實雲端 (Production)
+  const bool useFirebaseEmulator = false;
+
+  if (kDebugMode && useFirebaseEmulator) {
+    try {
+      // 若要用「實體手機」測試，必須填入這台 Mac 電腦的 Wi-Fi 區網 IP
+      // 目前自動偵測為 192.168.1.119
+      final String host = '192.168.1.119'; 
+      await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+      FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+      FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+      debugPrint('已設定連接至 Firebase 本機模擬器 ($host)');
+    } catch (e) {
+      debugPrint('Firebase 模擬器連接失敗: $e');
+    }
+  }
 
   // 初始化 Crashlytics
   await CrashReportingService().initialize();

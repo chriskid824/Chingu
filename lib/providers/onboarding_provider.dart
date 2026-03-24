@@ -64,16 +64,15 @@ class OnboardingProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Setters for Step 3
   void setPreferences({
     required String diningPreference,
-    required int minAge,
-    required int maxAge,
+    int? minAge,
+    int? maxAge,
     required int budgetRange,
   }) {
     _diningPreference = diningPreference;
-    _minAge = minAge;
-    _maxAge = maxAge;
+    if (minAge != null) _minAge = minAge;
+    if (maxAge != null) _maxAge = maxAge;
     _budgetRange = budgetRange;
     notifyListeners();
   }
@@ -101,9 +100,7 @@ class OnboardingProvider with ChangeNotifier {
       return false;
     }
 
-    if (_country == null || _city == null || _district == null) {
-      return false;
-    }
+    // location 不再是 onboarding 必填（在預約晚餐時選擇）
 
     // 準備更新數據
     final Map<String, dynamic> userData = {
@@ -112,9 +109,6 @@ class OnboardingProvider with ChangeNotifier {
       'gender': _gender,
       'job': _job,
       'interests': _interests,
-      'country': _country,
-      'city': _city,
-      'district': _district,
       'diningPreference': _diningPreference,
       'minAge': _minAge,
       'maxAge': _maxAge,
@@ -122,6 +116,10 @@ class OnboardingProvider with ChangeNotifier {
     };
 
     // 添加可選欄位
+    if (_country != null) userData['country'] = _country;
+    if (_city != null) userData['city'] = _city;
+    if (_district != null) userData['district'] = _district;
+
     if (_bio != null && _bio!.isNotEmpty) {
       userData['bio'] = _bio;
     }

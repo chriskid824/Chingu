@@ -53,6 +53,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      // 顯示驗證信通知
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('已發送驗證信，請至信箱確認'),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
       // 註冊成功，導航到個人資料設定流程
       Navigator.of(context).pushReplacementNamed(AppRoutes.profileSetup);
     } else {
@@ -88,6 +97,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       // 顯示錯誤訊息
       final error = authProvider.errorMessage ?? 'Google 登入失敗';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    setState(() => _isLoading = true);
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.signInWithApple();
+
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    if (success) {
+      if (!authProvider.hasCompletedOnboarding()) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.profileSetup);
+      } else {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.mainNavigation);
+      }
+    } else {
+      final error = authProvider.errorMessage ?? 'Apple 登入失敗';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
@@ -329,41 +365,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 
-                // Google 登入按鈕
-                OutlinedButton(
-                  onPressed: _isLoading ? null : _handleGoogleSignIn,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(color: chinguTheme?.surfaceVariant ?? Colors.grey),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                // Apple 登入按鈕
+                SizedBox(
+                  height: 54,
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _handleAppleSignIn,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 3),
+                          child: Icon(Icons.apple, size: 30, color: Colors.black),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          '使用 Apple 註冊',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.g_mobiledata,
-                          size: 24,
-                          color: theme.colorScheme.primary,
-                        ),
+                ),
+                const SizedBox(height: 12),
+
+                // Google 登入按鈕
+                SizedBox(
+                  height: 54,
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _handleGoogleSignIn,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '使用 Google 登入',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/google_logo.png',
+                          width: 30,
+                          height: 30,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Text(
+                          '使用 Google 註冊',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

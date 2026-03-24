@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
@@ -83,22 +84,16 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
 
       if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Google 登入失敗'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _loginError = authProvider.errorMessage ?? 'Google 登入失敗，請稍後再試';
+        });
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google 登入發生錯誤: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _isLoading = false;
+        _loginError = 'Google 登入發生錯誤，請稍後再試';
+      });
     }
   }
 
@@ -114,22 +109,16 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
 
       if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Apple 登入失敗'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _loginError = authProvider.errorMessage ?? 'Apple 登入失敗，請稍後再試';
+        });
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Apple 登入發生錯誤: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _isLoading = false;
+        _loginError = 'Apple 登入發生錯誤，請稍後再試';
+      });
     }
   }
 
@@ -139,8 +128,20 @@ class _LoginScreenState extends State<LoginScreen> {
     final chinguTheme = theme.extension<ChinguTheme>();
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFD6EAF8),  // 頂部淡藍
+              Color(0xFFEBF5FB),  // 中段更淡
+              Colors.white,       // 底部白色
+            ],
+            stops: [0.0, 0.35, 0.6],
+          ),
+        ),
+        child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(
@@ -148,51 +149,19 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
                 
-                // Logo
+                // Mascot
                 Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              theme.colorScheme.primary.withValues(alpha: 0.2),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: chinguTheme?.primaryGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.restaurant,
-                          size: 40,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  child: Image.asset(
+                    'assets/images/login_mascot.png',
+                    width: 240,
+                    height: 180,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 
                 // Title
                 Row(
@@ -222,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // ===== Social Login =====
-                // Apple Sign-In
+                // Apple Sign-In (iOS: native, Android: web flow)
                 _buildAppleButton(),
                 const SizedBox(height: 12),
 
@@ -261,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     hintText: 'your@email.com',
                     prefixIcon: Icon(
                       Icons.email_rounded,
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                   ),
                   validator: (value) {
@@ -287,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     hintText: '••••••••',
                     prefixIcon: Icon(
                       Icons.lock_rounded,
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -299,10 +268,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           _obscurePassword = !_obscurePassword;
                         });
                       },
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
                     ),
                   ),
                   validator: (value) {
@@ -350,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _isLoading ? null : () => Navigator.pushNamed(context, AppRoutes.forgotPassword),
                     child: Text(
                       '忘記密碼？',
-                      style: TextStyle(color: theme.colorScheme.primary),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                   ),
                 ),
@@ -391,20 +356,23 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+        ),
       ),
     );
   }
 
   /// Apple 登入按鈕
   Widget _buildAppleButton() {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 54,
-      child: ElevatedButton(
+      child: OutlinedButton(
         onPressed: _isLoading ? null : _handleAppleLogin,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
           elevation: 0,
+          side: BorderSide(color: Colors.grey.shade300),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -415,12 +383,12 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.only(bottom: 3),
-              child: Icon(Icons.apple, size: 30),
+              child: Icon(Icons.apple, size: 30, color: Colors.black),
             ),
             const SizedBox(width: 8),
             const Text(
               '使用 Apple 登入',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
             ),
           ],
         ),
@@ -447,8 +415,8 @@ class _LoginScreenState extends State<LoginScreen> {
             // Google 官方彩色 logo
             Image.asset(
               'assets/images/google_logo.png',
-              width: 36,
-              height: 36,
+              width: 30,
+              height: 30,
             ),
             const SizedBox(width: 10),
             Text(

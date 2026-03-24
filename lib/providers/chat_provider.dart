@@ -36,6 +36,11 @@ class ChatProvider with ChangeNotifier {
 
       debugPrint('找到 ${chatRoomsQuery.docs.length} 個聊天室');
 
+      // 取得封鎖名單以過濾聊天列表
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      final blockedUserIds = Set<String>.from(userData?['blockedUserIds'] ?? []);
+
       _chatRooms = [];
       int totalUnreadCount = 0;
 
@@ -51,10 +56,18 @@ class ChatProvider with ChangeNotifier {
 
         if (otherUserId.isEmpty) continue;
 
+        // 跳過被封鎖的用戶
+        if (blockedUserIds.contains(otherUserId)) continue;
+
         // 獲取對方的用戶資料
         final otherUserDoc = await _firestore.collection('users').doc(otherUserId).get();
         
         if (!otherUserDoc.exists) continue;
+
+        // 檢查對方是否也封鎖了我
+        final otherUserData = otherUserDoc.data() as Map<String, dynamic>?;
+        final otherBlockedIds = List<String>.from(otherUserData?['blockedUserIds'] ?? []);
+        if (otherBlockedIds.contains(userId)) continue;
 
         final otherUser = UserModel.fromMap(
           otherUserDoc.data() as Map<String, dynamic>,

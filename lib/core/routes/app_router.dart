@@ -27,6 +27,7 @@ import '../../screens/review/review_screen.dart';
 // 設定模組
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/edit_profile_screen.dart';
+import '../../screens/settings/edit_preferences_screen.dart';
 import '../../screens/settings/privacy_settings_screen.dart';
 import '../../screens/settings/notification_settings_screen.dart';
 import '../../screens/settings/notification_preview_screen.dart';
@@ -74,6 +75,7 @@ class AppRoutes {
   // 設定模組
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
+  static const String editPreferences = '/edit-preferences';
   static const String privacySettings = '/privacy-settings';
   static const String notificationSettings = '/notification-settings';
   static const String notificationPreview = '/notification-preview';
@@ -140,6 +142,9 @@ class AppRouter {
       
       case AppRoutes.preferences:
         return MaterialPageRoute(builder: (_) => const PreferencesScreen());
+
+      case AppRoutes.editPreferences:
+        return MaterialPageRoute(builder: (_) => const EditPreferencesScreen());
 
       case AppRoutes.location:
         return MaterialPageRoute(builder: (_) => const LocationScreen());

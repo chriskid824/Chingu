@@ -1,0 +1,17 @@
+default_platform(:android)
+
+platform :android do
+  desc "Submit a new Beta Build to Firebase App Distribution"
+  lane :distribute_firebase do
+    # 進行編譯
+    gradle(task: "clean assembleRelease")
+    
+    # 上傳至 Firebase
+    firebase_app_distribution(
+      app: ENV["FIREBASE_APP_ID"],
+      groups: "Chingu-Team, QA",
+      release_notes: "由 GitHub Actions 自動發佈的最新建置版本 🚀",
+      # service_credentials_file: "firebase_credentials.json" # 若使用 Token 則不需要此行
+    )
+  end
+end

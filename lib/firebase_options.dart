@@ -53,11 +53,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKeyForAndroidPlatform_ChangeThis',
-    appId: '1:123456789012:android:abcdef1234567890abcdef',
-    messagingSenderId: '123456789012',
-    projectId: 'chingu-demo',
-    storageBucket: 'chingu-demo.appspot.com',
+    apiKey: 'AIzaSyDv5N0iMR519L8CSplSas_qnVvES8W_cL4',
+    appId: '1:785159715135:android:b4a18423f0c4fd74da3b8a',
+    messagingSenderId: '785159715135',
+    projectId: 'chingu-98387',
+    storageBucket: 'chingu-98387.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

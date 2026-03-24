@@ -304,6 +304,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
     );
   }
 
+  bool _isConfirmingAttendance = false;
+
   Widget _buildAttendanceButton(DinnerGroupModel group) {
     final userId = context.read<AuthProvider>().uid ?? '';
     final confirmed = group.attendanceConfirmed[userId] ?? false;
@@ -311,23 +313,38 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: confirmed
+        onPressed: (confirmed || _isConfirmingAttendance)
             ? null
-            : () {
-                context
-                    .read<DinnerGroupProvider>()
-                    .confirmAttendance(group.id, userId);
+            : () async {
+                setState(() => _isConfirmingAttendance = true);
+                try {
+                  await context
+                      .read<DinnerGroupProvider>()
+                      .confirmAttendance(group.id, userId);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('確認失敗: $e')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isConfirmingAttendance = false);
+                }
               },
-        icon: Icon(confirmed ? Icons.check_circle : Icons.check_circle_outline),
+        icon: _isConfirmingAttendance
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Icon(confirmed ? Icons.check_circle : Icons.check_circle_outline),
         label: Text(
-          confirmed ? '已確認出席 ✅' : '確認出席',
+          _isConfirmingAttendance ? '確認中...' : (confirmed ? '已確認出席 ✅' : '確認出席'),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor:
               confirmed ? AppColorsMinimal.success : AppColorsMinimal.primary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColorsMinimal.success.withValues(alpha: 0.8),
+          disabledBackgroundColor: _isConfirmingAttendance 
+              ? AppColorsMinimal.primary.withValues(alpha: 0.7) 
+              : AppColorsMinimal.success.withValues(alpha: 0.8),
           disabledForegroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(

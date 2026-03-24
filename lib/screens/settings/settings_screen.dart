@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/services/database_seeder.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -9,6 +13,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
+    final user = context.watch<AuthProvider>().userModel;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -21,52 +26,68 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           _buildHeader(context),
-          // Profile Section
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    gradient: chinguTheme?.primaryGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+          // Profile Section - 讀取真實用戶資料
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              final user = authProvider.userModel;
+              final email = user?.email ?? '';
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        gradient: chinguTheme?.primaryGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(Icons.person_rounded, size: 35, color: Colors.white),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '張小明',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      child: ClipOval(
+                        child: user?.avatarUrl != null
+                            ? Image.network(
+                                user!.avatarUrl!,
+                                fit: BoxFit.cover,
+                                width: 70, height: 70,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.person_rounded, size: 35, color: Colors.white),
+                              )
+                            : const Icon(Icons.person_rounded, size: 35, color: Colors.white),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'user@example.com',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.name ?? '未設定',
+                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            email,
+                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, color: theme.colorScheme.primary),
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRoutes.editProfile);
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(Icons.edit, color: theme.colorScheme.primary),
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(AppRoutes.editProfile);
-                  },
-                ),
-              ],
-            ),
+              );
+            },
           ),
           const Divider(),
           // Account Settings
@@ -75,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
             Navigator.of(context).pushNamed(AppRoutes.editProfile);
           }),
           _buildListTile(context, Icons.favorite_outline, '配對偏好', () {
-            Navigator.of(context).pushNamed(AppRoutes.preferences);
+            Navigator.of(context).pushNamed(AppRoutes.editPreferences);
           }),
           _buildListTile(context, Icons.lock_outline, '隱私設定', () {
             Navigator.of(context).pushNamed(AppRoutes.privacySettings);
@@ -109,7 +130,50 @@ class SettingsScreen extends StatelessWidget {
             Navigator.of(context).pushNamed(AppRoutes.about);
           }, trailing: 'v1.0.0'),
           const Divider(),
-          // Logout
+          // Developer Settings (Only for admins, even in Release mode)
+          if (user?.email == 'chriskid824@gmail.com' || user?.email == 'test@gmail.com' || kDebugMode) ...[
+            _buildSectionTitle(context, '開發者選項 (實機真實資料庫可用)'),
+            _buildListTile(context, Icons.bug_report_rounded, '產生測試資料 (User & Events)', () async {
+              try {
+                final authProv = context.read<AuthProvider>();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在產生假資料...')));
+                
+                final seeder = DatabaseSeeder();
+                final mockUsers = await seeder.generateMockUsers(count: 10);
+                
+                if (authProv.uid != null) {
+                  await seeder.generateDinnerEvents(authProv.uid!, mockUsers);
+                }
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('假資料產生成功！')));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('產生失敗: $e')));
+                }
+              }
+            }, iconColor: Colors.deepPurple),
+            _buildListTile(context, Icons.delete_sweep_rounded, '清除當前角色的測試資料', () async {
+              try {
+                final authProv = context.read<AuthProvider>();
+                if (authProv.uid != null) {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在清除...')));
+                   await DatabaseSeeder().clearDummyData(authProv.uid!);
+                   if (context.mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('假資料清除成功！')));
+                   }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('清除失敗: $e')));
+                }
+              }
+            }, iconColor: Colors.deepOrange),
+            const Divider(),
+          ],
+
+          // Destructive Actions
           _buildListTile(
             context,
             Icons.logout,
@@ -127,13 +191,16 @@ class SettingsScreen extends StatelessWidget {
                       child: const Text('取消'),
                     ),
                     TextButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.of(context).pop();
+                        await context.read<AuthProvider>().signOut();
                         // 執行登出邏輯，導向登入頁面
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                          AppRoutes.login,
-                          (route) => false,
-                        );
+                        if (context.mounted) {
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            AppRoutes.login,
+                            (route) => false,
+                          );
+                        }
                       },
                       child: Text('確定', style: TextStyle(color: theme.colorScheme.error)),
                     ),

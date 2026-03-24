@@ -191,14 +191,6 @@ class ProfilePreviewScreen extends StatelessWidget {
 
                   // Info Cards
                   _buildInfoCard(
-                    Icons.location_on_rounded,
-                    '位置',
-                    '${user.city}, ${user.district}',
-                    theme.colorScheme.primary,
-                    theme,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
                     Icons.restaurant_menu_rounded,
                     '用餐偏好',
                     user.diningPreferenceText,
@@ -207,9 +199,9 @@ class ProfilePreviewScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildInfoCard(
-                    Icons.restaurant_rounded,
-                    '用餐偏好',
-                    user.diningPreferenceText,
+                    Icons.payments_rounded,
+                    '預算範圍',
+                    _budgetRangeText(user.budgetRange),
                     chinguTheme?.error ?? theme.colorScheme.error,
                     theme,
                   ),
@@ -323,6 +315,15 @@ class ProfilePreviewScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+  static String _budgetRangeText(int range) {
+    switch (range) {
+      case 0: return 'NT\$ 300-500 小資輕食';
+      case 1: return 'NT\$ 500-800 舒適餐敘';
+      case 2: return 'NT\$ 800-1200 精緻饗宴';
+      case 3: return 'NT\$ 1200+ 頂級體驗';
+      default: return 'NT\$ 500-800 舒適餐敘';
+    }
   }
 
   Widget _buildInfoCard(IconData icon, String label, String value, Color color, ThemeData theme) {

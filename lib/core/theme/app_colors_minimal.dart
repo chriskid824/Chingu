@@ -1,179 +1,88 @@
 import 'package:flutter/material.dart';
 
-/// Chingu Design Token System — 小清新 · 天空藍 + 薄荷綠
+/// Chingu Design Token System — 莫蘭迪暖色系 (Morandi Warm)
 /// 
 /// 設計原則：
-/// - 清新、療癒、像看天空的感覺
-/// - 微藍白底 + 天空藍漸層 + 薄荷綠點綴
-/// - 大圓角、充分留白、柔和藍灰陰影
-/// - 靈感：Apple Health App、晴朗天空、薄荷微風
+/// - 內斂、質感、高雅
+/// - 淺藍灰底色 + 磚橘/深棕點綴 (溫暖與獨特)
+/// - 大圓角、柔和陰影、卡片式留白
 class AppColorsMinimal {
-  // ==================== 主色系（天空藍） ====================
+  // ==================== 主色系（天空藍灰） ====================
   
-  /// 主色 - 天空藍
-  static const Color primary = Color(0xFF64B5F6);
+  /// 主色 - 深莫蘭迪藍灰 (標題文字, Segment 選取字)
+  static const Color primary = Color(0xFF2E5364);
   
-  /// 主色 - 淺色變體
-  static const Color primaryLight = Color(0xFF90CAF9);
+  /// 主色 - 淺色背景 (Segment 底色, SearchBar 底板)
+  static const Color primaryBackground = Color(0xFFEAEFF3);
   
-  /// 主色 - 深色變體
-  static const Color primaryDark = Color(0xFF1E88E5);
+  // ==================== 次要色系（磚橘/深棕色Accent） ====================
   
-  /// 主色 - 極淺背景（提示條、Tag 背景）
-  static const Color primaryBackground = Color(0xFFE3F2FD);
+  /// 次要色 - 磚橘色 (Badge, 點綴)
+  static const Color secondary = Color(0xFFA64A25);
   
-  // ==================== 次要色系（薄荷綠） ====================
-  
-  /// 次要色 - 薄荷綠
-  static const Color secondary = Color(0xFF80CBC4);
-  
-  /// 次要色 - 淺色變體
-  static const Color secondaryLight = Color(0xFFB2DFDB);
-  
-  /// 次要色 - 深色變體
-  static const Color secondaryDark = Color(0xFF4DB6AC);
-  
+  /// FAB 色調
+  static const Color fabStart = Color(0xFFD67756);
+  static const Color fabEnd = Color(0xFFE9967A);
+
   // ==================== 背景色系 ====================
   
-  /// 主背景 - 微藍白（非純白，帶一絲天空感）
-  static const Color background = Color(0xFFFAFCFF);
+  /// 主背景 - 極淺灰藍
+  static const Color background = Color(0xFFF7F9FB);
   
-  /// 表面色 - 暖藍白（卡片用）
-  static const Color surface = Color(0xFFF5F8FC);
+  /// 表面色 - 卡片純白
+  static const Color surface = Color(0xFFFFFFFF);
   
-  /// 表面色變體 - 淺藍灰（分隔線、邊框、輸入框）
-  static const Color surfaceVariant = Color(0xFFECF0F6);
-  
-  /// 表面色 - 禁用狀態
-  static const Color surfaceDisabled = Color(0xFFDEE4EA);
+  /// 表面變體 - 特殊區塊底板
+  static const Color surfaceVariant = Color(0xFFF0F4F8);
   
   // ==================== 文字色系 ====================
   
-  /// 主要文字 - 深藍灰
-  static const Color textPrimary = Color(0xFF263238);
+  /// 主要文字 - 深灰黑
+  static const Color textPrimary = Color(0xFF1A1A1A);
   
-  /// 次要文字 - 中藍灰
-  static const Color textSecondary = Color(0xFF607D8B);
+  /// 次要文字 - 灰
+  static const Color textSecondary = Color(0xFF757575);
   
-  /// 輔助文字 - 淺藍灰
-  static const Color textTertiary = Color(0xFF90A4AE);
+  // ==================== 狀態色系 ====================
   
-  /// 禁用文字
-  static const Color textDisabled = Color(0xFFB0BEC5);
+  static const Color success = Color(0xFF4CAF50);    // 上線綠點
+  static const Color warning = Color(0xFF885520);    // 在線褐點
+  static const Color error = Color(0xFFEF5350);      // 刪除、警告
+  static const Color info = Color(0xFF6B93B8);       // 漸層起點
   
-  /// 反色文字
-  static const Color textInverse = Color(0xFFFFFFFF);
+  // ==================== 陰影色系 ====================
   
-  // ==================== 功能色系 ====================
+  static const Color shadowLight = Color(0x08000000);   // 極輕柔黑
+  static const Color shadowMedium = Color(0x14000000);  // 輕柔黑
   
-  /// 成功色 - 薄荷綠
-  static const Color success = Color(0xFF66BB6A);
+  // ==================== 漸層 Token ====================
   
-  /// 成功色 - 淺色背景
-  static const Color successLight = Color(0xFFE8F5E9);
-  
-  /// 警告色 - 柔和琥珀
-  static const Color warning = Color(0xFFFFB74D);
-  
-  /// 警告色 - 淺色背景
-  static const Color warningLight = Color(0xFFFFF8E1);
-  
-  /// 錯誤色 - 柔和紅
-  static const Color error = Color(0xFFEF5350);
-  
-  /// 錯誤色 - 淺色背景
-  static const Color errorLight = Color(0xFFFFEBEE);
-  
-  /// 資訊色 - 天空藍（與 primary 同色系）
-  static const Color info = Color(0xFF42A5F5);
-  
-  /// 資訊色 - 淺色背景
-  static const Color infoLight = Color(0xFFE3F2FD);
-  
-  // ==================== 陰影色系（藍灰調） ====================
-  
-  /// 極淺陰影
-  static const Color shadowLight = Color(0x0A78909C);
-  
-  /// 淺陰影
-  static const Color shadowMedium = Color(0x1478909C);
-  
-  /// 中等陰影
-  static const Color shadowDark = Color(0x1F78909C);
-  
-  // ==================== 分隔線 ====================
-  
-  /// 分隔線顏色
-  static const Color divider = Color(0xFFDCE4EC);
-  
-  /// 邊框顏色
-  static const Color border = Color(0xFFCFD8DC);
-  
-  // ==================== 漸層色 ====================
-  
-  /// 主色漸層（天空藍 → 薄荷綠，清新天空感）
+  /// AppBar 標題漸層 (莫蘭迪藍)
   static const LinearGradient primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
     colors: [
-      Color(0xFF64B5F6), // 天空藍
-      Color(0xFF80CBC4), // 薄荷綠
+      Color(0xFF6B93B8), 
+      Color(0xFF8DB6C9),
     ],
   );
   
-  /// 透明漸層（輕透天空藍，用於卡片背景）
-  static const LinearGradient transparentGradient = LinearGradient(
+  /// FAB 懸浮按鈕漸層 (蜜桃橘棕)
+  static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0x1864B5F6), // 天空藍 ~10%
-      Color(0x0C80CBC4), // 薄荷綠 ~5%
+      Color(0xFFD67756),
+      Color(0xFFE9967A),
     ],
   );
   
-  /// 次要漸層（薄荷綠 → 淡薄荷）
-  static const LinearGradient secondaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF80CBC4), // 薄荷綠
-      Color(0xFFB2DFDB), // 淡薄荷
-    ],
-  );
-  
-  /// 玻璃質感漸層
+  /// 原有的玻璃效應
   static const LinearGradient glassGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0x30FFFFFF),
-      Color(0x08FFFFFF),
-    ],
+    colors: [Color(0x30FFFFFF), Color(0x08FFFFFF)],
   );
-  
-  /// 成功漸層（柔和綠）
-  static const LinearGradient successGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFFA5D6A7), // 淺綠
-      Color(0xFF66BB6A), // 柔和綠
-    ],
-  );
-  
-  // ==================== 特殊用途色 ====================
-  
-  /// 覆蓋層背景
-  static Color overlay = const Color(0xB3263238); // 深藍灰 70%
-  
-  /// 輕微覆蓋層
-  static Color overlayLight = const Color(0x66263238); // 深藍灰 40%
-  
-  /// Shimmer 效果基礎色
-  static const Color shimmerBase = Color(0xFFECF0F6);
-  
-  /// Shimmer 效果高亮色
-  static const Color shimmerHighlight = Color(0xFFF5F8FC);
 
   // ==================== 間距 Token ====================
   
@@ -202,4 +111,40 @@ class AppColorsMinimal {
   static const double radiusLG = 24;
   /// 全圓（頭像、進度環）
   static const double radiusFull = 999;
+
+  // ==================== 舊版相容與遺留 Token ====================
+  static const Color primaryLight = Color(0xFF90CAF9);
+  static const Color primaryDark = Color(0xFF1E88E5);
+  static const Color secondaryLight = Color(0xFFB2DFDB);
+  static const Color secondaryDark = Color(0xFF4DB6AC);
+  static const Color surfaceDisabled = Color(0xFFDEE4EA);
+  static const Color textTertiary = Color(0xFF90A4AE);
+  static const Color textDisabled = Color(0xFFB0BEC5);
+  static const Color textInverse = Color(0xFFFFFFFF);
+  static const Color successLight = Color(0xFFE8F5E9);
+  static const Color warningLight = Color(0xFFFFF8E1);
+  static const Color errorLight = Color(0xFFFFEBEE);
+  static const Color infoLight = Color(0xFFE3F2FD);
+  static const Color shadowDark = Color(0x1F78909C);
+  static const Color divider = Color(0xFFDCE4EC);
+  static const Color border = Color(0xFFCFD8DC);
+  static const LinearGradient transparentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0x1864B5F6), Color(0x0C80CBC4)],
+  );
+  static const LinearGradient secondaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF80CBC4), Color(0xFFB2DFDB)],
+  );
+  static const LinearGradient successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFA5D6A7), Color(0xFF66BB6A)],
+  );
+  static Color overlay = const Color(0xB3263238);
+  static Color overlayLight = const Color(0x66263238);
+  static const Color shimmerBase = Color(0xFFECF0F6);
+  static const Color shimmerHighlight = Color(0xFFF5F8FC);
 }

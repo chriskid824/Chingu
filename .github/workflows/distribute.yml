@@ -1,0 +1,50 @@
+name: Automatic App Distribution
+
+on:
+  push:
+    branches:
+      - main
+      - release
+  workflow_dispatch: # 允許手動觸發
+
+jobs:
+  build_and_distribute:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 抓取程式碼 (Checkout)
+        uses: actions/checkout@v4
+      
+      - name: ☕ 設定 Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: 🐦 設定 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: 📦 下載依賴套件 (Pub get)
+        run: flutter pub get
+        
+      - name: 🔍 執行靜態分析 (Analyze)
+        run: flutter analyze
+        
+      - name: 🧪 執行自動化測試 (Test)
+        run: flutter test
+        
+      - name: 💎 設定 Ruby (Fastlane 需要)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: android
+          
+      - name: 🚀 透過 Fastlane 上傳 Firebase App Distribution
+        working-directory: android
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: bundle exec fastlane distribute_firebase
