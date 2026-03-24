@@ -39,16 +39,14 @@ jobs:
       - name: 🏗️ 編譯 Release APK
         run: flutter build apk --release
         
-      - name: 💎 設定 Ruby (Fastlane 需要)
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: android
-          
-      - name: 🚀 透過 Fastlane 上傳 Firebase App Distribution
-        working-directory: android
+      - name: 🚀 上傳至 Firebase App Distribution
+        run: |
+          npm install -g firebase-tools
+          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+            --app "$FIREBASE_APP_ID" \
+            --groups "Chingu-Team, QA" \
+            --release-notes "由 GitHub Actions 自動發佈的最新建置版本 🚀" \
+            --token "$FIREBASE_TOKEN"
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: bundle exec fastlane distribute_firebase
