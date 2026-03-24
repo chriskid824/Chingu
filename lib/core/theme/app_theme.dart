@@ -268,7 +268,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: preset == AppThemePreset.minimal ? AppColorsMinimal.surface : colorScheme.surface,
         shape: RoundedRectangleBorder(

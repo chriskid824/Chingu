@@ -8,6 +8,8 @@ import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:chingu/models/dinner_event_model.dart';
+import 'package:chingu/providers/dinner_event_provider.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -209,12 +211,43 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildGroupChatTab(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme) {
-    // 尚未實作完整的群組對話，先顯示一個 Placeholder 或者靜態 Banner
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      children: [
-        _buildDinnerGroupBanner(context, theme, chinguTheme),
-      ],
+    return Consumer<DinnerEventProvider>(
+      builder: (context, eventProvider, _) {
+        final events = eventProvider.myEvents;
+        
+        // 過濾搜尋字串
+        final filteredEvents = events.where((event) {
+          if (_searchQuery.isEmpty) return true;
+          final title = '${event.city} 晚餐聚會 🥘';
+          return title.toLowerCase().contains(_searchQuery);
+        }).toList();
+
+        if (filteredEvents.isEmpty) {
+          return Center(
+            child: Text(
+              '沒有找到群組聚餐',
+              style: TextStyle(color: theme.colorScheme.primary, fontSize: 16),
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            final authProvider = context.read<AuthProvider>();
+            if (authProvider.uid != null) {
+              await eventProvider.fetchMyEvents(authProvider.uid!);
+            }
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            itemCount: filteredEvents.length,
+            itemBuilder: (context, index) {
+              final event = filteredEvents[index];
+              return _buildDinnerGroupBanner(context, theme, chinguTheme, event);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -477,10 +510,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  /// Dinner group banner card (Placeholder for Group Tab)
-  Widget _buildDinnerGroupBanner(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme) {
+  /// 晚餐群組互動卡片結構
+  Widget _buildDinnerGroupBanner(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme, DinnerEventModel event) {
+    // 取得時間
+    final timeText = DateFormat('MM/dd').format(event.eventDate);
+    final title = '${event.city} 晚餐聚會 🥘';
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
@@ -492,70 +529,81 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Stacked avatars
-          SizedBox(
-            width: 52,
-            height: 52,
-            child: Stack(
-              clipBehavior: Clip.none,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: () {
+            // 點擊後跳轉到群組詳情（此處含有真正的群組聊天室入口）
+            Navigator.pushNamed(
+              context,
+              AppRoutes.groupDetail,
+              arguments: {'eventId': event.id},
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Positioned(left: 0, child: _buildMiniAvatar('👨‍t')),
-                Positioned(left: 15, child: _buildMiniAvatar('👧')),
+                // 參與者大頭貼堆疊 (取最多 2 個展示)
+                SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(left: 0, child: _buildMiniAvatar('👨')),
+                      if (event.signedUpUsers.length > 1)
+                        Positioned(left: 15, child: _buildMiniAvatar('👧')),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '點擊進入查看群組詳情與聊天...',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      timeText,
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    ),
+                    const SizedBox(height: 6),
+                    // 可以設計未讀通知，先留白排版
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '週五台菜狂熱聚 🥘',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '阿明: 那我就先訂位 6 個人囉！...',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '14:32',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: (chinguTheme?.badgeColor ?? Colors.orange),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  '3',
-                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, height: 1.1),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
