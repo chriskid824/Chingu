@@ -26,6 +26,18 @@ jobs:
         with:
           flutter-version: '3.29.0'
           channel: 'stable'
+          cache: true
+
+      # ⚡ 快取 Gradle 依賴，大幅加速第二次之後的編譯
+      - name: ⚡ 快取 Gradle 依賴
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            build/
+          key: gradle-${{ hashFiles('**/*.gradle*', 'pubspec.lock') }}
+          restore-keys: gradle-
           
       - name: 📦 下載依賴套件 (Pub get)
         run: flutter pub get
@@ -44,6 +56,7 @@ jobs:
           npm install -g firebase-tools
           firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
             --app "$FIREBASE_APP_ID" \
+            --testers "chriskid0824@gmail.com" \
             --release-notes "由 GitHub Actions 自動發佈的最新建置版本 🚀" \
             --token "$FIREBASE_TOKEN"
         env:
