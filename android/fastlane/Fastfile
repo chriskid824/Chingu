@@ -3,15 +3,13 @@ default_platform(:android)
 platform :android do
   desc "Submit a new Beta Build to Firebase App Distribution"
   lane :distribute_firebase do
-    # 進行編譯
-    gradle(task: "clean assembleRelease")
-    
-    # 上傳至 Firebase
+    # APK 已由 CI 的 flutter build apk 編譯完成
+    # Fastlane 只負責上傳至 Firebase App Distribution
     firebase_app_distribution(
       app: ENV["FIREBASE_APP_ID"],
+      android_artifact_path: "../build/app/outputs/flutter-apk/app-release.apk",
       groups: "Chingu-Team, QA",
       release_notes: "由 GitHub Actions 自動發佈的最新建置版本 🚀",
-      # service_credentials_file: "firebase_credentials.json" # 若使用 Token 則不需要此行
     )
   end
 end

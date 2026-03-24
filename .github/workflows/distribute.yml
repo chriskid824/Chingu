@@ -36,6 +36,9 @@ jobs:
       - name: 🧪 執行自動化測試 (Test)
         run: flutter test
         
+      - name: 🏗️ 編譯 Release APK
+        run: flutter build apk --release
+        
       - name: 💎 設定 Ruby (Fastlane 需要)
         uses: ruby/setup-ruby@v1
         with:
