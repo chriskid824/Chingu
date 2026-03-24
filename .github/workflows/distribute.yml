@@ -24,6 +24,7 @@ jobs:
       - name: 🐦 設定 Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.29.0'
           channel: 'stable'
           
       - name: 📦 下載依賴套件 (Pub get)
