@@ -29,7 +29,7 @@ void main() {
   }
 
   group('LoginScreen Widget Test', () {
-    testWidgets('應成功顯示登入表單與三大按鈕', (WidgetTester tester) async {
+    testWidgets('應成功顯示登入表單與登入按鈕', (WidgetTester tester) async {
       when(() => mockAuthProvider.isLoading).thenReturn(false);
 
       // 設定模擬的視窗大小，避免溢出錯誤
@@ -44,7 +44,7 @@ void main() {
       
       // 檢查按鈕
       expect(find.text('登入'), findsOneWidget);
-      expect(find.text('使用 Apple 登入'), findsOneWidget);
+      expect(find.text('使用 Google 登入'), findsOneWidget);
     });
 
     testWidgets('點擊信箱登入時會觸發 AuthProvider', (WidgetTester tester) async {
