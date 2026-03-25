@@ -47,6 +47,15 @@ jobs:
         
       - name: 🧪 執行自動化測試 (Test)
         run: flutter test
+
+      # 使用與本機相同的 debug keystore，確保 Google Sign-In SHA-1 一致
+      - name: 🔑 還原 Debug Keystore
+        if: env.DEBUG_KEYSTORE_BASE64 != ''
+        run: |
+          mkdir -p ~/.android
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         
       - name: 🏗️ 編譯 Release APK
         run: flutter build apk --release
