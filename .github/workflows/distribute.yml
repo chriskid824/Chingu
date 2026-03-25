@@ -54,7 +54,100 @@ jobs:
           mkdir -p ~/.android
           echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 --decode > ~/.android/debug.keystore
           echo "✅ Debug keystore 已還原"
-          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>&1 | grep "SHA1:" || echo "⚠️ 無法讀取 SHA1"
+
+      # 驗證所有登入相關設定是否正確
+      - name: 🛡️ 驗證 Google/Apple 登入設定
+        run: |
+          echo "========================================="
+          echo "  🛡️ 登入設定檢查報告"
+          echo "========================================="
+          ERRORS=0
+          
+          # 1. SHA-1 指紋驗證
+          echo ""
+          echo "📌 1. SHA-1 指紋驗證"
+          ACTUAL_SHA1=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>&1 | grep "SHA1:" | awk '{print $2}')
+          EXPECTED_SHA1="02:0A:DB:16:52:65:62:59:D4:FF:0E:CF:30:60:0A:51:55:2D:D8:D6"
+          if [ "$ACTUAL_SHA1" = "$EXPECTED_SHA1" ]; then
+            echo "   ✅ SHA-1 一致: $ACTUAL_SHA1"
+          else
+            echo "   ❌ SHA-1 不一致!"
+            echo "      期望: $EXPECTED_SHA1"
+            echo "      實際: $ACTUAL_SHA1"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # 2. google-services.json 存在且格式正確
+          echo ""
+          echo "📌 2. google-services.json 檢查"
+          if [ -f "android/app/google-services.json" ]; then
+            PROJECT_ID=$(python3 -c "import json; print(json.load(open('android/app/google-services.json'))['project_info']['project_id'])")
+            PACKAGE=$(python3 -c "import json; print(json.load(open('android/app/google-services.json'))['client'][0]['client_info']['android_client_info']['package_name'])")
+            echo "   ✅ 檔案存在 (project: $PROJECT_ID, package: $PACKAGE)"
+          else
+            echo "   ❌ google-services.json 不存在!"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # 3. GoogleService-Info.plist (iOS) 檢查
+          echo ""
+          echo "📌 3. GoogleService-Info.plist (iOS) 檢查"
+          if [ -f "ios/Runner/GoogleService-Info.plist" ]; then
+            echo "   ✅ iOS Firebase 設定檔存在"
+          else
+            echo "   ⚠️ iOS Firebase 設定檔不存在 (僅影響 iOS)"
+          fi
+          
+          # 4. firebase_options.dart 檢查
+          echo ""
+          echo "📌 4. firebase_options.dart 檢查"
+          if [ -f "lib/firebase_options.dart" ]; then
+            echo "   ✅ Firebase 初始化設定檔存在"
+          else
+            echo "   ❌ firebase_options.dart 不存在!"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # 5. Auth Service 完整性檢查
+          echo ""
+          echo "📌 5. Auth Service 登入方法檢查"
+          if grep -q "signInWithGoogle" lib/services/auth_service.dart; then
+            echo "   ✅ signInWithGoogle 方法存在"
+          else
+            echo "   ❌ signInWithGoogle 方法遺失!"
+            ERRORS=$((ERRORS + 1))
+          fi
+          if grep -q "signInWithApple" lib/services/auth_service.dart; then
+            echo "   ✅ signInWithApple 方法存在"
+          else
+            echo "   ❌ signInWithApple 方法遺失!"
+            ERRORS=$((ERRORS + 1))
+          fi
+          if grep -q "Platform.isAndroid" lib/services/auth_service.dart; then
+            echo "   ✅ Android 平台邏輯存在"
+          else
+            echo "   ⚠️ 未偵測到 Android 平台判斷"
+          fi
+          
+          # 6. build.gradle.kts 簽名設定檢查
+          echo ""
+          echo "📌 6. Release 簽名設定檢查"
+          if grep -q 'signingConfigs.getByName("debug")' android/app/build.gradle.kts; then
+            echo "   ✅ Release 使用 debug keystore 簽名"
+          else
+            echo "   ⚠️ Release 簽名設定可能有異"
+          fi
+          
+          echo ""
+          echo "========================================="
+          if [ $ERRORS -gt 0 ]; then
+            echo "  ❌ 發現 $ERRORS 個錯誤，中止編譯"
+            echo "========================================="
+            exit 1
+          else
+            echo "  ✅ 所有登入設定檢查通過！"
+            echo "========================================="
+          fi
         
       - name: 🏗️ 編譯 Release APK
         run: flutter build apk --release
