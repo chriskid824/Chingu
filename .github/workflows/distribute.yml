@@ -50,12 +50,11 @@ jobs:
 
       # 使用與本機相同的 debug keystore，確保 Google Sign-In SHA-1 一致
       - name: 🔑 還原 Debug Keystore
-        if: env.DEBUG_KEYSTORE_BASE64 != ''
         run: |
           mkdir -p ~/.android
-          echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
-        env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+          echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 --decode > ~/.android/debug.keystore
+          echo "✅ Debug keystore 已還原"
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>&1 | grep "SHA1:" || echo "⚠️ 無法讀取 SHA1"
         
       - name: 🏗️ 編譯 Release APK
         run: flutter build apk --release
