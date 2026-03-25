@@ -132,9 +132,26 @@ class AuthService {
 
   /// Apple 登入
   ///
-  /// 返回 User 或拋出異常
+  /// iOS: 使用原生 Sign In with Apple
+  /// Android: 使用 Firebase signInWithProvider (web flow)
   Future<User> signInWithApple() async {
     try {
+      if (Platform.isAndroid) {
+        // Android 使用 Firebase 的 Apple provider（自動處理 web 流程）
+        final appleProvider = AppleAuthProvider()
+          ..addScope('email')
+          ..addScope('name');
+
+        final UserCredential userCredential =
+            await _auth.signInWithProvider(appleProvider);
+
+        if (userCredential.user == null) {
+          throw Exception('Apple 登入失敗');
+        }
+        return userCredential.user!;
+      }
+
+      // iOS 使用原生 Sign In with Apple
       final rawNonce = _generateNonce();
       final nonce = _sha256ofString(rawNonce);
 
@@ -170,7 +187,8 @@ class AuthService {
 
       return userCredential.user!;
     } catch (e) {
-      if (e.toString().contains('AuthorizationErrorCode.canceled')) {
+      if (e.toString().contains('AuthorizationErrorCode.canceled') ||
+          e.toString().contains('canceled')) {
         throw Exception('Apple 登入已取消');
       }
       throw Exception('Apple 登入失敗: $e');
