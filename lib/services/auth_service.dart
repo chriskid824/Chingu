@@ -3,12 +3,18 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io' show Platform;
 import 'package:crypto/crypto.dart';
 
 /// 認證服務 - 處理所有 Firebase Authentication 相關操作
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  // iOS 需要明確提供 clientId，否則會 crash
+  late final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: Platform.isIOS
+        ? '785159715135-j4lim0dgn2lfmm379pdfdg15cgrd49df.apps.googleusercontent.com'
+        : null,
+  );
 
   /// 獲取當前登入用戶
   User? get currentUser => _auth.currentUser;
