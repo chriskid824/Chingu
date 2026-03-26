@@ -16,6 +16,14 @@
         {
           "client_id": "785159715135-ifeninojg3q6aov4glr9b5vraakjp4re.apps.googleusercontent.com",
           "client_type": 3
+        },
+        {
+          "client_id": "785159715135-3hcg9b0np2nk3t1gmes5eqc9t7v602bc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chingu.chingu",
+            "certificate_hash": "020adb1652656259d4ff0ecf30600a51552dd8d6"
+          }
         }
       ],
       "api_key": [
