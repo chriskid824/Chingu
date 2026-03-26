@@ -197,11 +197,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // ===== Social Login =====
-                // Apple Sign-In（僅 iOS，Android 需要額外 Apple Developer 設定）
-                if (Platform.isIOS) ...[
-                  _buildAppleButton(),
-                  const SizedBox(height: 12),
-                ],
+                // Apple Sign-In（所有平台都顯示）
+                _buildAppleButton(),
+                const SizedBox(height: 12),
 
                 // Google Sign-In
                 _buildGoogleButton(theme, chinguTheme),
