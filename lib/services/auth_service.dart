@@ -14,6 +14,7 @@ class AuthService {
     clientId: Platform.isIOS
         ? '785159715135-j4lim0dgn2lfmm379pdfdg15cgrd49df.apps.googleusercontent.com'
         : null,
+    serverClientId: '785159715135-ifeninojg3q6aov4glr9b5vraakjp4re.apps.googleusercontent.com',
   );
 
   /// 獲取當前登入用戶

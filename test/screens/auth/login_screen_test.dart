@@ -44,7 +44,6 @@ void main() {
       
       // 檢查按鈕
       expect(find.text('登入'), findsOneWidget);
-      expect(find.text('使用 Apple 登入'), findsOneWidget);
       expect(find.text('使用 Google 登入'), findsOneWidget);
     });
 

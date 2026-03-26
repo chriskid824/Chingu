@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -196,9 +197,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // ===== Social Login =====
-                // Apple Sign-In（iOS: 原生, Android: Firebase web flow）
-                _buildAppleButton(),
-                const SizedBox(height: 12),
+                // Apple Sign-In（僅 iOS，Android 需要額外 Apple Developer 設定）
+                if (Platform.isIOS) ...[
+                  _buildAppleButton(),
+                  const SizedBox(height: 12),
+                ],
 
                 // Google Sign-In
                 _buildGoogleButton(theme, chinguTheme),
