@@ -9,6 +9,7 @@ class UserModel {
   final String gender; // 'male', 'female', 'non_binary', 'undisclosed'
   final String job;
   final List<String> interests;
+  final List<String> subscribedTopics;
   final String country;
   final String city;
   final String district;
@@ -47,6 +48,7 @@ class UserModel {
     required this.gender,
     required this.job,
     required this.interests,
+    this.subscribedTopics = const [],
     required this.country,
     required this.city,
     required this.district,
@@ -86,6 +88,7 @@ class UserModel {
       gender: map['gender'] ?? 'male',
       job: map['job'] ?? '',
       interests: List<String>.from(map['interests'] ?? []),
+      subscribedTopics: List<String>.from(map['subscribedTopics'] ?? []),
       country: map['country'] ?? '',
       city: map['city'] ?? '',
       district: map['district'] ?? '',
@@ -119,6 +122,7 @@ class UserModel {
       'gender': gender,
       'job': job,
       'interests': interests,
+      'subscribedTopics': subscribedTopics,
       'country': country,
       'city': city,
       'district': district,
@@ -151,6 +155,7 @@ class UserModel {
     String? gender,
     String? job,
     List<String>? interests,
+    List<String>? subscribedTopics,
     String? country,
     String? city,
     String? district,
@@ -180,6 +185,7 @@ class UserModel {
       gender: gender ?? this.gender,
       job: job ?? this.job,
       interests: interests ?? this.interests,
+      subscribedTopics: subscribedTopics ?? this.subscribedTopics,
       country: country ?? this.country,
       city: city ?? this.city,
       district: district ?? this.district,
