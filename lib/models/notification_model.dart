@@ -10,8 +10,12 @@ class NotificationModel {
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
+  final String? deeplink; // URL scheme or path for deep linking
   final bool isRead;
   final DateTime createdAt;
+
+  // Alias for message to satisfy specific naming requirements if needed
+  String get content => message;
 
   NotificationModel({
     required this.id,
@@ -22,6 +26,7 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.deeplink,
     this.isRead = false,
     required this.createdAt,
   });
@@ -39,10 +44,11 @@ class NotificationModel {
       userId: map['userId'] ?? '',
       type: map['type'] ?? 'system',
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
+      message: map['message'] ?? map['content'] ?? '', // Fallback to content if message is missing
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      deeplink: map['deeplink'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -55,9 +61,11 @@ class NotificationModel {
       'type': type,
       'title': title,
       'message': message,
+      'content': message, // Store both for compatibility/redundancy if needed, or just rely on message
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -74,8 +82,38 @@ class NotificationModel {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: true,
       createdAt: createdAt,
+    );
+  }
+
+  /// 複製並更新字段
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? message,
+    String? imageUrl,
+    String? actionType,
+    String? actionData,
+    String? deeplink,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
+      actionType: actionType ?? this.actionType,
+      actionData: actionData ?? this.actionData,
+      deeplink: deeplink ?? this.deeplink,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -96,27 +134,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
