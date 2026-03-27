@@ -8,8 +8,8 @@ import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/utils/image_cache_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import 'package:chingu/models/dinner_event_model.dart';
-import 'package:chingu/providers/dinner_event_provider.dart';
+import 'package:chingu/models/dinner_group_model.dart';
+import 'package:chingu/providers/dinner_group_provider.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -211,18 +211,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildGroupChatTab(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme) {
-    return Consumer<DinnerEventProvider>(
-      builder: (context, eventProvider, _) {
-        final events = eventProvider.myEvents;
+    return Consumer<DinnerGroupProvider>(
+      builder: (context, groupProvider, _) {
+        if (groupProvider.isLoading) {
+          return const ChatListSkeleton();
+        }
+
+        final groups = groupProvider.myGroups;
         
         // 過濾搜尋字串
-        final filteredEvents = events.where((event) {
+        final filteredGroups = groups.where((group) {
           if (_searchQuery.isEmpty) return true;
-          final title = '${event.city} 晚餐聚會 🥘';
-          return title.toLowerCase().contains(_searchQuery);
+          final title = '晚餐聚會 🥘';
+          final restaurant = group.restaurantName ?? '';
+          return title.toLowerCase().contains(_searchQuery) ||
+                 restaurant.toLowerCase().contains(_searchQuery);
         }).toList();
 
-        if (filteredEvents.isEmpty) {
+        if (filteredGroups.isEmpty) {
           return Center(
             child: Text(
               '沒有找到群組聚餐',
@@ -235,15 +241,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
           onRefresh: () async {
             final authProvider = context.read<AuthProvider>();
             if (authProvider.uid != null) {
-              await eventProvider.fetchMyEvents(authProvider.uid!);
+              await groupProvider.fetchMyGroups(authProvider.uid!);
             }
           },
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            itemCount: filteredEvents.length,
+            itemCount: filteredGroups.length,
             itemBuilder: (context, index) {
-              final event = filteredEvents[index];
-              return _buildDinnerGroupBanner(context, theme, chinguTheme, event);
+              final group = filteredGroups[index];
+              return _buildDinnerGroupBanner(context, theme, chinguTheme, group);
             },
           ),
         );
@@ -511,10 +517,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   /// 晚餐群組互動卡片結構
-  Widget _buildDinnerGroupBanner(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme, DinnerEventModel event) {
-    // 取得時間
-    final timeText = DateFormat('MM/dd').format(event.eventDate);
-    final title = '${event.city} 晚餐聚會 🥘';
+  Widget _buildDinnerGroupBanner(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme, DinnerGroupModel group) {
+    final timeText = DateFormat('MM/dd').format(group.createdAt);
+    final statusLabel = _groupStatusLabel(group.status);
+    final title = group.restaurantName ?? '晚餐聚會 🥘';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -534,11 +540,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(30),
           onTap: () {
-            // 點擊後跳轉到群組詳情（此處含有真正的群組聊天室入口）
             Navigator.pushNamed(
               context,
               AppRoutes.groupDetail,
-              arguments: {'eventId': event.id},
+              arguments: {'group': group},
             );
           },
           child: Padding(
@@ -546,7 +551,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 參與者大頭貼堆疊 (取最多 2 個展示)
+                // 參與者大頭貼堆疊
                 SizedBox(
                   width: 52,
                   height: 52,
@@ -554,7 +559,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       Positioned(left: 0, child: _buildMiniAvatar('👨')),
-                      if (event.signedUpUsers.length > 1)
+                      if (group.participantIds.length > 1)
                         Positioned(left: 15, child: _buildMiniAvatar('👧')),
                     ],
                   ),
@@ -576,7 +581,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '點擊進入查看群組詳情與聊天...',
+                        '$statusLabel · ${group.participantIds.length} 人同桌',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 14,
@@ -596,7 +601,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                     ),
                     const SizedBox(height: 6),
-                    // 可以設計未讀通知，先留白排版
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -606,6 +610,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       ),
     );
+  }
+
+  String _groupStatusLabel(String status) {
+    switch (status) {
+      case 'pending': return '⏳ 等待揭曉';
+      case 'info_revealed': return '👀 同伴已揭曉';
+      case 'location_revealed': return '🎉 餐廳已揭曉';
+      case 'completed': return '✅ 已結束';
+      default: return status;
+    }
   }
 
   Widget _buildMiniAvatar(String emoji) {

@@ -116,9 +116,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   
                   const SizedBox(height: AppColorsMinimal.space2XL),
                   
-                  // ─── Zone 3: 個人統計快捷卡 ───
-                  _buildSectionTitle('你的旅程'),
+                  // ─── Zone 3: Events 區塊（回饋 + 歷史活動 + 統計） ───
+                  _buildSectionTitle('Events'),
                   const SizedBox(height: AppColorsMinimal.spaceMD),
+                  _buildReviewBanner(theme),
+                  _buildPastEventsList(theme),
+                  const SizedBox(height: AppColorsMinimal.spaceLG),
                   _buildStatsRow(theme),
                   
                   const SizedBox(height: AppColorsMinimal.space3XL),
@@ -240,13 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final diff = event.eventDate.difference(now);
 
         if (diff.isNegative) {
-          // 活動已結束 — 檢查是否在 48 小時評價窗口內
-          final hoursSinceEnd = diff.inHours.abs();
-          if (hoursSinceEnd <= 48) {
-            // 狀態 5: 評價模式（晚餐結束後 48 小時內）
-            return _buildReviewCard(theme, chinguTheme, event);
-          }
-          // 狀態 4: 活動已完全結束
+          // 活動已結束 — 直接顯示已完成卡（評價入口移到 Events 區）
           return _buildCompletedCard(theme, event);
         } else if (diff.inHours < 3) {
           // 狀態 3: 即將開始 / 餐廳已解鎖
@@ -579,180 +576,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 狀態 5: 評價卡 — 晚餐結束後 48 小時內
-  Widget _buildReviewCard(ThemeData theme, ChinguTheme? chinguTheme, dynamic event) {
-    final dateStr = DateFormat('MM/dd (E)', 'zh_TW').format(event.eventDate);
-    final signedUp = event.signedUpUsers?.length ?? 6;
-    final toReview = signedUp - 1; // 不含自己
-
-    return Container(
-      padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
-      decoration: BoxDecoration(
-        gradient: chinguTheme?.transparentGradient,
-        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-        border: Border.all(
-          color: AppColorsMinimal.secondary.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          // 圖示
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              gradient: chinguTheme?.secondaryGradient,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.rate_review_rounded,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: AppColorsMinimal.spaceLG),
-          Text(
-            '$dateStr 的晚餐已結束',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColorsMinimal.textTertiary,
-            ),
-          ),
-          const SizedBox(height: AppColorsMinimal.spaceSM),
-          Text(
-            '你覺得今晚的夥伴如何？',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColorsMinimal.textPrimary,
-            ),
-          ),
-          const SizedBox(height: AppColorsMinimal.spaceSM),
-          Text(
-            '對 $toReview 位同桌者做「想再見面」評價\n雙方都想的話，就能開始聊天 💬',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColorsMinimal.textSecondary,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: AppColorsMinimal.spaceXL),
-          
-          // 同桌者頭像列
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              toReview > 5 ? 5 : toReview,
-              (index) => Container(
-                width: 40,
-                height: 40,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: AppColorsMinimal.surfaceVariant,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColorsMinimal.secondary.withValues(alpha: 0.4),
-                    width: 2,
-                  ),
-                ),
-                child: Icon(
-                  Icons.person_rounded,
-                  color: AppColorsMinimal.textTertiary,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: AppColorsMinimal.spaceXL),
-          
-          // 評價進度
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppColorsMinimal.spaceLG,
-              vertical: AppColorsMinimal.spaceSM,
-            ),
-            decoration: BoxDecoration(
-              color: AppColorsMinimal.surface,
-              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.pending_rounded,
-                  size: 16,
-                  color: AppColorsMinimal.secondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '0 / $toReview 已完成',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColorsMinimal.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: AppColorsMinimal.spaceLG),
-          
-          // CTA 按鈕
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final authProvider = context.read<AuthProvider>();
-                final reviewProvider = context.read<ReviewProvider>();
-                final userId = authProvider.uid;
-                if (userId == null) return;
-
-                // 載入待評價群組
-                await reviewProvider.loadPendingReviews(userId);
-
-                if (!context.mounted) return;
-
-                if (reviewProvider.pendingGroups.isNotEmpty) {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.review,
-                    arguments: {'group': reviewProvider.pendingGroups.first},
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorsMinimal.secondary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                '開始評價 ✨',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: AppColorsMinimal.spaceSM),
-          
-          // 超時提示
-          Text(
-            '⏰ 48 小時內完成評價，逾期將自動關閉',
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColorsMinimal.textTertiary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// 狀態 4: 已完成卡
   Widget _buildCompletedCard(ThemeData theme, dynamic event) {
@@ -952,7 +775,298 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ============ Zone 3: 個人統計 ============
+  // ============ Zone 3: Events 區塊 ============
+
+  /// 回饋 Banner — 待評價提醒（參考 Timeleft 的 feedback banner）
+  Widget _buildReviewBanner(ThemeData theme) {
+    return Consumer<ReviewProvider>(
+      builder: (context, reviewProvider, _) {
+        // 檢查是否有待評價群組
+        if (!reviewProvider.hasPendingReviews) {
+          // 嘗試載入待評價
+          final authProvider = context.read<AuthProvider>();
+          if (authProvider.uid != null && !reviewProvider.isLoading) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              reviewProvider.loadPendingReviews(authProvider.uid!);
+            });
+          }
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceLG),
+          padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColorsMinimal.secondary.withValues(alpha: 0.08),
+                AppColorsMinimal.primary.withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+            border: Border.all(
+              color: AppColorsMinimal.secondary.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              // 左側圖示
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: AppColorsMinimal.secondaryGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.rate_review_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppColorsMinimal.spaceMD),
+              // 中間文字
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '覺得這次體驗如何？',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColorsMinimal.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '分享回饋，解鎖聊天！',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColorsMinimal.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 右側按鈕
+              ElevatedButton(
+                onPressed: () async {
+                  final authProvider = context.read<AuthProvider>();
+                  final userId = authProvider.uid;
+                  if (userId == null) return;
+
+                  await reviewProvider.loadPendingReviews(userId);
+                  if (!context.mounted) return;
+
+                  if (reviewProvider.pendingGroups.isNotEmpty) {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.review,
+                      arguments: {'group': reviewProvider.pendingGroups.first},
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColorsMinimal.secondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  '評價 ✨',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 歷史活動列表（參考 Timeleft Events 頁面設計）
+  Widget _buildPastEventsList(ThemeData theme) {
+    return Consumer<DinnerEventProvider>(
+      builder: (context, eventProvider, _) {
+        // 取得已結束的活動
+        final pastEvents = eventProvider.myEvents
+            .where((e) => e.eventDate.isBefore(DateTime.now()))
+            .toList()
+          ..sort((a, b) => b.eventDate.compareTo(a.eventDate)); // 降序
+
+        if (pastEvents.isEmpty) {
+          // 新用戶空狀態
+          return Container(
+            padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
+            decoration: BoxDecoration(
+              color: AppColorsMinimal.surface,
+              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+              border: Border.all(color: AppColorsMinimal.surfaceVariant),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.explore_rounded,
+                  size: 40,
+                  color: AppColorsMinimal.primary.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: AppColorsMinimal.spaceMD),
+                Text(
+                  '你的第一場冒險即將開始 ✨',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColorsMinimal.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '報名後，這裡會出現你的晚餐紀錄',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColorsMinimal.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // 最多顯示 3 場
+        final displayEvents = pastEvents.take(3).toList();
+
+        return Column(
+          children: [
+            ...displayEvents.map((event) => _buildPastEventCard(event)),
+            if (pastEvents.length > 3) ...[
+              const SizedBox(height: AppColorsMinimal.spaceSM),
+              GestureDetector(
+                onTap: () {
+                  // TODO: 展開全部歷史或跳轉到獨立頁面
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '查看全部 ${pastEvents.length} 場 →',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColorsMinimal.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  /// 單張歷史活動卡片（參考 Timeleft 的活動卡片設計）
+  Widget _buildPastEventCard(dynamic event) {
+    final dateStr = DateFormat('MM/dd (E)', 'zh_TW').format(event.eventDate);
+    final timeStr = DateFormat('HH:mm').format(event.eventDate);
+    final city = event.city.isNotEmpty ? event.city : '晚餐聚會';
+
+    return GestureDetector(
+      onTap: () {
+        // 嘗試找到對應的群組，進入群組詳情
+        final groupProvider = context.read<DinnerGroupProvider>();
+        final matchingGroup = groupProvider.myGroups
+            .where((g) => g.eventId == event.id)
+            .toList();
+        
+        if (matchingGroup.isNotEmpty) {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.groupDetail,
+            arguments: {'group': matchingGroup.first},
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppColorsMinimal.spaceLG,
+          vertical: AppColorsMinimal.spaceMD,
+        ),
+        decoration: BoxDecoration(
+          color: AppColorsMinimal.surface,
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+          border: Border.all(color: AppColorsMinimal.surfaceVariant),
+          boxShadow: [
+            BoxShadow(
+              color: AppColorsMinimal.shadowLight,
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 刀叉圖示
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColorsMinimal.primaryBackground,
+                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+              ),
+              child: const Icon(
+                Icons.restaurant_rounded,
+                color: AppColorsMinimal.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: AppColorsMinimal.spaceMD),
+            // 資訊
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$city 晚餐',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColorsMinimal.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$dateStr · $timeStr',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColorsMinimal.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 箭頭
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColorsMinimal.textTertiary,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   
   Widget _buildStatsRow(ThemeData theme) {
     return Consumer2<DinnerEventProvider, DinnerGroupProvider>(
