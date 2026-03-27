@@ -4,6 +4,7 @@ import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'home/home_screen.dart';
 import 'chat/chat_list_screen.dart';
+import 'events/events_screen.dart';
 import 'profile/profile_detail_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -50,6 +51,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final List<Widget> _screens = [
     const HomeScreen(),
     const ChatListScreen(),
+    const EventsScreen(),
     const ProfileDetailScreen(),
   ];
 
@@ -105,6 +107,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             _buildChatNavItem(),
             _buildNavItem(
               index: 2,
+              icon: Icons.calendar_month_outlined,
+              activeIcon: Icons.calendar_month_rounded,
+              label: 'Events',
+            ),
+            _buildNavItem(
+              index: 3,
               icon: Icons.person_outline_rounded,
               activeIcon: Icons.person_rounded,
               label: '我的',

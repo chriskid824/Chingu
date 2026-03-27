@@ -39,6 +39,9 @@ import '../../screens/profile/report_user_screen.dart';
 // 群組模組
 import '../../screens/group/group_detail_screen.dart';
 import '../../models/dinner_group_model.dart';
+// Events 模組
+import '../../screens/events/event_detail_screen.dart';
+import '../../models/dinner_event_model.dart';
 // 訂閱模組
 import '../../screens/subscription/paywall_screen.dart';
 
@@ -86,6 +89,9 @@ class AppRoutes {
   
   // 群組模組
   static const String groupDetail = '/group-detail';
+  
+  // Events 模組
+  static const String eventDetail = '/event-detail';
   
   // 訂閱模組
   static const String paywall = '/paywall';
@@ -227,6 +233,13 @@ class AppRouter {
 
       case AppRoutes.paywall:
         return slideRoute(const PaywallScreen());
+
+      // ==================== Events 模組 ====================
+      case AppRoutes.eventDetail:
+        final args = settings.arguments as Map<String, dynamic>;
+        final event = args['event'] as DinnerEventModel;
+        final group = args['group'] as DinnerGroupModel?;
+        return slideRoute(EventDetailScreen(event: event, group: group));
 
       // ==================== 404 ====================
       default:
