@@ -8,6 +8,7 @@ class NotificationModel {
   final String title;
   final String message;
   final String? imageUrl;
+  final String? deeplink;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
   final bool isRead;
@@ -20,6 +21,7 @@ class NotificationModel {
     required this.title,
     required this.message,
     this.imageUrl,
+    this.deeplink,
     this.actionType,
     this.actionData,
     this.isRead = false,
@@ -41,6 +43,7 @@ class NotificationModel {
       title: map['title'] ?? '',
       message: map['message'] ?? '',
       imageUrl: map['imageUrl'],
+      deeplink: map['deeplink'],
       actionType: map['actionType'],
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
@@ -56,6 +59,7 @@ class NotificationModel {
       'title': title,
       'message': message,
       'imageUrl': imageUrl,
+      'deeplink': deeplink,
       'actionType': actionType,
       'actionData': actionData,
       'isRead': isRead,
@@ -65,17 +69,35 @@ class NotificationModel {
 
   /// 複製並標記為已讀
   NotificationModel markAsRead() {
+    return copyWith(isRead: true);
+  }
+
+  /// 複製並修改屬性
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? message,
+    String? imageUrl,
+    String? deeplink,
+    String? actionType,
+    String? actionData,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
     return NotificationModel(
-      id: id,
-      userId: userId,
-      type: type,
-      title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
-      isRead: true,
-      createdAt: createdAt,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
+      deeplink: deeplink ?? this.deeplink,
+      actionType: actionType ?? this.actionType,
+      actionData: actionData ?? this.actionData,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -96,27 +118,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
