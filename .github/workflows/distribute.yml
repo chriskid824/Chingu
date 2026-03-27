@@ -48,12 +48,21 @@ jobs:
       - name: 🧪 執行自動化測試 (Test)
         run: flutter test
 
-      # 使用與本機相同的 debug keystore，確保 Google Sign-In SHA-1 一致
-      - name: 🔑 還原 Debug Keystore
+      # 還原正式 Release Keystore (Upload Key) 並建立 key.properties
+      - name: 🔑 還原 Release Keystore 與設定
         run: |
-          mkdir -p ~/.android
-          echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 --decode > ~/.android/debug.keystore
-          echo "✅ Debug keystore 已還原"
+          # 1. 還原 Keystore 檔案
+          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+          
+          # 2. 建立 key.properties 供 Gradle 讀取
+          cat <<EOF > android/key.properties
+          storePassword=chingu2024
+          keyPassword=chingu2024
+          keyAlias=chinguupload
+          storeFile=upload-keystore.jks
+          EOF
+          
+          echo "✅ Release keystore 與 key.properties 已成功設定"
 
       # 驗證所有登入相關設定是否正確
       - name: 🛡️ 驗證 Google/Apple 登入設定
@@ -63,11 +72,12 @@ jobs:
           echo "========================================="
           ERRORS=0
           
-          # 1. SHA-1 指紋驗證
+          # 1. SHA-1 指紋驗證 (驗證新的 Release Keystore)
           echo ""
           echo "📌 1. SHA-1 指紋驗證"
-          ACTUAL_SHA1=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>&1 | grep "SHA1:" | awk '{print $2}')
-          EXPECTED_SHA1="02:0A:DB:16:52:65:62:59:D4:FF:0E:CF:30:60:0A:51:55:2D:D8:D6"
+          # 注意：此處需使用本機編譯產生的 upload-keystore.jks 的真實指紋
+          ACTUAL_SHA1=$(keytool -list -v -keystore android/app/upload-keystore.jks -alias chinguupload -storepass chingu2024 2>&1 | grep "SHA1:" | awk '{print $2}')
+          EXPECTED_SHA1="43:9B:D8:3F:6D:93:50:24:09:AA:7E:D4:36:1F:1F:93:81:2D:18:EF"
           if [ "$ACTUAL_SHA1" = "$EXPECTED_SHA1" ]; then
             echo "   ✅ SHA-1 一致: $ACTUAL_SHA1"
           else
@@ -132,8 +142,8 @@ jobs:
           # 6. build.gradle.kts 簽名設定檢查
           echo ""
           echo "📌 6. Release 簽名設定檢查"
-          if grep -q 'signingConfigs.getByName("debug")' android/app/build.gradle.kts; then
-            echo "   ✅ Release 使用 debug keystore 簽名"
+          if grep -q 'signingConfig = signingConfigs.getByName("release")' android/app/build.gradle.kts; then
+            echo "   ✅ Release 使用正式憑證簽名 (signingConfigs.getByName(\"release\"))"
           else
             echo "   ⚠️ Release 簽名設定可能有異"
           fi
