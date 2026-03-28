@@ -202,6 +202,13 @@ class _EventsScreenState extends State<EventsScreen> {
                           'group': reviewProvider.pendingGroups.first,
                         },
                       );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('目前沒有待評價的群組'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(
