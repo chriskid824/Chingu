@@ -991,19 +991,54 @@ class DatabaseSeeder {
     debugPrint('  清理了 ${mockUsers.docs.length} 個假用戶');
 
     // 刪除測試活動和群組中包含自己的
-    // （保守做法：只刪有 testscenario 用戶的群組）
+    // （擴大範圍：找出所有跟自己相關的測試 group 和 test event）
     final groups = await _firestore.collection('dinner_groups')
         .where('participantIds', arrayContains: myUid)
         .get();
     for (var doc in groups.docs) {
       final data = doc.data();
       final participants = List<String>.from(data['participantIds'] ?? []);
-      // 只刪除含有假用戶的群組
+      
+      // 如果這個群聊裡面有我們剛剛刪掉的測試用戶名單（或者根本沒人），一併清除
       if (participants.any((id) => mockUsers.docs.any((m) => m.id == id))) {
         await doc.reference.delete();
       }
     }
     debugPrint('  清理了相關群組');
+
+    // 擴大範圍：刪除包含 myUid 的所有 dinner_events（只刪除也是測試性質的，檢查 signedUpUsers 是否有 mock用戶）
+    final events = await _firestore.collection('dinner_events')
+        .where('signedUpUsers', arrayContains: myUid)
+        .get();
+    int deletedEvents = 0;
+    for (var doc in events.docs) {
+      final data = doc.data();
+      final signedUp = List<String>.from(data['signedUpUsers'] ?? []);
+      if (signedUp.any((id) => mockUsers.docs.any((m) => m.id == id))) {
+        await doc.reference.delete();
+        deletedEvents++;
+      }
+    }
+    debugPrint('  清理了 $deletedEvents 個測試活動');
+
+    // 擴大範圍：刪除聊天室與訊息
+    final chats = await _firestore.collection('chat_rooms')
+        .where('participantIds', arrayContains: myUid)
+        .get();
+    for (var doc in chats.docs) {
+      final data = doc.data();
+      final parts = List<String>.from(data['participantIds'] ?? []);
+      if (parts.any((id) => mockUsers.docs.any((m) => m.id == id))) {
+        final msgs = await _firestore.collection('messages')
+            .where('chatRoomId', isEqualTo: doc.id)
+            .get();
+        for (var mDoc in msgs.docs) {
+          await mDoc.reference.delete();
+        }
+        await doc.reference.delete();
+      }
+    }
+    debugPrint('  清理了相關聊天室與訊息');
 
     // 刪除 reverse reviews
     final reviews = await _firestore.collection('dinner_reviews')

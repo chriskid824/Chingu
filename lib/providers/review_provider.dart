@@ -62,6 +62,7 @@ class ReviewProvider extends ChangeNotifier {
     _error = null;
     _reviewChoices = {};
     _newChatRoomIds = [];
+    _pendingReviewees = []; // 避免殘留前一次的舊資料
     notifyListeners();
 
     try {
@@ -70,13 +71,39 @@ class ReviewProvider extends ChangeNotifier {
       final users = <UserModel>[];
 
       for (final uid in pendingIds) {
-        final user = await _firestoreService.getUser(uid);
-        if (user != null) {
-          users.add(user);
-          debugPrint('  ✓ 載入用戶: ${user.name} ($uid)');
-        } else {
-          // Fallback: 建立基本用戶讓畫面仍可操作
-          debugPrint('  ⚠ 找不到用戶 $uid，使用 fallback');
+        try {
+          // 加入超時機制，以免網路或 Firestore 異常導致整個畫面無回應
+          final user = await _firestoreService.getUser(uid).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => throw Exception('Timeout'),
+          );
+          if (user != null) {
+            users.add(user);
+            debugPrint('  ✓ 載入用戶: ${user.name} ($uid)');
+          } else {
+            // Fallback: 建立基本用戶讓畫面仍可操作
+            debugPrint('  ⚠ 找不到用戶 $uid，使用 fallback');
+            users.add(UserModel(
+              uid: uid,
+              email: '',
+              name: '用戶 ${users.length + 1}',
+              age: 0,
+              gender: '',
+              city: '',
+              district: '',
+              country: '',
+              job: '—',
+              interests: const [],
+              diningPreference: 'any',
+              minAge: 18,
+              maxAge: 60,
+              budgetRange: 1,
+              createdAt: DateTime.now(),
+              lastLogin: DateTime.now(),
+            ));
+          }
+        } catch (e) {
+          debugPrint('  ⚠ 嘗試載入 $uid 發生錯誤 ($e)，使用 fallback');
           users.add(UserModel(
             uid: uid,
             email: '',
