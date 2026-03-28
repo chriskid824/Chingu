@@ -671,4 +671,338 @@ class DatabaseSeeder {
       rethrow;
     }
   }
+
+  /// 🧪 完整測試情境種子資料（為當前登入帳號生成）
+  ///
+  /// 涵蓋 6 大模組 15 個 User Case：
+  /// A. 活動報名  B. 群組狀態機  C. 聊天
+  /// D. 評價互評  E. Events Tab  F. 訂閱額度
+  Future<void> seedTestScenariosForUser() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ 請先登入');
+        return;
+      }
+      final myUid = currentUser.uid;
+      debugPrint('🚀 開始生成完整測試情境資料... (UID: $myUid)');
+
+      // ── 清理舊測試資料 ──
+      debugPrint('步驟 0/7: 清理舊測試資料...');
+      await _cleanTestData(myUid);
+
+      // ── 1. 生成 5 個假用戶 ──
+      debugPrint('步驟 1/7: 生成 5 個假測試用戶...');
+      final mockUserIds = <String>[];
+      final mockNames = ['Alex Chen', 'Sophie Lin', 'Kevin Wu', 'Tina Chang', 'Ryan Liu'];
+      final mockGenders = ['male', 'female', 'male', 'female', 'male'];
+      final mockIndustries = ['Technology', 'Arts', 'Financial services', 'Healthcare', 'Services'];
+      final mockNationalities = ['Taiwan', 'Taiwan', 'Japan', 'Taiwan', 'USA'];
+
+      for (int i = 0; i < 5; i++) {
+        final uid = _uuid.v4();
+        mockUserIds.add(uid);
+        final shuffled = ['設計', '咖啡', '攝影', '科技', '美食', '旅行', '音樂']..shuffle(_random);
+
+        await _firestore.collection('users').doc(uid).set({
+          'uid': uid,
+          'email': 'testscenario_${uid.substring(0, 5)}@chingu.local',
+          'name': '${mockNames[i]} (Test)',
+          'gender': mockGenders[i],
+          'age': 25 + _random.nextInt(8),
+          'job': '測試用戶',
+          'city': '台北市',
+          'district': '信義區',
+          'interests': shuffled.take(4).toList(),
+          'budgetRange': 1,
+          'bio': '測試情境用戶',
+          'country': mockNationalities[i],
+          'avatarUrl': 'https://i.pravatar.cc/150?img=${10 + i}',
+          'createdAt': Timestamp.now(),
+          'lastLogin': Timestamp.now(),
+        });
+      }
+      debugPrint('✓ 5 個假用戶已生成');
+
+      // ── 2. 生成 4 個活動 ──
+      debugPrint('步驟 2/7: 生成 4 個活動...');
+      final now = DateTime.now();
+
+      // 2 個已過期活動（Events Tab 歷史用）
+      final pastEvent1Id = _uuid.v4();
+      final pastDate1 = DateTime(now.year, now.month, now.day - 14, 19, 0);
+      await _firestore.collection('dinner_events').doc(pastEvent1Id).set({
+        'eventDate': Timestamp.fromDate(pastDate1),
+        'signupDeadline': Timestamp.fromDate(pastDate1.subtract(const Duration(days: 1))),
+        'city': '台北市',
+        'signedUpUsers': [myUid, ...mockUserIds.take(5)],
+        'status': 'completed',
+        'createdAt': Timestamp.fromDate(pastDate1.subtract(const Duration(days: 7))),
+      });
+
+      final pastEvent2Id = _uuid.v4();
+      final pastDate2 = DateTime(now.year, now.month, now.day - 7, 19, 0);
+      await _firestore.collection('dinner_events').doc(pastEvent2Id).set({
+        'eventDate': Timestamp.fromDate(pastDate2),
+        'signupDeadline': Timestamp.fromDate(pastDate2.subtract(const Duration(days: 1))),
+        'city': '台北市',
+        'signedUpUsers': [myUid, ...mockUserIds.take(5)],
+        'status': 'completed',
+        'createdAt': Timestamp.fromDate(pastDate2.subtract(const Duration(days: 7))),
+      });
+
+      // 2 個未來活動（報名 / 上限測試用）
+      final futureEvent1Id = _uuid.v4();
+      final futureDate1 = DateTime(now.year, now.month, now.day + 3, 19, 0);
+      await _firestore.collection('dinner_events').doc(futureEvent1Id).set({
+        'eventDate': Timestamp.fromDate(futureDate1),
+        'signupDeadline': Timestamp.fromDate(futureDate1.subtract(const Duration(days: 1))),
+        'city': '台北市',
+        'signedUpUsers': [myUid, ...mockUserIds.take(5)],
+        'status': 'open',
+        'createdAt': Timestamp.now(),
+      });
+
+      final futureEvent2Id = _uuid.v4();
+      final futureDate2 = DateTime(now.year, now.month, now.day + 10, 19, 0);
+      await _firestore.collection('dinner_events').doc(futureEvent2Id).set({
+        'eventDate': Timestamp.fromDate(futureDate2),
+        'signupDeadline': Timestamp.fromDate(futureDate2.subtract(const Duration(days: 1))),
+        'city': '台北市',
+        'signedUpUsers': [myUid, ...mockUserIds.take(3)],
+        'status': 'open',
+        'createdAt': Timestamp.now(),
+      });
+      debugPrint('✓ 4 個活動已生成（2 已過期 + 2 未來）');
+
+      // ── 3. 生成 4 個群組（4 種狀態各 1） ──
+      debugPrint('步驟 3/7: 生成 4 個群組（各狀態）...');
+      final allParticipants = [myUid, ...mockUserIds];
+
+      final companionPreviews = mockUserIds.asMap().entries.map((e) => {
+        'index': e.key,
+        'zodiac': ['♈', '♉', '♊', '♋', '♌'][e.key],
+        'industryCategory': mockIndustries[e.key],
+        'ageGroup': '25-30',
+        'topInterests': ['美食', '旅行'],
+        'nationality': mockNationalities[e.key],
+      }).toList();
+
+      // B1: pending 群組
+      final group1Id = _uuid.v4();
+      await _firestore.collection('dinner_groups').doc(group1Id).set({
+        'eventId': futureEvent1Id,
+        'participantIds': allParticipants,
+        'memberIds': allParticipants, // review_service 用 memberIds 查詢
+        'status': 'pending',
+        'reviewStatus': 'none',
+        'district': '信義區',
+        'restaurantId': null,
+        'restaurantName': null,
+        'companionPreviews': [],
+        'icebreakerQuestions': ['如果有一天不用工作，你最想做什麼？'],
+        'attendanceConfirmed': {},
+        'createdAt': Timestamp.now(),
+      });
+
+      // B2: info_revealed 群組
+      final group2Id = _uuid.v4();
+      await _firestore.collection('dinner_groups').doc(group2Id).set({
+        'eventId': futureEvent2Id,
+        'participantIds': allParticipants,
+        'memberIds': allParticipants,
+        'status': 'info_revealed',
+        'reviewStatus': 'none',
+        'district': '信義區',
+        'restaurantId': null,
+        'restaurantName': null,
+        'companionPreviews': companionPreviews,
+        'icebreakerQuestions': ['最近看的一部好電影？', '你的旅行清單上排第一的地方？'],
+        'attendanceConfirmed': {},
+        'createdAt': Timestamp.now(),
+      });
+
+      // B3: location_revealed 群組（有餐廳 + 聊天室）
+      final group3Id = _uuid.v4();
+      await _firestore.collection('dinner_groups').doc(group3Id).set({
+        'eventId': pastEvent2Id,
+        'participantIds': allParticipants,
+        'memberIds': allParticipants,
+        'status': 'location_revealed',
+        'reviewStatus': 'none',
+        'district': '信義區',
+        'restaurantId': 'test-restaurant',
+        'restaurantName': '山海樓台菜',
+        'restaurantAddress': '台北市信義區松壽路 12 號',
+        'companionPreviews': companionPreviews,
+        'icebreakerQuestions': ['最喜歡的料理類型？'],
+        'attendanceConfirmed': {myUid: true},
+        'createdAt': Timestamp.fromDate(pastDate2),
+      });
+
+      // B4: completed 群組（觸發評價）
+      final group4Id = _uuid.v4();
+      await _firestore.collection('dinner_groups').doc(group4Id).set({
+        'eventId': pastEvent1Id,
+        'participantIds': allParticipants,
+        'memberIds': allParticipants,
+        'status': 'completed',
+        'reviewStatus': 'none',
+        'district': '信義區',
+        'restaurantId': 'test-restaurant-2',
+        'restaurantName': '韓濟蔘雞湯專門店',
+        'restaurantAddress': '台北市中山區林森北路 130 號 2 樓',
+        'companionPreviews': companionPreviews,
+        'icebreakerQuestions': ['你最近最開心的一件事？'],
+        'attendanceConfirmed': {for (var id in allParticipants) id: true},
+        'createdAt': Timestamp.fromDate(pastDate1),
+      });
+      debugPrint('✓ 4 個群組已生成 (pending / info_revealed / location_revealed / completed)');
+
+      // ── 4. 生成群組聊天室 ──
+      debugPrint('步驟 4/7: 生成群組聊天室...');
+      final groupChatId = _uuid.v4();
+      await _firestore.collection('chat_rooms').doc(groupChatId).set({
+        'participantIds': allParticipants,
+        'type': 'group',
+        'groupId': group3Id,
+        'lastMessage': '大家好！期待今晚的聚餐 🎉',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'unreadCount': {myUid: 2},
+      });
+
+      // 添加群組聊天訊息
+      await _firestore.collection('messages').add({
+        'chatRoomId': groupChatId,
+        'senderId': mockUserIds[0],
+        'text': '大家好！期待今晚的聚餐 🎉',
+        'type': 'text',
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+      await _firestore.collection('messages').add({
+        'chatRoomId': groupChatId,
+        'senderId': mockUserIds[1],
+        'text': '我也超期待的！有人知道餐廳在哪嗎？',
+        'type': 'text',
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+      debugPrint('✓ 群組聊天室 + 2 則訊息已生成');
+
+      // ── 5. 生成 1v1 Mutual Match 聊天室 ──
+      debugPrint('步驟 5/7: 生成 1v1 聊天室...');
+      final matchPartnerId = mockUserIds[0]; // Alex Chen
+      final sortedIds = [myUid, matchPartnerId]..sort();
+      final matchChatId = '${sortedIds[0]}_${sortedIds[1]}_$group4Id';
+
+      await _firestore.collection('chat_rooms').doc(matchChatId).set({
+        'id': matchChatId,
+        'participantIds': sortedIds,
+        'participants': sortedIds, // review_service 用 participants
+        'groupId': group4Id,
+        'eventId': pastEvent1Id,
+        'matchType': 'mutual_dinner_review',
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessage': '上次聚餐很開心！有空再約 😊',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'unreadCount': {myUid: 1, matchPartnerId: 0},
+      });
+
+      await _firestore.collection('messages').add({
+        'chatRoomId': matchChatId,
+        'senderId': matchPartnerId,
+        'text': '嗨！很高興上次有跟你同桌 🙌',
+        'type': 'text',
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+      await _firestore.collection('messages').add({
+        'chatRoomId': matchChatId,
+        'senderId': matchPartnerId,
+        'text': '上次聚餐很開心！有空再約 😊',
+        'type': 'text',
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+      debugPrint('✓ 1v1 Mutual Match 聊天室 + 2 則訊息已生成');
+
+      // ── 6. 生成 reverse review（用於觸發 mutual match） ──
+      debugPrint('步驟 6/7: 生成 reverse review...');
+      final reverseReviewId = _uuid.v4();
+      await _firestore.collection('dinner_reviews').doc(reverseReviewId).set({
+        'reviewerId': mockUserIds[1], // Sophie → 你：想再見面
+        'revieweeId': myUid,
+        'groupId': group4Id,
+        'eventId': pastEvent1Id,
+        'wantToMeetAgain': true,
+        'experienceRating': 5,
+        'experienceHighlights': ['有趣的對話', '很有共鳴'],
+        'createdAt': Timestamp.now(),
+      });
+      debugPrint('✓ Reverse review 已生成（Sophie → 你：想再見面）');
+
+      // ── 7. 設定訂閱額度 ──
+      debugPrint('步驟 7/7: 設定訂閱額度...');
+      await _firestore.collection('subscriptions').doc(myUid).set({
+        'plan': 'free',
+        'freeTrialsRemaining': 2,
+        'singleTickets': 0,
+        'status': 'active',
+        'freeTicketsUsed': 1,
+      });
+      debugPrint('✓ 訂閱額度已設定（免費剩餘 2 次）');
+
+      // ── 完成 ──
+      debugPrint('\n🎉 完整測試情境資料生成完成！');
+      debugPrint('┌───────────────────────────────────────┐');
+      debugPrint('│ 5 個假用戶                             │');
+      debugPrint('│ 4 個活動（2 已過期 + 2 未來）           │');
+      debugPrint('│ 4 個群組（pending/info/location/done） │');
+      debugPrint('│ 2 個聊天室（群組 + 1v1 mutual match）  │');
+      debugPrint('│ 4 則訊息（各 2 則）                     │');
+      debugPrint('│ 1 筆 reverse review（觸發 mutual）     │');
+      debugPrint('│ 訂閱：免費剩餘 2 次                     │');
+      debugPrint('└───────────────────────────────────────┘');
+    } catch (e) {
+      debugPrint('❌ 測試情境資料生成失敗: $e');
+      rethrow;
+    }
+  }
+
+  /// 清理測試情境資料（只刪除 testscenario_ 前綴的假用戶和關聯資料）
+  Future<void> _cleanTestData(String myUid) async {
+    // 刪除假用戶
+    final mockUsers = await _firestore.collection('users')
+        .where('bio', isEqualTo: '測試情境用戶')
+        .get();
+    for (var doc in mockUsers.docs) {
+      await doc.reference.delete();
+    }
+    debugPrint('  清理了 ${mockUsers.docs.length} 個假用戶');
+
+    // 刪除測試活動和群組中包含自己的
+    // （保守做法：只刪有 testscenario 用戶的群組）
+    final groups = await _firestore.collection('dinner_groups')
+        .where('participantIds', arrayContains: myUid)
+        .get();
+    for (var doc in groups.docs) {
+      final data = doc.data();
+      final participants = List<String>.from(data['participantIds'] ?? []);
+      // 只刪除含有假用戶的群組
+      if (participants.any((id) => mockUsers.docs.any((m) => m.id == id))) {
+        await doc.reference.delete();
+      }
+    }
+    debugPrint('  清理了相關群組');
+
+    // 刪除 reverse reviews
+    final reviews = await _firestore.collection('dinner_reviews')
+        .where('revieweeId', isEqualTo: myUid)
+        .get();
+    for (var doc in reviews.docs) {
+      await doc.reference.delete();
+    }
+    debugPrint('  清理了 ${reviews.docs.length} 筆 reviews');
+  }
 }

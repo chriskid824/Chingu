@@ -128,6 +128,39 @@ class _DebugScreenState extends State<DebugScreen> {
     }
   }
 
+  Future<void> _runFullTestScenarios() async {
+    setState(() {
+      _isLoading = true;
+      _status = '🧪 正在生成完整測試情境資料...';
+    });
+
+    try {
+      final seeder = DatabaseSeeder();
+      await seeder.seedTestScenariosForUser();
+      
+      // 刷新 Provider
+      if (mounted) {
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null) {
+          await context.read<DinnerEventProvider>().fetchMyEvents(userId);
+        }
+      }
+
+      setState(() {
+        _status = '✅ 完整測試資料生成成功！\n'
+            '5 用戶 / 4 活動 / 4 群組 / 2 聊天室';
+      });
+    } catch (e) {
+      setState(() {
+        _status = '❌ 生成失敗: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,6 +203,17 @@ class _DebugScreenState extends State<DebugScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.pink,
                   side: const BorderSide(color: Colors.pink),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _isLoading ? null : _runFullTestScenarios,
+                icon: const Icon(Icons.science_rounded),
+                label: const Text('🧪 生成完整測試資料'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
