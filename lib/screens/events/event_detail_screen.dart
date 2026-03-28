@@ -53,16 +53,15 @@ class EventDetailScreen extends StatelessWidget {
                     _buildDinnerInfoCard(),
                     const SizedBox(height: 16),
                     // Restaurant 資訊卡
-                    if (group?.restaurantName != null)
+                    if (group?.restaurantName != null) ...[
                       _buildRestaurantCard(),
-                    if (group?.restaurantName != null)
                       const SizedBox(height: 16),
+                    ],
                     // Feedback 區塊
                     _buildFeedbackCard(context),
                     const SizedBox(height: 16),
-                    // Group 區塊
-                    if (group != null)
-                      _buildGroupCard(),
+                    // Group 區塊（永遠顯示）
+                    _buildGroupCard(),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -377,8 +376,11 @@ class EventDetailScreen extends StatelessWidget {
 
   /// Group 區塊（參考 Timeleft 截圖 3）
   Widget _buildGroupCard() {
-    final participantCount = group!.participantIds.length;
-    final previews = group!.companionPreviews;
+    // 優先用群組資料，沒有則 fallback 到活動報名人數
+    final participantCount = group?.participantIds.length 
+        ?? event.signedUpUsers.length;
+    final previews = group?.companionPreviews ?? [];
+    final displayCount = participantCount > 0 ? participantCount : 6;
 
     return Container(
       width: double.infinity,
@@ -418,7 +420,7 @@ class EventDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '你在 Chingu Table',
+            'You are in Chingu Table',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -431,7 +433,7 @@ class EventDetailScreen extends StatelessWidget {
             height: 40,
             child: Stack(
               children: List.generate(
-                participantCount.clamp(0, 6),
+                displayCount.clamp(0, 6),
                 (i) => Positioned(
                   left: i * 24.0,
                   child: Container(
@@ -454,9 +456,9 @@ class EventDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$participantCount 人同桌',
+            'New people are waiting for you!',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: AppColorsMinimal.textSecondary,
             ),
           ),
