@@ -66,19 +66,44 @@ class ReviewProvider extends ChangeNotifier {
 
     try {
       final pendingIds = List<String>.from(group['pendingReviewees'] ?? []);
+      debugPrint('📋 待評價成員 IDs: $pendingIds (共 ${pendingIds.length} 人)');
       final users = <UserModel>[];
 
       for (final uid in pendingIds) {
         final user = await _firestoreService.getUser(uid);
         if (user != null) {
           users.add(user);
+          debugPrint('  ✓ 載入用戶: ${user.name} ($uid)');
+        } else {
+          // Fallback: 建立基本用戶讓畫面仍可操作
+          debugPrint('  ⚠ 找不到用戶 $uid，使用 fallback');
+          users.add(UserModel(
+            uid: uid,
+            email: '',
+            name: '用戶 ${users.length + 1}',
+            age: 0,
+            gender: '',
+            city: '',
+            district: '',
+            country: '',
+            job: '—',
+            interests: const [],
+            diningPreference: 'any',
+            minAge: 18,
+            maxAge: 60,
+            budgetRange: 1,
+            createdAt: DateTime.now(),
+            lastLogin: DateTime.now(),
+          ));
         }
       }
 
       _pendingReviewees = users;
+      debugPrint('✓ 已載入 ${users.length} 位待評價成員');
       notifyListeners();
     } catch (e) {
       _error = '載入成員資料失敗: $e';
+      debugPrint('❌ loadRevieweesForGroup 失敗: $e');
       notifyListeners();
     } finally {
       _isLoading = false;

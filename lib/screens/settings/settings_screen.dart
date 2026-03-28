@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/auth_provider.dart';
-import 'package:chingu/services/database_seeder.dart';
+
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -13,7 +13,6 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final chinguTheme = theme.extension<ChinguTheme>();
-    final user = context.watch<AuthProvider>().userModel;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -129,49 +128,6 @@ class SettingsScreen extends StatelessWidget {
           _buildListTile(context, Icons.info_outline, '關於', () {
             Navigator.of(context).pushNamed(AppRoutes.about);
           }, trailing: 'v1.0.0'),
-          const Divider(),
-          // Developer Settings (Only for admins, even in Release mode)
-          if (user?.email == 'chriskid824@gmail.com' || user?.email == 'test@gmail.com' || kDebugMode) ...[
-            _buildSectionTitle(context, '開發者選項 (實機真實資料庫可用)'),
-            _buildListTile(context, Icons.bug_report_rounded, '產生測試資料 (User & Events)', () async {
-              try {
-                final authProv = context.read<AuthProvider>();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在產生假資料...')));
-                
-                final seeder = DatabaseSeeder();
-                final mockUsers = await seeder.generateMockUsers(count: 10);
-                
-                if (authProv.uid != null) {
-                  await seeder.generateDinnerEvents(authProv.uid!, mockUsers);
-                }
-                
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('假資料產生成功！')));
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('產生失敗: $e')));
-                }
-              }
-            }, iconColor: Colors.deepPurple),
-            _buildListTile(context, Icons.delete_sweep_rounded, '清除當前角色的測試資料', () async {
-              try {
-                final authProv = context.read<AuthProvider>();
-                if (authProv.uid != null) {
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在清除...')));
-                   await DatabaseSeeder().clearDummyData(authProv.uid!);
-                   if (context.mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('假資料清除成功！')));
-                   }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('清除失敗: $e')));
-                }
-              }
-            }, iconColor: Colors.deepOrange),
-            const Divider(),
-          ],
 
           // Destructive Actions
           _buildListTile(

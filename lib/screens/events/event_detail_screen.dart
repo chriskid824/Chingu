@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/models/dinner_event_model.dart';
@@ -52,11 +53,9 @@ class EventDetailScreen extends StatelessWidget {
                     // Dinner 資訊卡
                     _buildDinnerInfoCard(),
                     const SizedBox(height: 16),
-                    // Restaurant 資訊卡
-                    if (group?.restaurantName != null) ...[
-                      _buildRestaurantCard(),
-                      const SizedBox(height: 16),
-                    ],
+                    // Restaurant 資訊卡（永遠顯示）
+                    _buildRestaurantCard(),
+                    const SizedBox(height: 16),
                     // Feedback 區塊
                     _buildFeedbackCard(context),
                     const SizedBox(height: 16),
@@ -180,6 +179,8 @@ class EventDetailScreen extends StatelessWidget {
 
   /// Restaurant 資訊卡（參考 Timeleft 截圖 2）
   Widget _buildRestaurantCard() {
+    final hasRestaurant = group?.restaurantName != null;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -206,54 +207,91 @@ class EventDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // 餐廳名稱
-          Text(
-            group!.restaurantName ?? '',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColorsMinimal.textPrimary,
-            ),
-          ),
-          if (group!.restaurantAddress != null) ...[
-            const SizedBox(height: 6),
+          if (hasRestaurant) ...[
+            // 餐廳名稱
             Text(
-              group!.restaurantAddress!,
+              group!.restaurantName ?? '',
               style: TextStyle(
-                fontSize: 14,
-                color: AppColorsMinimal.textSecondary,
-                height: 1.4,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColorsMinimal.textPrimary,
+              ),
+            ),
+            if (group!.restaurantAddress != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.location_on_rounded, size: 16, color: AppColorsMinimal.textTertiary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      group!.restaurantAddress!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColorsMinimal.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 16),
+            // 地圖佔位
+            Container(
+              width: double.infinity,
+              height: 150,
+              decoration: BoxDecoration(
+                color: AppColorsMinimal.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.map_rounded,
+                    size: 36,
+                    color: AppColorsMinimal.primary.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '📍 ${group!.restaurantName ?? "餐廳位置"}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColorsMinimal.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // 尚未公佈
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: AppColorsMinimal.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.lock_clock_rounded,
+                    size: 32,
+                    color: AppColorsMinimal.textTertiary,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '餐廳資訊將於活動當天公佈',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColorsMinimal.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          // 地圖佔位（靜態地圖或未來整合 Google Maps）
-          Container(
-            width: double.infinity,
-            height: 180,
-            decoration: BoxDecoration(
-              color: AppColorsMinimal.surfaceVariant,
-              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.map_rounded,
-                  size: 40,
-                  color: AppColorsMinimal.primary.withValues(alpha: 0.5),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '📍 ${group!.restaurantName ?? "餐廳位置"}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColorsMinimal.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -299,20 +337,7 @@ class EventDetailScreen extends StatelessWidget {
                     (group?.participantIds.length ?? 3).clamp(0, 5),
                     (i) => Positioned(
                       left: i * 20.0,
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColorsMinimal.primaryBackground,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: Icon(
-                          Icons.person_rounded,
-                          size: 16,
-                          color: AppColorsMinimal.textTertiary,
-                        ),
-                      ),
+                      child: _buildSmallAvatar(i),
                     ),
                   ),
                 ),
@@ -443,20 +468,7 @@ class EventDetailScreen extends StatelessWidget {
                 displayCount.clamp(0, 6),
                 (i) => Positioned(
                   left: i * 24.0,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColorsMinimal.primaryBackground,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 20,
-                      color: AppColorsMinimal.textTertiary,
-                    ),
-                  ),
+                  child: _buildAvatar(i, 40),
                 ),
               ),
             ),
@@ -538,5 +550,41 @@ class EventDetailScreen extends StatelessWidget {
       case 'food': case 'food & beverage': return '🍽️';
       default: return '👤';
     }
+  }
+
+  /// 大頭像（Group 區）
+  Widget _buildAvatar(int index, double size) {
+    // 使用 pravatar 作為測試頭像（和 seeder 一致）
+    final avatarUrl = 'https://i.pravatar.cc/150?img=${10 + index}';
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColorsMinimal.primaryBackground,
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: avatarUrl,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Icon(
+            Icons.person_rounded,
+            size: size * 0.5,
+            color: AppColorsMinimal.textTertiary,
+          ),
+          errorWidget: (_, __, ___) => Icon(
+            Icons.person_rounded,
+            size: size * 0.5,
+            color: AppColorsMinimal.textTertiary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 小頭像（Feedback 區）
+  Widget _buildSmallAvatar(int index) {
+    return _buildAvatar(index, 32);
   }
 }
