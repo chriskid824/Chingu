@@ -691,15 +691,15 @@ class DatabaseSeeder {
       debugPrint('步驟 0/7: 清理舊測試資料...');
       await _cleanTestData(myUid);
 
-      // ── 1. 生成 5 個假用戶 ──
-      debugPrint('步驟 1/7: 生成 5 個假測試用戶...');
+      // ── 1. 生成 16 個假用戶 ──
+      debugPrint('步驟 1/7: 生成 16 個假測試用戶...');
       final mockUserIds = <String>[];
-      final mockNames = ['Alex Chen', 'Sophie Lin', 'Kevin Wu', 'Tina Chang', 'Ryan Liu'];
-      final mockGenders = ['male', 'female', 'male', 'female', 'male'];
+      final mockNames = ['Alex', 'Sophie', 'Kevin', 'Tina', 'Ryan', 'Lisa', 'David', 'Emma', 'John', 'Alice', 'Tom', 'Chloe', 'Eric', 'Zoe', 'Leo', 'Mia'];
+      final mockGenders = ['male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female'];
       final mockIndustries = ['Technology', 'Arts', 'Financial services', 'Healthcare', 'Services'];
       final mockNationalities = ['Taiwan', 'Taiwan', 'Japan', 'Taiwan', 'USA'];
 
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 16; i++) {
         final uid = _uuid.v4();
         mockUserIds.add(uid);
         final shuffled = ['設計', '咖啡', '攝影', '科技', '美食', '旅行', '音樂']..shuffle(_random);
@@ -716,13 +716,19 @@ class DatabaseSeeder {
           'interests': shuffled.take(4).toList(),
           'budgetRange': 1,
           'bio': '測試情境用戶',
-          'country': mockNationalities[i],
+          'country': mockNationalities[i % 5],
           'avatarUrl': 'https://i.pravatar.cc/150?img=${10 + i}',
           'createdAt': Timestamp.now(),
           'lastLogin': Timestamp.now(),
         });
       }
-      debugPrint('✓ 5 個假用戶已生成');
+      debugPrint('✓ 16 個假用戶已生成');
+
+      // 分配 4 組不同的參與者名單 (每組包含自己 + 4位不同的人)
+      final part1 = [myUid, ...mockUserIds.sublist(0, 4)];
+      final part2 = [myUid, ...mockUserIds.sublist(4, 8)];
+      final part3 = [myUid, ...mockUserIds.sublist(8, 12)];
+      final part4 = [myUid, ...mockUserIds.sublist(12, 16)];
 
       // ── 2. 生成 4 個活動 ──
       debugPrint('步驟 2/7: 生成 4 個活動...');
@@ -735,7 +741,7 @@ class DatabaseSeeder {
         'eventDate': Timestamp.fromDate(pastDate1),
         'signupDeadline': Timestamp.fromDate(pastDate1.subtract(const Duration(days: 1))),
         'city': '台北市',
-        'signedUpUsers': [myUid, ...mockUserIds.take(5)],
+        'signedUpUsers': part4,
         'status': 'completed',
         'createdAt': Timestamp.fromDate(pastDate1.subtract(const Duration(days: 7))),
       });
@@ -746,7 +752,7 @@ class DatabaseSeeder {
         'eventDate': Timestamp.fromDate(pastDate2),
         'signupDeadline': Timestamp.fromDate(pastDate2.subtract(const Duration(days: 1))),
         'city': '台北市',
-        'signedUpUsers': [myUid, ...mockUserIds.take(5)],
+        'signedUpUsers': part3,
         'status': 'completed',
         'createdAt': Timestamp.fromDate(pastDate2.subtract(const Duration(days: 7))),
       });
@@ -758,7 +764,7 @@ class DatabaseSeeder {
         'eventDate': Timestamp.fromDate(futureDate1),
         'signupDeadline': Timestamp.fromDate(futureDate1.subtract(const Duration(days: 1))),
         'city': '台北市',
-        'signedUpUsers': [myUid, ...mockUserIds.take(5)],
+        'signedUpUsers': part1,
         'status': 'open',
         'createdAt': Timestamp.now(),
       });
@@ -769,7 +775,7 @@ class DatabaseSeeder {
         'eventDate': Timestamp.fromDate(futureDate2),
         'signupDeadline': Timestamp.fromDate(futureDate2.subtract(const Duration(days: 1))),
         'city': '台北市',
-        'signedUpUsers': [myUid, ...mockUserIds.take(3)],
+        'signedUpUsers': part2,
         'status': 'open',
         'createdAt': Timestamp.now(),
       });
@@ -777,29 +783,31 @@ class DatabaseSeeder {
 
       // ── 3. 生成 4 個群組（4 種狀態各 1） ──
       debugPrint('步驟 3/7: 生成 4 個群組（各狀態）...');
-      final allParticipants = [myUid, ...mockUserIds];
 
-      final companionPreviews = mockUserIds.asMap().entries.map((e) => {
-        'index': e.key,
-        'zodiac': ['♈', '♉', '♊', '♋', '♌'][e.key],
-        'industryCategory': mockIndustries[e.key],
-        'ageGroup': '25-30',
-        'topInterests': ['美食', '旅行'],
-        'nationality': mockNationalities[e.key],
-      }).toList();
+      List<Map<String, dynamic>> _buildPreviews(List<String> pIds) {
+        return pIds.where((id) => id != myUid).toList().asMap().entries.map((e) => {
+          'index': e.key,
+          'zodiac': ['♈', '♉', '♊', '♋', '♌'][e.key % 5],
+          'industryCategory': mockIndustries[e.key % 5],
+          'ageGroup': '25-30',
+          'topInterests': ['美食', '旅行'],
+          'nationality': mockNationalities[e.key % 5],
+        }).toList();
+      }
 
-      // B1: pending 群組
+      // B1: pending 群組 -> 改為加入假餐廳資訊方便測試
       final group1Id = _uuid.v4();
       await _firestore.collection('dinner_groups').doc(group1Id).set({
         'eventId': futureEvent1Id,
-        'participantIds': allParticipants,
-        'memberIds': allParticipants, // review_service 用 memberIds 查詢
+        'participantIds': part1,
+        'memberIds': part1,
         'status': 'pending',
         'reviewStatus': 'none',
         'district': '信義區',
-        'restaurantId': null,
-        'restaurantName': null,
-        'companionPreviews': [],
+        'restaurantId': 'test-restaurant-1',
+        'restaurantName': '信義泰式料理',
+        'restaurantAddress': '台北市信義區松壽路 9 號',
+        'companionPreviews': _buildPreviews(part1),
         'icebreakerQuestions': ['如果有一天不用工作，你最想做什麼？'],
         'attendanceConfirmed': {},
         'createdAt': Timestamp.now(),
@@ -809,14 +817,15 @@ class DatabaseSeeder {
       final group2Id = _uuid.v4();
       await _firestore.collection('dinner_groups').doc(group2Id).set({
         'eventId': futureEvent2Id,
-        'participantIds': allParticipants,
-        'memberIds': allParticipants,
+        'participantIds': part2,
+        'memberIds': part2,
         'status': 'info_revealed',
         'reviewStatus': 'none',
         'district': '信義區',
-        'restaurantId': null,
-        'restaurantName': null,
-        'companionPreviews': companionPreviews,
+        'restaurantId': 'test-restaurant-3',
+        'restaurantName': '松菸早午餐',
+        'restaurantAddress': '台北市信義區忠孝東路四段 553 巷',
+        'companionPreviews': _buildPreviews(part2),
         'icebreakerQuestions': ['最近看的一部好電影？', '你的旅行清單上排第一的地方？'],
         'attendanceConfirmed': {},
         'createdAt': Timestamp.now(),
@@ -826,15 +835,15 @@ class DatabaseSeeder {
       final group3Id = _uuid.v4();
       await _firestore.collection('dinner_groups').doc(group3Id).set({
         'eventId': pastEvent2Id,
-        'participantIds': allParticipants,
-        'memberIds': allParticipants,
+        'participantIds': part3,
+        'memberIds': part3,
         'status': 'location_revealed',
         'reviewStatus': 'none',
         'district': '信義區',
         'restaurantId': 'test-restaurant',
         'restaurantName': '山海樓台菜',
         'restaurantAddress': '台北市信義區松壽路 12 號',
-        'companionPreviews': companionPreviews,
+        'companionPreviews': _buildPreviews(part3),
         'icebreakerQuestions': ['最喜歡的料理類型？'],
         'attendanceConfirmed': {myUid: true},
         'createdAt': Timestamp.fromDate(pastDate2),
@@ -844,55 +853,55 @@ class DatabaseSeeder {
       final group4Id = _uuid.v4();
       await _firestore.collection('dinner_groups').doc(group4Id).set({
         'eventId': pastEvent1Id,
-        'participantIds': allParticipants,
-        'memberIds': allParticipants,
+        'participantIds': part4,
+        'memberIds': part4,
+        'pendingReviewees': part4.where((id) => id != myUid).toList(),
         'status': 'completed',
         'reviewStatus': 'none',
         'district': '信義區',
         'restaurantId': 'test-restaurant-2',
         'restaurantName': '韓濟蔘雞湯專門店',
         'restaurantAddress': '台北市中山區林森北路 130 號 2 樓',
-        'companionPreviews': companionPreviews,
+        'companionPreviews': _buildPreviews(part4),
         'icebreakerQuestions': ['你最近最開心的一件事？'],
-        'attendanceConfirmed': {for (var id in allParticipants) id: true},
+        'attendanceConfirmed': {for (var id in part4) id: true},
         'createdAt': Timestamp.fromDate(pastDate1),
       });
-      debugPrint('✓ 4 個群組已生成 (pending / info_revealed / location_revealed / completed)');
+      debugPrint('✓ 4 個群組已生成 ( pending / info / location / completed，皆已綁定餐廳 )');
 
       // ── 4. 生成群組聊天室 ──
-      debugPrint('步驟 4/7: 生成群組聊天室...');
-      final groupChatId = _uuid.v4();
-      await _firestore.collection('chat_rooms').doc(groupChatId).set({
-        'participantIds': allParticipants,
-        'type': 'group',
-        'groupId': group3Id,
-        'lastMessage': '大家好！期待今晚的聚餐 🎉',
-        'lastMessageAt': FieldValue.serverTimestamp(),
-        'unreadCount': {myUid: 2},
-      });
+      debugPrint('步驟 4/7: 生成群組聊天室 (為 4 個群組各建 1 個)...');
+      
+      Future<void> _createGroupChat(String gId, List<String> pIds, String eventTitle) async {
+        final chatRoomId = _uuid.v4();
+        await _firestore.collection('chat_rooms').doc(chatRoomId).set({
+          'participantIds': pIds,
+          'type': 'group',
+          'groupId': gId,
+          'lastMessage': '期待 $eventTitle 的聚餐 🎉',
+          'lastMessageAt': FieldValue.serverTimestamp(),
+          'unreadCount': {myUid: 1},
+        });
+        await _firestore.collection('messages').add({
+          'chatRoomId': chatRoomId,
+          'senderId': pIds.last,
+          'text': '期待 $eventTitle 的聚餐 🎉',
+          'type': 'text',
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
 
-      // 添加群組聊天訊息
-      await _firestore.collection('messages').add({
-        'chatRoomId': groupChatId,
-        'senderId': mockUserIds[0],
-        'text': '大家好！期待今晚的聚餐 🎉',
-        'type': 'text',
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-      });
-      await _firestore.collection('messages').add({
-        'chatRoomId': groupChatId,
-        'senderId': mockUserIds[1],
-        'text': '我也超期待的！有人知道餐廳在哪嗎？',
-        'type': 'text',
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-      });
-      debugPrint('✓ 群組聊天室 + 2 則訊息已生成');
+      await _createGroupChat(group1Id, part1, "下次");
+      await _createGroupChat(group2Id, part2, "週末");
+      await _createGroupChat(group3Id, part3, "週三");
+      await _createGroupChat(group4Id, part4, "上次");
+      
+      debugPrint('✓ 4 個群組聊天室生成完畢');
 
       // ── 5. 生成 1v1 Mutual Match 聊天室 ──
       debugPrint('步驟 5/7: 生成 1v1 聊天室...');
-      final matchPartnerId = mockUserIds[0]; // Alex Chen
+      final matchPartnerId = part4[1]; // Sophie
       final sortedIds = [myUid, matchPartnerId]..sort();
       final matchChatId = '${sortedIds[0]}_${sortedIds[1]}_$group4Id';
 
@@ -931,7 +940,7 @@ class DatabaseSeeder {
       debugPrint('步驟 6/7: 生成 reverse review...');
       final reverseReviewId = _uuid.v4();
       await _firestore.collection('dinner_reviews').doc(reverseReviewId).set({
-        'reviewerId': mockUserIds[1], // Sophie → 你：想再見面
+        'reviewerId': part4[2], // 同團的另一個人 → 你：想再見面
         'revieweeId': myUid,
         'groupId': group4Id,
         'eventId': pastEvent1Id,

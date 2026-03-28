@@ -282,39 +282,44 @@ class _ReviewScreenState extends State<ReviewScreen> {
     required Color selectedColor,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? selectedColor.withValues(alpha: 0.1)
-              : AppColorsMinimal.surface,
-          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
-          border: Border.all(
-            color: isSelected ? selectedColor : AppColorsMinimal.divider,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isSelected ? selectedColor : AppColorsMinimal.textTertiary,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+        splashColor: selectedColor.withValues(alpha: 0.2),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? selectedColor.withValues(alpha: 0.1)
+                : AppColorsMinimal.surface,
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+            border: Border.all(
+              color: isSelected ? selectedColor : AppColorsMinimal.divider,
+              width: isSelected ? 1.5 : 1,
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 20,
                 color: isSelected ? selectedColor : AppColorsMinimal.textTertiary,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? selectedColor : AppColorsMinimal.textTertiary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

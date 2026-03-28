@@ -48,7 +48,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor, // Very light gray-blue background
-      floatingActionButton: _buildFAB(theme, chinguTheme),
       appBar: _buildAppBar(theme, chinguTheme),
       body: SafeArea(
         child: chatProvider.isLoading
@@ -105,37 +104,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildFAB(ThemeData theme, ChinguTheme? chinguTheme) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: chinguTheme?.fabGradient ?? const LinearGradient(colors: [Color(0xFFD67756), Color(0xFFE9967A)]),
-        boxShadow: [
-          BoxShadow(
-            color: (chinguTheme?.fabGradient.colors.first ?? const Color(0xFFD67756)).withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () {
-            // Initiate new chat or action
-          },
-          child: const Icon(
-            Icons.edit_square,
-            color: Colors.white,
-            size: 26,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSegmentedControl(ThemeData theme, ChinguTheme? chinguTheme) {
     return Container(
