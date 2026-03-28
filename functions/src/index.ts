@@ -9,6 +9,7 @@ admin.initializeApp();
 
 // Broadcast notifications (admin)
 export { sendBroadcast } from "./sendBroadcast";
+export { sendNotification } from "./sendNotification";
 
 // Push notification triggers (automatic)
 export { onNewChatMessage, onMutualMatch } from "./pushNotifications";
