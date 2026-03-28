@@ -1,5 +1,8 @@
 /// 通知文案 A/B 測試配置
 /// 用於測試不同通知文案對用戶參與度的影響
+
+export type NotificationGroup = 'A' | 'B';
+
 export interface NotificationCopyVariant {
     variantId: string;
     title: string;
@@ -12,6 +15,20 @@ export interface NotificationCopyTest {
     notificationType: string;
     variants: NotificationCopyVariant[];
     defaultVariantId: string;
+    groupVariants: Record<NotificationGroup, string>;
+}
+
+/**
+ * 根據 User ID 獲取分組 (A/B)
+ * 使用簡單的哈希算法保證同一個用戶總是分到同一組
+ */
+export function getUserGroup(userId: string): NotificationGroup {
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+        hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash) % 2 === 0 ? 'A' : 'B';
 }
 
 // A/B 測試: 配對成功通知
@@ -19,6 +36,10 @@ export const matchSuccessTest: NotificationCopyTest = {
     testId: 'match_success_copy_v1',
     notificationType: 'match_success',
     defaultVariantId: 'control',
+    groupVariants: {
+        'A': 'control',
+        'B': 'friendly'
+    },
     variants: [
         {
             variantId: 'control',
@@ -46,6 +67,10 @@ export const newMessageTest: NotificationCopyTest = {
     testId: 'new_message_copy_v1',
     notificationType: 'new_message',
     defaultVariantId: 'control',
+    groupVariants: {
+        'A': 'control',
+        'B': 'engaging'
+    },
     variants: [
         {
             variantId: 'control',
@@ -71,6 +96,10 @@ export const eventReminderTest: NotificationCopyTest = {
     testId: 'event_reminder_copy_v1',
     notificationType: 'event_reminder',
     defaultVariantId: 'control',
+    groupVariants: {
+        'A': 'control',
+        'B': 'countdown'
+    },
     variants: [
         {
             variantId: 'control',
@@ -98,6 +127,10 @@ export const inactivityTest: NotificationCopyTest = {
     testId: 'inactivity_copy_v1',
     notificationType: 'inactivity_reminder',
     defaultVariantId: 'control',
+    groupVariants: {
+        'A': 'control',
+        'B': 'curious'
+    },
     variants: [
         {
             variantId: 'control',
@@ -165,4 +198,33 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * 根據用戶分組自動獲取通知文案
+ * @param testId 測試 ID
+ * @param userId 用戶 ID
+ * @param params 文案替換參數
+ */
+export function getNotificationContentForUser(
+    testId: string,
+    userId: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string; group: NotificationGroup } {
+    const group = getUserGroup(userId);
+    const test = allNotificationTests.find((t) => t.testId === testId);
+
+    // 如果找不到測試配置，默認使用 control 變體或空
+    if (!test) {
+        return { ...getNotificationCopy(testId, 'control', params), variantId: 'control', group };
+    }
+
+    const variantId = test.groupVariants[group] || test.defaultVariantId;
+    const content = getNotificationCopy(testId, variantId, params);
+
+    return {
+        ...content,
+        variantId,
+        group
+    };
 }
