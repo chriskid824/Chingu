@@ -6,11 +6,13 @@ import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/models/dinner_group_model.dart';
+import 'package:chingu/models/user_model.dart';
+import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/providers/review_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 
 /// 活動詳情頁（參考 Timeleft 截圖 2 & 3）
-class EventDetailScreen extends StatelessWidget {
+class EventDetailScreen extends StatefulWidget {
   final DinnerEventModel event;
   final DinnerGroupModel? group;
 
@@ -19,6 +21,50 @@ class EventDetailScreen extends StatelessWidget {
     required this.event,
     this.group,
   });
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  List<UserModel> _participants = [];
+
+  DinnerEventModel get event => widget.event;
+  DinnerGroupModel? get group => widget.group;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadParticipants();
+  }
+
+  Future<void> _loadParticipants() async {
+    final ids = group?.participantIds ?? event.signedUpUsers;
+    if (ids.isEmpty) return;
+
+    
+    final users = <UserModel>[];
+    // 排除自己，只載入其他參與者
+    final authProvider = context.read<AuthProvider>();
+    final myUid = authProvider.uid;
+
+    for (final uid in ids) {
+      if (uid == myUid) continue; // 跳過自己
+      try {
+        final user = await _firestoreService.getUser(uid).timeout(
+          const Duration(seconds: 3),
+        );
+        if (user != null) users.add(user);
+      } catch (_) {}
+    }
+    
+    if (mounted) {
+      setState(() {
+        _participants = users;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -552,10 +598,13 @@ class EventDetailScreen extends StatelessWidget {
     }
   }
 
-  /// 大頭像（Group 區）
+  /// 大頭像（Group 區）— 使用真正的參與者資料
   Widget _buildAvatar(int index, double size) {
-    // 使用 pravatar 作為測試頭像（和 seeder 一致）
-    final avatarUrl = 'https://i.pravatar.cc/150?img=${10 + index}';
+    String? avatarUrl;
+    if (index < _participants.length) {
+      avatarUrl = _participants[index].avatarUrl;
+    }
+
     return Container(
       width: size,
       height: size,
@@ -565,20 +614,26 @@ class EventDetailScreen extends StatelessWidget {
         border: Border.all(color: Colors.white, width: 2),
       ),
       child: ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: avatarUrl,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Icon(
-            Icons.person_rounded,
-            size: size * 0.5,
-            color: AppColorsMinimal.textTertiary,
-          ),
-          errorWidget: (_, __, ___) => Icon(
-            Icons.person_rounded,
-            size: size * 0.5,
-            color: AppColorsMinimal.textTertiary,
-          ),
-        ),
+        child: avatarUrl != null && avatarUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: avatarUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Icon(
+                  Icons.person_rounded,
+                  size: size * 0.5,
+                  color: AppColorsMinimal.textTertiary,
+                ),
+                errorWidget: (_, __, ___) => Icon(
+                  Icons.person_rounded,
+                  size: size * 0.5,
+                  color: AppColorsMinimal.textTertiary,
+                ),
+              )
+            : Icon(
+                Icons.person_rounded,
+                size: size * 0.5,
+                color: AppColorsMinimal.textTertiary,
+              ),
       ),
     );
   }

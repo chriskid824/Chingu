@@ -11,72 +11,71 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // 開發者權限（僅限資料種子工具使用）
+    function isDeveloper() {
+      return isAuthenticated() && 
+             request.auth.token.email != null && 
+             request.auth.token.email == 'chriskid824@gmail.com';
+    }
+
     // ===== 用戶 =====
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId) || isDeveloper();
       allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) || isDeveloper();
     }
 
     // ===== 訂閱 =====
     match /subscriptions/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      // 不允許客戶端刪除訂閱
+      allow create: if isOwner(userId) || isDeveloper();
+      allow update: if isOwner(userId) || isDeveloper();
     }
 
     // ===== 晚餐活動 =====
-    match /dinnerEvents/{eventId} {
+    match /dinner_events/{eventId} {
       allow read: if isAuthenticated();
-      // 報名/取消報名由 Cloud Function 處理
-      allow create: if false;
+      allow create: if isAuthenticated() || isDeveloper();
       allow update: if isAuthenticated();
-      allow delete: if false;
+      allow delete: if isDeveloper();
     }
 
     // ===== 群組 =====
-    match /dinnerGroups/{groupId} {
-      allow read: if isAuthenticated()
-        && request.auth.uid in resource.data.participantIds;
-      allow create: if false; // 由 Cloud Function 建立
-      allow update: if isAuthenticated()
-        && request.auth.uid in resource.data.participantIds;
-      allow delete: if false;
+    match /dinner_groups/{groupId} {
+      allow read: if isAuthenticated();
+      allow create: if isDeveloper();
+      allow update: if isAuthenticated();
+      allow delete: if isDeveloper();
     }
 
     // ===== 聊天室 =====
     match /chat_rooms/{chatRoomId} {
-      allow read: if isAuthenticated()
-        && request.auth.uid in resource.data.participantIds;
-      allow create: if false; // 由 Cloud Function 建立
-      allow update: if isAuthenticated()
-        && request.auth.uid in resource.data.participantIds;
-      allow delete: if false;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() || isDeveloper();
+      allow update: if isAuthenticated();
+      allow delete: if isDeveloper();
     }
 
     // ===== 訊息 =====
     match /messages/{messageId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated()
-        && request.auth.uid == request.resource.data.senderId;
+      allow create: if isAuthenticated();
       allow update: if false;
-      allow delete: if false;
+      allow delete: if isDeveloper();
     }
 
     // ===== 評價 =====
-    match /reviews/{reviewId} {
+    match /dinner_reviews/{reviewId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated()
-        && request.auth.uid == request.resource.data.reviewerId;
+      allow create: if isAuthenticated();
       allow update: if false;
-      allow delete: if false;
+      allow delete: if isDeveloper();
     }
 
     // ===== 檢舉 =====
     match /reports/{reportId} {
-      allow read: if false; // 只有後台管理員可看
+      allow read: if false;
       allow create: if isAuthenticated();
       allow update: if false;
       allow delete: if false;
@@ -85,51 +84,17 @@ service cloud.firestore {
     // ===== 餐廳 =====
     match /restaurants/{restaurantId} {
       allow read: if isAuthenticated();
-      // 為了測試，允許開發者寫入特定前綴的餐廳
-      allow write: if isDeveloper() && restaurantId.matches('test-.*'); 
+      allow write: if isDeveloper();
     }
 
     // ===== 通知 =====
     match /notifications/{notificationId} {
       allow read: if isAuthenticated()
         && request.auth.uid == resource.data.userId;
-      allow create: if false; // 由 Cloud Function 建立
+      allow create: if false;
       allow update: if isAuthenticated()
         && request.auth.uid == resource.data.userId;
       allow delete: if false;
-    }
-
-    // ===== 開發者權限驗證 =====
-    function isDeveloper() {
-      return isAuthenticated() && 
-             request.auth.token.email != null && 
-             request.auth.token.email == 'chriskid824@gmail.com';
-    }
-
-    // ===== 測試專用：僅允許開發者刪除/建立假資料 / 改動敏感表 =====
-    match /users/{userId} {
-      // 開發者可以自由增刪測試用戶
-      allow create, delete: if isDeveloper();
-    }
-    
-    match /dinner_events/{eventId} {
-      allow read, write: if isDeveloper();
-    }
-    
-    match /dinner_groups/{groupId} {
-      allow read, write: if isDeveloper();
-    }
-    
-    match /chat_rooms/{chatRoomId} {
-      allow read, write: if isDeveloper();
-    }
-    
-    match /messages/{messageId} {
-      allow read, write: if isDeveloper();
-    }
-    
-    match /dinner_reviews/{reviewId} {
-      allow read, write: if isDeveloper();
     }
 
     // ===== 預設：拒絕所有未列出的集合 =====

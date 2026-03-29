@@ -124,7 +124,8 @@ class ReviewService {
 
     await _chatRoomsCollection.doc(chatRoomId).set({
       'id': chatRoomId,
-      'participants': sortedIds,
+      'participantIds': sortedIds, // ChatProvider 查詢依賴此欄位
+      'participants': sortedIds,   // 向下相容
       'groupId': groupId,
       'eventId': eventId,
       'matchType': 'mutual_dinner_review',

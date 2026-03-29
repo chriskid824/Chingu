@@ -22,7 +22,7 @@ class DinnerGroupProvider extends ChangeNotifier {
 
     try {
       final snapshot = await _firestore
-          .collection('dinnerGroups')
+          .collection('dinner_groups')
           .where('participantIds', arrayContains: userId)
           .orderBy('createdAt', descending: true)
           .limit(10)
@@ -42,7 +42,7 @@ class DinnerGroupProvider extends ChangeNotifier {
   /// 監聽特定群組的即時更新
   Stream<DinnerGroupModel?> watchGroup(String groupId) {
     return _firestore
-        .collection('dinnerGroups')
+        .collection('dinner_groups')
         .doc(groupId)
         .snapshots()
         .map((doc) {
@@ -57,7 +57,7 @@ class DinnerGroupProvider extends ChangeNotifier {
   /// 確認出席
   Future<void> confirmAttendance(String groupId, String userId) async {
     try {
-      await _firestore.collection('dinnerGroups').doc(groupId).update({
+      await _firestore.collection('dinner_groups').doc(groupId).update({
         'attendanceConfirmed.$userId': true,
       });
 

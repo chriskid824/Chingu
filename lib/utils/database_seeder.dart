@@ -979,74 +979,71 @@ class DatabaseSeeder {
     }
   }
 
-  /// 清理測試情境資料（只刪除 testscenario_ 前綴的假用戶和關聯資料）
+  /// 清理測試情境資料 — 無條件刪除所有跟自己相關的測試資料
   Future<void> _cleanTestData(String myUid) async {
-    // 刪除假用戶
+    debugPrint('  🧹 開始強力清理...');
+    
+    // 1. 刪除所有測試假用戶（bio = '測試情境用戶'）
     final mockUsers = await _firestore.collection('users')
         .where('bio', isEqualTo: '測試情境用戶')
         .get();
     for (var doc in mockUsers.docs) {
       await doc.reference.delete();
     }
-    debugPrint('  清理了 ${mockUsers.docs.length} 個假用戶');
+    debugPrint('  ✓ 刪除了 ${mockUsers.docs.length} 個假用戶');
 
-    // 刪除測試活動和群組中包含自己的
-    // （擴大範圍：找出所有跟自己相關的測試 group 和 test event）
+    // 2. 刪除所有包含自己的 dinner_groups（不做任何條件判斷）
     final groups = await _firestore.collection('dinner_groups')
         .where('participantIds', arrayContains: myUid)
         .get();
     for (var doc in groups.docs) {
-      final data = doc.data();
-      final participants = List<String>.from(data['participantIds'] ?? []);
-      
-      // 如果這個群聊裡面有我們剛剛刪掉的測試用戶名單（或者根本沒人），一併清除
-      if (participants.any((id) => mockUsers.docs.any((m) => m.id == id))) {
-        await doc.reference.delete();
-      }
+      await doc.reference.delete();
     }
-    debugPrint('  清理了相關群組');
+    debugPrint('  ✓ 刪除了 ${groups.docs.length} 個群組');
 
-    // 擴大範圍：刪除包含 myUid 的所有 dinner_events（只刪除也是測試性質的，檢查 signedUpUsers 是否有 mock用戶）
+    // 3. 刪除所有包含自己的 dinner_events
     final events = await _firestore.collection('dinner_events')
         .where('signedUpUsers', arrayContains: myUid)
         .get();
-    int deletedEvents = 0;
     for (var doc in events.docs) {
-      final data = doc.data();
-      final signedUp = List<String>.from(data['signedUpUsers'] ?? []);
-      if (signedUp.any((id) => mockUsers.docs.any((m) => m.id == id))) {
-        await doc.reference.delete();
-        deletedEvents++;
-      }
+      await doc.reference.delete();
     }
-    debugPrint('  清理了 $deletedEvents 個測試活動');
+    debugPrint('  ✓ 刪除了 ${events.docs.length} 個活動');
 
-    // 擴大範圍：刪除聊天室與訊息
+    // 4. 刪除所有包含自己的 chat_rooms 和其中的 messages
     final chats = await _firestore.collection('chat_rooms')
         .where('participantIds', arrayContains: myUid)
         .get();
+    int msgCount = 0;
     for (var doc in chats.docs) {
-      final data = doc.data();
-      final parts = List<String>.from(data['participantIds'] ?? []);
-      if (parts.any((id) => mockUsers.docs.any((m) => m.id == id))) {
-        final msgs = await _firestore.collection('messages')
-            .where('chatRoomId', isEqualTo: doc.id)
-            .get();
-        for (var mDoc in msgs.docs) {
-          await mDoc.reference.delete();
-        }
-        await doc.reference.delete();
+      // 先刪除該聊天室的所有訊息
+      final msgs = await _firestore.collection('messages')
+          .where('chatRoomId', isEqualTo: doc.id)
+          .get();
+      for (var mDoc in msgs.docs) {
+        await mDoc.reference.delete();
+        msgCount++;
       }
-    }
-    debugPrint('  清理了相關聊天室與訊息');
-
-    // 刪除 reverse reviews
-    final reviews = await _firestore.collection('dinner_reviews')
-        .where('revieweeId', isEqualTo: myUid)
-        .get();
-    for (var doc in reviews.docs) {
       await doc.reference.delete();
     }
-    debugPrint('  清理了 ${reviews.docs.length} 筆 reviews');
+    debugPrint('  ✓ 刪除了 ${chats.docs.length} 個聊天室 + $msgCount 則訊息');
+
+    // 5. 刪除所有 reviewer 或 reviewee 是自己的評價
+    final reviewsAsReviewer = await _firestore.collection('dinner_reviews')
+        .where('reviewerId', isEqualTo: myUid)
+        .get();
+    for (var doc in reviewsAsReviewer.docs) {
+      await doc.reference.delete();
+    }
+    final reviewsAsReviewee = await _firestore.collection('dinner_reviews')
+        .where('revieweeId', isEqualTo: myUid)
+        .get();
+    for (var doc in reviewsAsReviewee.docs) {
+      await doc.reference.delete();
+    }
+    debugPrint('  ✓ 刪除了 ${reviewsAsReviewer.docs.length + reviewsAsReviewee.docs.length} 筆評價');
+    
+    debugPrint('  🧹 強力清理完畢！');
   }
 }
+
