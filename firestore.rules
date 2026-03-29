@@ -85,8 +85,8 @@ service cloud.firestore {
     // ===== 餐廳 =====
     match /restaurants/{restaurantId} {
       allow read: if isAuthenticated();
-      // 為了測試，允許客戶端寫入特定前綴的餐廳
-      allow write: if isAuthenticated() && (restaurantId.matches('test-.*') || false); 
+      // 為了測試，允許開發者寫入特定前綴的餐廳
+      allow write: if isDeveloper() && restaurantId.matches('test-.*'); 
     }
 
     // ===== 通知 =====
@@ -99,31 +99,37 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ===== 測試專用：允許刪除/建立假資料 =====
+    // ===== 開發者權限驗證 =====
+    function isDeveloper() {
+      return isAuthenticated() && 
+             request.auth.token.email != null && 
+             request.auth.token.email == 'chriskid824@gmail.com';
+    }
+
+    // ===== 測試專用：僅允許開發者刪除/建立假資料 / 改動敏感表 =====
     match /users/{userId} {
-      // 容許如果 request 的 data 有測試標記，或者原來的 doc 有測試標記
-      allow create: if isAuthenticated() && request.resource.data.job == '測試用戶';
-      allow delete: if isAuthenticated() && resource.data.job == '測試用戶';
+      // 開發者可以自由增刪測試用戶
+      allow create, delete: if isDeveloper();
     }
     
     match /dinner_events/{eventId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isDeveloper();
     }
     
     match /dinner_groups/{groupId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isDeveloper();
     }
     
     match /chat_rooms/{chatRoomId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isDeveloper();
     }
     
     match /messages/{messageId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isDeveloper();
     }
     
     match /dinner_reviews/{reviewId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isDeveloper();
     }
 
     // ===== 預設：拒絕所有未列出的集合 =====
