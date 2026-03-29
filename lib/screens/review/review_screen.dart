@@ -294,7 +294,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           decoration: BoxDecoration(
             color: isSelected
                 ? selectedColor.withValues(alpha: 0.1)
-                : AppColorsMinimal.surface,
+                : Colors.transparent, // 讓底下 Material 的水波紋可以被看見
             borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
             border: Border.all(
               color: isSelected ? selectedColor : AppColorsMinimal.divider,

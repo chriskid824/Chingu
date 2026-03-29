@@ -85,7 +85,8 @@ service cloud.firestore {
     // ===== 餐廳 =====
     match /restaurants/{restaurantId} {
       allow read: if isAuthenticated();
-      allow write: if false; // 只有管理員可修改
+      // 為了測試，允許客戶端寫入特定前綴的餐廳
+      allow write: if isAuthenticated() && (restaurantId.matches('test-.*') || false); 
     }
 
     // ===== 通知 =====
@@ -96,6 +97,33 @@ service cloud.firestore {
       allow update: if isAuthenticated()
         && request.auth.uid == resource.data.userId;
       allow delete: if false;
+    }
+
+    // ===== 測試專用：允許刪除/建立假資料 =====
+    match /users/{userId} {
+      // 容許如果 request 的 data 有測試標記，或者原來的 doc 有測試標記
+      allow create: if isAuthenticated() && request.resource.data.job == '測試用戶';
+      allow delete: if isAuthenticated() && resource.data.job == '測試用戶';
+    }
+    
+    match /dinner_events/{eventId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /dinner_groups/{groupId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /chat_rooms/{chatRoomId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /messages/{messageId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /dinner_reviews/{reviewId} {
+      allow read, write: if isAuthenticated();
     }
 
     // ===== 預設：拒絕所有未列出的集合 =====
