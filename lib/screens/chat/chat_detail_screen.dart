@@ -211,7 +211,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 value: 'report',
                 child: Row(
                   children: [
-                    Icon(Icons.flag_outlined, color: Colors.orange, size: 20),
+                    Icon(Icons.flag_outlined, color: AppColorsMinimal.warning, size: 20),
                     SizedBox(width: 12),
                     Text('舉報用戶'),
                   ],
@@ -221,7 +221,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 value: 'block',
                 child: Row(
                   children: [
-                    Icon(Icons.block, color: Colors.red, size: 20),
+                    Icon(Icons.block, color: AppColorsMinimal.error, size: 20),
                     SizedBox(width: 12),
                     Text('封鎖用戶'),
                   ],

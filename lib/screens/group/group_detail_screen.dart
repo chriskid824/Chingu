@@ -407,14 +407,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
     );
   }
 
-  // 同伴卡片差異化顏色
+  // 同伴卡片差異化顏色 — 使用莫蘭迪色系
   static const _companionColors = [
-    Color(0xFF7C4DFF), // 紫
-    Color(0xFFFF6D00), // 橘
-    Color(0xFF00BFA5), // 綠
-    Color(0xFFE91E63), // 粉
-    Color(0xFF2962FF), // 藍
-    Color(0xFFFFAB00), // 金
+    Color(0xFF6B93B8), // 藍灰
+    Color(0xFFD67756), // 磚橘
+    Color(0xFF8DB6C9), // 淺藍
+    Color(0xFFA64A25), // 深磚橘
+    Color(0xFF7CAF7C), // 莫蘭迪綠
+    Color(0xFF885520), // 棕色
   ];
 
   Widget _buildCompanionCard(Map<String, dynamic> preview) {

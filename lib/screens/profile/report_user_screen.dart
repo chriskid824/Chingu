@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/widgets/app_icon_button.dart';
 import 'package:chingu/services/firestore_service.dart';
@@ -75,7 +76,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('舉報已提交，我們會盡快處理'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColorsMinimal.success,
         ),
       );
 
