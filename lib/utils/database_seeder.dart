@@ -514,8 +514,9 @@ class DatabaseSeeder {
       await _firestore.collection('dinner_groups').doc(group1Id).set({
         'id': group1Id,
         'eventId': eventId,
-        'memberIds': group1Members,
+        'participantIds': group1Members,
         'status': 'pending', // 等待揭曉
+        'reviewStatus': 'none',
         'district': '信義區',
         'restaurantId': null,
         'restaurantName': null,
@@ -531,17 +532,20 @@ class DatabaseSeeder {
       await _firestore.collection('dinner_groups').doc(group2Id).set({
         'id': group2Id,
         'eventId': eventId,
-        'memberIds': group2Members,
+        'participantIds': group2Members,
         'status': 'location_revealed',
+        'reviewStatus': 'none',
         'district': '信義區',
         'restaurantId': 'test-restaurant',
         'restaurantName': '山海樓台菜',
         'restaurantAddress': '台北市信義區松壽路 12 號',
-        'companionPreviews': group2Members.map((uid) => {
-          'uid': uid,
-          'initial': 'T',
-          'ageRange': '25-30',
-          'sharedInterests': ['美食', '旅行'],
+        'companionPreviews': group2Members.where((uid) => uid != myUid).toList().asMap().entries.map((e) => {
+          'index': e.key,
+          'zodiac': ['♈', '♉', '♊', '♋', '♌'][e.key % 5],
+          'industryCategory': 'Technology',
+          'ageGroup': '25-30',
+          'topInterests': ['美食', '旅行'],
+          'nationality': 'Taiwan',
         }).toList(),
         'icebreakerQuestions': ['你的旅行清單上排第一的地方？', '最喜歡的料理類型？'],
         'attendanceConfirmed': {},
@@ -714,7 +718,7 @@ class DatabaseSeeder {
       await _firestore.collection('dinner_groups').doc(group1Id).set({
         'eventId': futureEvent1Id,
         'participantIds': part1,
-        'memberIds': part1,
+        'memberIds': part1, // legacy 相容
         'status': 'pending',
         'reviewStatus': 'none',
         'district': '信義區',
