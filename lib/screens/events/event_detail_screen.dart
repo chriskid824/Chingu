@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/models/dinner_group_model.dart';
@@ -598,43 +598,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
   }
 
-  /// 大頭像（Group 區）— 使用真正的參與者資料
+  /// 大頭像（Group 區）— 見面前顯示幾何頭像，見面後顯示真實照片
   Widget _buildAvatar(int index, double size) {
-    String? avatarUrl;
-    if (index < _participants.length) {
-      avatarUrl = _participants[index].avatarUrl;
-    }
+    final user = index < _participants.length ? _participants[index] : null;
+    final showPhoto = PhotoVisibility.isGroupPhotoUnlocked(event.eventDate);
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColorsMinimal.primaryBackground,
-        border: Border.all(color: Colors.white, width: 2),
-      ),
-      child: ClipOval(
-        child: avatarUrl != null && avatarUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: avatarUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Icon(
-                  Icons.person_rounded,
-                  size: size * 0.5,
-                  color: AppColorsMinimal.textTertiary,
-                ),
-                errorWidget: (_, __, ___) => Icon(
-                  Icons.person_rounded,
-                  size: size * 0.5,
-                  color: AppColorsMinimal.textTertiary,
-                ),
-              )
-            : Icon(
-                Icons.person_rounded,
-                size: size * 0.5,
-                color: AppColorsMinimal.textTertiary,
-              ),
-      ),
+    return GeometricAvatar(
+      seed: user?.uid ?? 'user_$index',
+      photoUrl: user?.avatarUrl,
+      showPhoto: showPhoto,
+      size: size,
+      name: user?.name,
     );
   }
 

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/review_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/models/user_model.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 
 /// 評價畫面 — 晚餐後對同桌成員做互評
 ///
@@ -203,22 +203,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
       child: Row(
         children: [
           // Avatar
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppColorsMinimal.primaryBackground,
-            backgroundImage: user.avatarUrl != null
-                ? CachedNetworkImageProvider(user.avatarUrl!)
-                : null,
-            child: user.avatarUrl == null
-                ? Text(
-                    user.name.isNotEmpty ? user.name[0] : '?',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColorsMinimal.primary,
-                    ),
-                  )
-                : null,
+          GeometricAvatar(
+            seed: user.uid,
+            photoUrl: user.avatarUrl,
+            showPhoto: PhotoVisibility.isReviewPhotoVisible(),
+            size: 56,
+            name: user.name,
           ),
           const SizedBox(width: 14),
 

@@ -5,8 +5,7 @@ import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/skeleton_loading.dart';
-import 'package:chingu/utils/image_cache_manager.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 import 'package:intl/intl.dart';
 import 'package:chingu/models/dinner_group_model.dart';
 import 'package:chingu/providers/dinner_group_provider.dart';
@@ -323,34 +322,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF1E262C), // Dark circular background as fallback
-                        image: otherUser.avatarUrl != null
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(
-                                  otherUser.avatarUrl!,
-                                  cacheManager: ImageCacheManager().manager,
-                                ),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: otherUser.avatarUrl == null
-                          ? Center(
-                              child: Text(
-                                otherUser.name.isNotEmpty ? otherUser.name[0].toUpperCase() : '?',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          : null,
+                    GeometricAvatar(
+                      seed: otherUser.uid,
+                      photoUrl: otherUser.avatarUrl,
+                      showPhoto: PhotoVisibility.isDirectChatPhotoVisible(),
+                      size: 52,
+                      name: otherUser.name,
                     ),
                     // Status dot (Green for online, or brown based on some logic)
                     Positioned(
