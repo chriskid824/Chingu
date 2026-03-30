@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/screens/home/home_state.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 import 'package:chingu/models/dinner_group_model.dart';

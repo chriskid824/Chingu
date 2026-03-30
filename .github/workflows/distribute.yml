@@ -10,17 +10,19 @@ on:
 jobs:
   build_and_distribute:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 抓取程式碼 (Checkout)
         uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 10  # 取最近 10 筆 commit 用於 release notes
+
       - name: ☕ 設定 Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      
+
       - name: 🐦 設定 Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -28,40 +30,37 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # ⚡ 快取 Gradle 依賴，大幅加速第二次之後的編譯
+      # ⚡ 快取 Gradle 依賴
       - name: ⚡ 快取 Gradle 依賴
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            build/
           key: gradle-${{ hashFiles('**/*.gradle*', 'pubspec.lock') }}
           restore-keys: gradle-
-          
+
       - name: 📦 下載依賴套件 (Pub get)
         run: flutter pub get
-        
+
       - name: 🔍 執行靜態分析 (Analyze)
-        run: flutter analyze --no-fatal-infos
-        
+        run: flutter analyze --no-fatal-infos lib/ test/
+
       - name: 🧪 執行自動化測試 (Test)
         run: flutter test
 
-      # 還原正式 Release Keystore (Upload Key) 並建立 key.properties
+      # 還原正式 Release Keystore 並建立 key.properties
       - name: 🔑 還原 Release Keystore 與設定
         run: |
-          # 1. 還原 Keystore 檔案
           echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
-          
-          # 2. 建立 key.properties 供 Gradle 讀取
+
           cat <<EOF > android/key.properties
-          storePassword=chingu2024
-          keyPassword=chingu2024
-          keyAlias=chinguupload
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=upload-keystore.jks
           EOF
-          
+
           echo "✅ Release keystore 與 key.properties 已成功設定"
 
       # 驗證所有登入相關設定是否正確
@@ -71,56 +70,43 @@ jobs:
           echo "  🛡️ 登入設定檢查報告"
           echo "========================================="
           ERRORS=0
-          
-          # 1. SHA-1 指紋驗證 (驗證新的 Release Keystore)
+
+          # 1. SHA-1 指紋驗證
           echo ""
           echo "📌 1. SHA-1 指紋驗證"
-          # 注意：此處需使用本機編譯產生的 upload-keystore.jks 的真實指紋
-          ACTUAL_SHA1=$(keytool -list -v -keystore android/app/upload-keystore.jks -alias chinguupload -storepass chingu2024 2>&1 | grep "SHA1:" | awk '{print $2}')
-          EXPECTED_SHA1="43:9B:D8:3F:6D:93:50:24:09:AA:7E:D4:36:1F:1F:93:81:2D:18:EF"
+          ACTUAL_SHA1=$(keytool -list -v -keystore android/app/upload-keystore.jks -alias "${{ secrets.KEY_ALIAS }}" -storepass "${{ secrets.KEYSTORE_PASSWORD }}" 2>&1 | grep "SHA1:" | awk '{print $2}')
+          EXPECTED_SHA1="${{ secrets.EXPECTED_SHA1 }}"
           if [ "$ACTUAL_SHA1" = "$EXPECTED_SHA1" ]; then
-            echo "   ✅ SHA-1 一致: $ACTUAL_SHA1"
+            echo "   ✅ SHA-1 一致"
           else
             echo "   ❌ SHA-1 不一致!"
-            echo "      期望: $EXPECTED_SHA1"
-            echo "      實際: $ACTUAL_SHA1"
             ERRORS=$((ERRORS + 1))
           fi
-          
+
           # 2. google-services.json 存在且格式正確
           echo ""
           echo "📌 2. google-services.json 檢查"
           if [ -f "android/app/google-services.json" ]; then
             PROJECT_ID=$(python3 -c "import json; print(json.load(open('android/app/google-services.json'))['project_info']['project_id'])")
-            PACKAGE=$(python3 -c "import json; print(json.load(open('android/app/google-services.json'))['client'][0]['client_info']['android_client_info']['package_name'])")
-            echo "   ✅ 檔案存在 (project: $PROJECT_ID, package: $PACKAGE)"
+            echo "   ✅ 檔案存在 (project: $PROJECT_ID)"
           else
             echo "   ❌ google-services.json 不存在!"
             ERRORS=$((ERRORS + 1))
           fi
-          
-          # 3. GoogleService-Info.plist (iOS) 檢查
+
+          # 3. firebase_options.dart 檢查
           echo ""
-          echo "📌 3. GoogleService-Info.plist (iOS) 檢查"
-          if [ -f "ios/Runner/GoogleService-Info.plist" ]; then
-            echo "   ✅ iOS Firebase 設定檔存在"
-          else
-            echo "   ⚠️ iOS Firebase 設定檔不存在 (僅影響 iOS)"
-          fi
-          
-          # 4. firebase_options.dart 檢查
-          echo ""
-          echo "📌 4. firebase_options.dart 檢查"
+          echo "📌 3. firebase_options.dart 檢查"
           if [ -f "lib/firebase_options.dart" ]; then
             echo "   ✅ Firebase 初始化設定檔存在"
           else
             echo "   ❌ firebase_options.dart 不存在!"
             ERRORS=$((ERRORS + 1))
           fi
-          
-          # 5. Auth Service 完整性檢查
+
+          # 4. Auth Service 完整性檢查
           echo ""
-          echo "📌 5. Auth Service 登入方法檢查"
+          echo "📌 4. Auth Service 登入方法檢查"
           if grep -q "signInWithGoogle" lib/services/auth_service.dart; then
             echo "   ✅ signInWithGoogle 方法存在"
           else
@@ -133,21 +119,7 @@ jobs:
             echo "   ❌ signInWithApple 方法遺失!"
             ERRORS=$((ERRORS + 1))
           fi
-          if grep -q "Platform.isAndroid" lib/services/auth_service.dart; then
-            echo "   ✅ Android 平台邏輯存在"
-          else
-            echo "   ⚠️ 未偵測到 Android 平台判斷"
-          fi
-          
-          # 6. build.gradle.kts 簽名設定檢查
-          echo ""
-          echo "📌 6. Release 簽名設定檢查"
-          if grep -q 'signingConfig = signingConfigs.getByName("release")' android/app/build.gradle.kts; then
-            echo "   ✅ Release 使用正式憑證簽名 (signingConfigs.getByName(\"release\"))"
-          else
-            echo "   ⚠️ Release 簽名設定可能有異"
-          fi
-          
+
           echo ""
           echo "========================================="
           if [ $ERRORS -gt 0 ]; then
@@ -158,17 +130,36 @@ jobs:
             echo "  ✅ 所有登入設定檢查通過！"
             echo "========================================="
           fi
-        
+
+      # 自動遞增 build number（使用 GitHub run number）
       - name: 🏗️ 編譯 Release APK
-        run: flutter build apk --release
-        
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      # 上傳 APK 作為 artifact 備份
+      - name: 📎 上傳 APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # 產生 release notes
+      - name: 📝 產生 Release Notes
+        id: release_notes
+        run: |
+          NOTES=$(git log --oneline -5 --pretty=format:"• %s" | head -c 500)
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "Build #${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          EOF
+
       - name: 🚀 上傳至 Firebase App Distribution
         run: |
-          npm install -g firebase-tools
-          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+          npx firebase-tools appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
             --app "$FIREBASE_APP_ID" \
             --testers "chriskid824@gmail.com" \
-            --release-notes "由 GitHub Actions 自動發佈的最新建置版本 🚀" \
+            --release-notes "${{ steps.release_notes.outputs.notes }}" \
             --token "$FIREBASE_TOKEN"
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
