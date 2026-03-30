@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// 獨立的一場晚餐小組（固定6人一桌）
+/// 獨立的一場晚餐小組（5~7 人彈性一桌）
 class DinnerGroupModel {
   final String id;
   final String eventId; // 每週的系統活動 ID
   
-  // 參與者（固定6人）
+  // 參與者（5~7 人彈性）
   final List<String> participantIds; // 用戶 UID 列表
   
   // 餐廳資訊（透過 RestaurantModel 配對後寫入）
@@ -19,8 +19,8 @@ class DinnerGroupModel {
   
   // 群組專屬狀態 
   // 'pending' (剛分組)
-  // 'info_revealed' (週三解鎖同伴星座/產業/年齡層)
-  // 'location_revealed' (週四解鎖餐廳)
+  // 'info_revealed' (週二 18:00 解鎖同伴星座/產業/年齡段)
+  // 'location_revealed' (週三 17:00 解鎖餐廳)
   // 'completed' (已完食)
   final String status; 
   

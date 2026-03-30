@@ -11,9 +11,6 @@ class ChatMessageModel {
   final String type; // 'text', 'image', 'system'
   final DateTime timestamp;
   final List<String> readBy; // 已讀用戶 UID 列表
-  final bool isForwarded;
-  final String? originalSenderId;
-  final String? originalSenderName;
 
   ChatMessageModel({
     required this.id,
@@ -25,9 +22,6 @@ class ChatMessageModel {
     this.type = 'text',
     required this.timestamp,
     this.readBy = const [],
-    this.isForwarded = false,
-    this.originalSenderId,
-    this.originalSenderName,
   });
 
   /// 從 Firestore 文檔創建 ChatMessageModel
@@ -48,9 +42,6 @@ class ChatMessageModel {
       type: map['type'] ?? 'text',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       readBy: List<String>.from(map['readBy'] ?? []),
-      isForwarded: map['isForwarded'] ?? false,
-      originalSenderId: map['originalSenderId'],
-      originalSenderName: map['originalSenderName'],
     );
   }
 
@@ -65,9 +56,6 @@ class ChatMessageModel {
       'type': type,
       'timestamp': Timestamp.fromDate(timestamp),
       'readBy': readBy,
-      'isForwarded': isForwarded,
-      'originalSenderId': originalSenderId,
-      'originalSenderName': originalSenderName,
     };
   }
 
@@ -80,9 +68,6 @@ class ChatMessageModel {
   ChatMessageModel copyWith({
     String? message,
     List<String>? readBy,
-    bool? isForwarded,
-    String? originalSenderId,
-    String? originalSenderName,
   }) {
     return ChatMessageModel(
       id: id,
@@ -94,9 +79,6 @@ class ChatMessageModel {
       type: type,
       timestamp: timestamp,
       readBy: readBy ?? this.readBy,
-      isForwarded: isForwarded ?? this.isForwarded,
-      originalSenderId: originalSenderId ?? this.originalSenderId,
-      originalSenderName: originalSenderName ?? this.originalSenderName,
     );
   }
 }
@@ -104,7 +86,9 @@ class ChatMessageModel {
 /// 聊天室模型
 class ChatRoomModel {
   final String id;
+  final String type; // 'group'（同桌群聊）| 'direct'（雙向 👍 一對一）
   final String dinnerEventId;
+  final String? groupId; // group 類型：關聯的 DinnerGroup ID
   final List<String> participantIds;
   final Map<String, String> participantNames;
   final Map<String, String?> participantAvatars;
@@ -116,7 +100,9 @@ class ChatRoomModel {
 
   ChatRoomModel({
     required this.id,
+    this.type = 'direct',
     required this.dinnerEventId,
+    this.groupId,
     required this.participantIds,
     required this.participantNames,
     required this.participantAvatars,
@@ -137,7 +123,9 @@ class ChatRoomModel {
   factory ChatRoomModel.fromMap(Map<String, dynamic> map, String id) {
     return ChatRoomModel(
       id: id,
+      type: map['type'] ?? 'direct',
       dinnerEventId: map['dinnerEventId'] ?? '',
+      groupId: map['groupId'],
       participantIds: List<String>.from(map['participantIds'] ?? []),
       participantNames: Map<String, String>.from(map['participantNames'] ?? {}),
       participantAvatars: Map<String, String?>.from(map['participantAvatars'] ?? {}),
@@ -154,7 +142,9 @@ class ChatRoomModel {
   /// 轉換為 Map 以儲存到 Firestore
   Map<String, dynamic> toMap() {
     return {
+      'type': type,
       'dinnerEventId': dinnerEventId,
+      'groupId': groupId,
       'participantIds': participantIds,
       'participantNames': participantNames,
       'participantAvatars': participantAvatars,
@@ -174,6 +164,12 @@ class ChatRoomModel {
   }
 
   /// 複製並更新部分欄位
+  /// 是否為群組聊天
+  bool get isGroup => type == 'group';
+
+  /// 是否為一對一私訊
+  bool get isDirect => type == 'direct';
+
   ChatRoomModel copyWith({
     String? lastMessage,
     DateTime? lastMessageTime,
@@ -182,7 +178,9 @@ class ChatRoomModel {
   }) {
     return ChatRoomModel(
       id: id,
+      type: type,
       dinnerEventId: dinnerEventId,
+      groupId: groupId,
       participantIds: participantIds,
       participantNames: participantNames,
       participantAvatars: participantAvatars,

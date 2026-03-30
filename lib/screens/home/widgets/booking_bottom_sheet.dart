@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/subscription_provider.dart';
-import 'package:chingu/core/routes/app_router.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 class BookingBottomSheet extends StatefulWidget {
@@ -97,7 +96,9 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
       if (mounted) {
         if (e.code == 'permission-denied') {
           Navigator.pop(context);
-          Navigator.pushNamed(context, AppRoutes.paywall);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('目前無法報名，請稍後再試')),
+          );
         } else {
           // 翻譯常見錯誤碼為中文
           final friendlyMsg = _getFriendlyErrorMessage(e.code, e.message);

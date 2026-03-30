@@ -1,36 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// 晚餐評價模型 — 用於記錄晚餐後的互評
+/// 晚餐評價模型 — 用於記錄晚餐後的雙盲互評
 ///
-/// 每位參與者可以對同桌的其他人做「想再見面 / 不了」的評價。
-/// 雙方都選「想再見面」時，系統自動建立聊天室（Mutual Match）。
+/// 每位參與者對同桌的每一個人做 👍（想再聯絡）/ 👎（就到這吧）的評價。
+/// 雙方都給 👍 時，系統即時建立一對一聊天室（Mutual Match）。
+/// 72 小時未評價自動視為全部「跳過」。
 class DinnerReviewModel {
   final String id;
-  
+
   /// 評價者 UID
   final String reviewerId;
-  
+
   /// 被評價者 UID
   final String revieweeId;
-  
+
   /// 所屬晚餐群組 ID
   final String groupId;
-  
+
   /// 所屬活動 ID
   final String eventId;
-  
-  /// 是否想再見面
-  final bool wantToMeetAgain;
 
-  /// 體驗評分（1-5，emoji 滑桿）
-  final int? experienceRating;
+  /// 評價結果：'like'（👍）| 'dislike'（👎）| 'skipped'（72hr 逾期自動跳過）
+  final String result;
 
-  /// 體驗亮點（多選）
-  final List<String> experienceHighlights;
-
-  /// 下次偏好（選填，≥第 3 次才顯示）
-  final String? preferenceForNext;
-  
   /// 建立時間
   final DateTime createdAt;
 
@@ -40,24 +32,26 @@ class DinnerReviewModel {
     required this.revieweeId,
     required this.groupId,
     required this.eventId,
-    required this.wantToMeetAgain,
-    this.experienceRating,
-    this.experienceHighlights = const [],
-    this.preferenceForNext,
+    required this.result,
     required this.createdAt,
   });
 
   factory DinnerReviewModel.fromMap(Map<String, dynamic> map, String docId) {
+    // 向後相容：舊資料用 wantToMeetAgain bool，新資料用 result string
+    String result;
+    if (map.containsKey('result')) {
+      result = map['result'] ?? 'skipped';
+    } else {
+      result = (map['wantToMeetAgain'] == true) ? 'like' : 'dislike';
+    }
+
     return DinnerReviewModel(
       id: docId,
       reviewerId: map['reviewerId'] ?? '',
       revieweeId: map['revieweeId'] ?? '',
       groupId: map['groupId'] ?? '',
       eventId: map['eventId'] ?? '',
-      wantToMeetAgain: map['wantToMeetAgain'] ?? false,
-      experienceRating: map['experienceRating'] as int?,
-      experienceHighlights: List<String>.from(map['experienceHighlights'] ?? []),
-      preferenceForNext: map['preferenceForNext'] as String?,
+      result: result,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -68,10 +62,7 @@ class DinnerReviewModel {
       'revieweeId': revieweeId,
       'groupId': groupId,
       'eventId': eventId,
-      'wantToMeetAgain': wantToMeetAgain,
-      if (experienceRating != null) 'experienceRating': experienceRating,
-      if (experienceHighlights.isNotEmpty) 'experienceHighlights': experienceHighlights,
-      if (preferenceForNext != null) 'preferenceForNext': preferenceForNext,
+      'result': result,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -82,10 +73,7 @@ class DinnerReviewModel {
     String? revieweeId,
     String? groupId,
     String? eventId,
-    bool? wantToMeetAgain,
-    int? experienceRating,
-    List<String>? experienceHighlights,
-    String? preferenceForNext,
+    String? result,
     DateTime? createdAt,
   }) {
     return DinnerReviewModel(
@@ -94,11 +82,17 @@ class DinnerReviewModel {
       revieweeId: revieweeId ?? this.revieweeId,
       groupId: groupId ?? this.groupId,
       eventId: eventId ?? this.eventId,
-      wantToMeetAgain: wantToMeetAgain ?? this.wantToMeetAgain,
-      experienceRating: experienceRating ?? this.experienceRating,
-      experienceHighlights: experienceHighlights ?? this.experienceHighlights,
-      preferenceForNext: preferenceForNext ?? this.preferenceForNext,
+      result: result ?? this.result,
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  /// 是否為 👍
+  bool get isLike => result == 'like';
+
+  /// 是否為 👎
+  bool get isDislike => result == 'dislike';
+
+  /// 是否為逾期跳過
+  bool get isSkipped => result == 'skipped';
 }

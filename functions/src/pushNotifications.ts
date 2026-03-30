@@ -12,7 +12,7 @@ const messaging = admin.messaging();
  * 向聊天室中「非發送者」的成員推播通知。
  */
 export const onNewChatMessage = functions.firestore
-    .document("chatRooms/{chatRoomId}/messages/{messageId}")
+    .document("chat_rooms/{chatRoomId}/messages/{messageId}")
     .onCreate(async (snap, context) => {
         const { chatRoomId } = context.params;
         const messageData = snap.data();
@@ -25,7 +25,7 @@ export const onNewChatMessage = functions.firestore
 
         // 1. 取得聊天室資訊
         const chatRoomDoc = await db
-            .collection("chatRooms")
+            .collection("chat_rooms")
             .doc(chatRoomId)
             .get();
 
@@ -136,7 +136,7 @@ export const onNewChatMessage = functions.firestore
             unreadUpdates[`unreadCount.${uid}`] =
                 admin.firestore.FieldValue.increment(1) as unknown as number;
         }
-        await db.collection("chatRooms").doc(chatRoomId).update(unreadUpdates);
+        await db.collection("chat_rooms").doc(chatRoomId).update(unreadUpdates);
     });
 
 /**
@@ -147,27 +147,27 @@ export const onNewChatMessage = functions.firestore
  * 若是，建立聊天室並推播通知。
  */
 export const onMutualMatch = functions.firestore
-    .document("dinnerReviews/{reviewId}")
+    .document("dinner_reviews/{reviewId}")
     .onCreate(async (snap) => {
         const reviewData = snap.data();
         if (!reviewData) return;
 
         const reviewerId: string = reviewData.reviewerId;
         const revieweeId: string = reviewData.revieweeId;
-        const wantToMeetAgain: boolean = reviewData.wantToMeetAgain;
+        const result: string = reviewData.result || (reviewData.wantToMeetAgain ? "like" : "dislike");
         const eventId: string = reviewData.eventId;
         const groupId: string = reviewData.groupId;
 
         // 只處理正面評價
-        if (!wantToMeetAgain) return;
+        if (result !== "like") return;
 
         // 1. 檢查對方是否也給了正面評價
         const reverseReviewSnapshot = await db
-            .collection("dinnerReviews")
+            .collection("dinner_reviews")
             .where("reviewerId", "==", revieweeId)
             .where("revieweeId", "==", reviewerId)
             .where("eventId", "==", eventId)
-            .where("wantToMeetAgain", "==", true)
+            .where("result", "==", "like")
             .limit(1)
             .get();
 
@@ -185,7 +185,7 @@ export const onMutualMatch = functions.firestore
         const deterministicId = `match_${sortedUids[0]}_${sortedUids[1]}_${eventId}`;
 
         // 檢查是否已存在
-        const existingDoc = await db.collection("chatRooms").doc(deterministicId).get();
+        const existingDoc = await db.collection("chat_rooms").doc(deterministicId).get();
         if (existingDoc.exists) {
             console.log(
                 `[onMutualMatch] Chat room already exists: ${deterministicId}`
@@ -194,20 +194,22 @@ export const onMutualMatch = functions.firestore
         }
 
         // 3. 建立新聊天室（使用確定性 ID 防止重複）
-        const chatRoomRef = db.collection("chatRooms").doc(deterministicId);
+        const chatRoomRef = db.collection("chat_rooms").doc(deterministicId);
         await chatRoomRef.set({
-            participants: [reviewerId, revieweeId],
+            type: "direct",
+            participantIds: [reviewerId, revieweeId],
+            participantNames: {},
+            participantAvatars: {},
+            dinnerEventId: eventId,
+            groupId: groupId,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            lastMessage: "你們互相想再見面！開始聊天吧 💬",
+            lastMessage: "你們互相想再見面！開始聊天吧",
             lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
             lastMessageSenderId: "system",
             unreadCount: {
                 [reviewerId]: 1,
                 [revieweeId]: 1,
             },
-            source: "mutual_match",
-            eventId: eventId,
-            groupId: groupId,
         });
 
         console.log(

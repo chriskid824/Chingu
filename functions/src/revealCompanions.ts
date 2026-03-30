@@ -72,12 +72,12 @@ function getAgeGroup(age: number): string {
 }
 
 // ────────────────────────────────────────────────────────
-// revealCompanions: 每週三 10:00
-// 揭曉同伴匿名資訊 + 初始化出席確認
+// revealCompanions: 每週二 18:00
+// 揭曉同伴匿名資訊（星座/產業/年齡段）+ 初始化出席確認
 // ────────────────────────────────────────────────────────
 
 export const revealCompanions = functions.pubsub
-    .schedule("every wednesday 10:00")
+    .schedule("every tuesday 18:00")
     .timeZone("Asia/Taipei")
     .onRun(async () => {
         console.log("[revealCompanions] Revealing companion info...");
@@ -87,7 +87,7 @@ export const revealCompanions = functions.pubsub
         cutoff.setHours(cutoff.getHours() - 48);
 
         const groups = await db
-            .collection("dinnerGroups")
+            .collection("dinner_groups")
             .where("status", "==", "pending")
             .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(cutoff))
             .get();

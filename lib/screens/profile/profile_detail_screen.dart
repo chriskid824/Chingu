@@ -96,12 +96,6 @@ class ProfileDetailScreen extends StatelessWidget {
                                   onPressed: () => Navigator.pushNamed(context, AppRoutes.editProfile),
                                   tooltip: '編輯資料',
                                 ),
-                                // 預覽按鈕
-                                IconButton(
-                                  icon: const Icon(Icons.visibility_outlined, color: Colors.white),
-                                  onPressed: () => Navigator.pushNamed(context, AppRoutes.profilePreview),
-                                  tooltip: '預覽',
-                                ),
                               ],
                             ),
                           ],

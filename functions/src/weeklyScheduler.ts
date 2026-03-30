@@ -5,26 +5,41 @@ import { assignRestaurant } from "./restaurantAssignment";
 const db = admin.firestore();
 
 // ────────────────────────────────────────────────────────
-// 破冰問題資料庫
+// 破冰話題 — 從 Firestore /icebreaker_questions 動態載入
+// 分 3 層級：warmup(3題) → deep(4題) → soulful(3題)
 // ────────────────────────────────────────────────────────
-const ICEBREAKER_POOL = [
-    "如果可以和世界上任何人共進晚餐，你會選誰？",
-    "你最近看過最好看的電影/劇是什麼？",
-    "如果明天不用上班，你會做什麼？",
-    "你的 comfort food 是什麼？",
-    "你去過最喜歡的旅行目的地是哪裡？",
-    "小時候你想長大後做什麼？現在呢？",
-    "你最近學到的一件新事物是什麼？",
-    "形容今天心情的一首歌是什麼？",
-    "你覺得一個好的朋友最重要的特質是什麼？",
-    "你最引以為傲的一道自己煮的菜是什麼？",
-    "如果你可以瞬間學會一個新技能，你會選什麼？",
-    "你覺得台北最被低估的一家餐廳是？",
-];
 
-function pickIcebreakers(count: number): string[] {
-    const shuffled = [...ICEBREAKER_POOL].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
+async function pickIcebreakers(): Promise<string[]> {
+    const snapshot = await db
+        .collection("icebreaker_questions")
+        .where("isActive", "==", true)
+        .get();
+
+    if (snapshot.empty) {
+        console.warn("[pickIcebreakers] No icebreaker questions found in Firestore");
+        return [];
+    }
+
+    const byLevel: Record<string, string[]> = { warmup: [], deep: [], soulful: [] };
+    for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const level = data.level || "deep";
+        if (byLevel[level]) {
+            byLevel[level].push(doc.id);
+        }
+    }
+
+    // 隨機抽取：warmup 3 + deep 4 + soulful 3 = 10
+    const pick = (arr: string[], n: number) => {
+        const shuffled = [...arr].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, n);
+    };
+
+    return [
+        ...pick(byLevel.warmup, 3),
+        ...pick(byLevel.deep, 4),
+        ...pick(byLevel.soulful, 3),
+    ];
 }
 
 // ────────────────────────────────────────────────────────
@@ -34,19 +49,19 @@ function pickIcebreakers(count: number): string[] {
 /**
  * processWeeklyGrouping
  *
- * 排程觸發：每週二 21:00 台北時間
+ * 排程觸發：每週二 12:00 台北時間
  *
  * 流程：
  * 1. 找出本週四的所有 open 活動
  * 2. 按城市+區域分組報名者
- * 3. 每 6 人一桌（最少 4 人，不足的合併或取消）
+ * 3. 每 5~7 人一桌（最少 5 人，不足則取消保留下週）
  * 4. 為每桌指派餐廳
  * 5. 建立 DinnerGroup
  * 6. 更新 DinnerEvent 狀態為 closed
  * 7. 推播通知所有報名者
  */
 export const processWeeklyGrouping = functions.pubsub
-    .schedule("every tuesday 21:00")
+    .schedule("every tuesday 12:00")
     .timeZone("Asia/Taipei")
     .onRun(async () => {
         console.log("[processWeeklyGrouping] Starting weekly grouping...");
@@ -92,7 +107,7 @@ export const processWeeklyGrouping = functions.pubsub
                 `[processWeeklyGrouping] Event ${eventId}: ${signedUpUsers.length} users`
             );
 
-            if (signedUpUsers.length < 4) {
+            if (signedUpUsers.length < 5) {
                 // 人數不足：取消活動 + 通知
                 await handleInsufficientUsers(eventId, signedUpUsers);
                 totalCancelled++;
@@ -133,8 +148,8 @@ export const processWeeklyGrouping = functions.pubsub
 
             // 4. 為每桌建立 DinnerGroup + 指派餐廳
             for (const group of groups) {
-                const groupRef = db.collection("dinnerGroups").doc();
-                const icebreakers = pickIcebreakers(3);
+                const groupRef = db.collection("dinner_groups").doc();
+                const icebreakers = await pickIcebreakers();
 
                 await groupRef.set({
                     eventId: eventId,
@@ -259,7 +274,7 @@ function createSmartGroups(
 
         // 分離正式組和溢出
         for (const g of districtGroups) {
-            if (g.members.length >= 4) {
+            if (g.members.length >= 5) {
                 groups.push({
                     participantIds: g.members.map((m) => m.uid),
                     district: district,
@@ -271,11 +286,11 @@ function createSmartGroups(
     }
 
     // 溢出池處理
-    if (overflow.length >= 4) {
+    if (overflow.length >= 5) {
         shuffle(overflow);
         let i = 0;
-        while (i + 4 <= overflow.length) {
-            const take = Math.min(6, overflow.length - i);
+        while (i + 5 <= overflow.length) {
+            const take = Math.min(7, overflow.length - i);
             groups.push({
                 participantIds: overflow.slice(i, i + take).map((u) => u.uid),
                 district: overflow[i].district || "信義區",
@@ -293,7 +308,7 @@ function createSmartGroups(
         // 分散併入（不超過 8 人）
         for (const user of overflow) {
             const smallest = groups
-                .filter((g) => g.participantIds.length < 8)
+                .filter((g) => g.participantIds.length < 7)
                 .reduce(
                     (a, b) =>
                         a.participantIds.length <= b.participantIds.length
@@ -324,7 +339,7 @@ function genderBalancedSplit(
     const totalPeople = males.length + females.length + others.length;
     if (totalPeople === 0) return [];
 
-    const numTables = Math.ceil(totalPeople / 6);
+    const numTables = Math.ceil(totalPeople / 7);
     if (numTables === 0) return [];
 
     // 初始化空桌

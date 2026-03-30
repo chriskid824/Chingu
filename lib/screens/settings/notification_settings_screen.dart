@@ -11,8 +11,6 @@ class NotificationSettingsScreen extends StatefulWidget {
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
   // 預設值
   bool _pushEnabled = true;
-  bool _newMatch = true;
-  bool _matchSuccess = true;
   bool _newMessage = true;
   bool _eventReminder = true;
   bool _eventChange = true;
@@ -29,8 +27,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _pushEnabled = prefs.getBool('notif_push') ?? true;
-      _newMatch = prefs.getBool('notif_new_match') ?? true;
-      _matchSuccess = prefs.getBool('notif_match_success') ?? true;
       _newMessage = prefs.getBool('notif_new_message') ?? true;
       _eventReminder = prefs.getBool('notif_event_reminder') ?? true;
       _eventChange = prefs.getBool('notif_event_change') ?? true;
@@ -67,28 +63,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               setState(() => _pushEnabled = v);
               _saveSetting('notif_push', v);
             },
-            activeColor: theme.colorScheme.primary,
-          ),
-          const Divider(),
-          _buildSectionTitle(context, '配對通知'),
-          SwitchListTile(
-            title: const Text('新配對'),
-            subtitle: Text('當有人喜歡您時通知', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-            value: _newMatch && _pushEnabled,
-            onChanged: _pushEnabled ? (v) {
-              setState(() => _newMatch = v);
-              _saveSetting('notif_new_match', v);
-            } : null,
-            activeColor: theme.colorScheme.primary,
-          ),
-          SwitchListTile(
-            title: const Text('配對成功'),
-            subtitle: Text('當配對成功時通知', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-            value: _matchSuccess && _pushEnabled,
-            onChanged: _pushEnabled ? (v) {
-              setState(() => _matchSuccess = v);
-              _saveSetting('notif_match_success', v);
-            } : null,
             activeColor: theme.colorScheme.primary,
           ),
           const Divider(),

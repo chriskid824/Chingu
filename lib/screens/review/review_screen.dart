@@ -172,11 +172,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Widget _buildRevieweeCard(
     UserModel user,
-    bool? choice,
+    String? choice,
     ReviewProvider provider,
   ) {
-    final isYes = choice == true;
-    final isNo = choice == false;
+    final isYes = choice == 'like';
+    final isNo = choice == 'dislike';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -257,7 +257,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 label: '想見面',
                 isSelected: isYes,
                 selectedColor: AppColorsMinimal.error,
-                onTap: () => provider.setReviewChoice(user.uid, true),
+                onTap: () => provider.setReviewChoice(user.uid, 'like'),
               ),
               const SizedBox(width: 8),
               // 下次再說
@@ -266,7 +266,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 label: '下次',
                 isSelected: isNo,
                 selectedColor: AppColorsMinimal.textTertiary,
-                onTap: () => provider.setReviewChoice(user.uid, false),
+                onTap: () => provider.setReviewChoice(user.uid, 'dislike'),
               ),
             ],
           ),
@@ -400,33 +400,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     if (!mounted) return;
 
-    // Step 2: 顯示體驗回饋
-    final shouldContinue = await _showExperienceFeedback(provider, group);
-    if (!mounted || !shouldContinue) return;
-
-    // Step 3: 顯示結果
+    // 顯示結果
     if (provider.newChatRoomIds.isNotEmpty) {
       _showMutualMatchDialog(provider.newChatRoomIds.length);
     } else {
       _showCompletionDialog();
     }
-  }
-
-  Future<bool> _showExperienceFeedback(
-      ReviewProvider provider, Map<String, dynamic> group) async {
-    final dinnerCount = group['dinnerCount'] as int? ?? 1;
-
-    return await showModalBottomSheet<bool>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          isDismissible: false,
-          builder: (ctx) => _ExperienceFeedbackSheet(
-            provider: provider,
-            showPreference: dinnerCount >= 3,
-          ),
-        ) ??
-        true;
   }
 
   void _showMutualMatchDialog(int matchCount) {
@@ -577,230 +556,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── 體驗回饋 BottomSheet ───
-class _ExperienceFeedbackSheet extends StatelessWidget {
-  final ReviewProvider provider;
-  final bool showPreference;
-
-  const _ExperienceFeedbackSheet({
-    required this.provider,
-    required this.showPreference,
-  });
-
-  static const _emojis = ['😐', '🙂', '😊', '😄', '🤩'];
-  static const _highlights = [
-    '聊天很投緣',
-    '話題很有趣',
-    '氣氛很輕鬆',
-    '餐廳環境好',
-  ];
-  static const _preferences = [
-    '🔥 想認識完全不同領域的人',
-    '🤝 想認識有共同興趣的人',
-    '🎲 交給 Chingu 決定！',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: ListenableBuilder(
-        listenable: provider,
-        builder: (context, _) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Title
-            const Text(
-              '這次體驗如何？',
-              style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold,
-                color: AppColorsMinimal.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '你的回饋會幫助我們更懂你',
-              style: TextStyle(
-                fontSize: 13, color: AppColorsMinimal.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Emoji slider
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(5, (i) {
-                final selected = provider.experienceRating == i + 1;
-                return GestureDetector(
-                  onTap: () => provider.setExperienceRating(i + 1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColorsMinimal.primary.withValues(alpha: 0.12)
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: selected
-                            ? AppColorsMinimal.primary
-                            : AppColorsMinimal.divider,
-                        width: selected ? 2 : 1,
-                      ),
-                    ),
-                    child: Text(
-                      _emojis[i],
-                      style: TextStyle(fontSize: selected ? 32 : 24),
-                    ),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 24),
-
-            // Highlights
-            const Text(
-              '你最喜歡這次的什麼？',
-              style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600,
-                color: AppColorsMinimal.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _highlights.map((h) {
-                final selected = provider.experienceHighlights.contains(h);
-                return GestureDetector(
-                  onTap: () => provider.toggleHighlight(h),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColorsMinimal.primary
-                          : AppColorsMinimal.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: selected
-                            ? AppColorsMinimal.primary
-                            : AppColorsMinimal.divider,
-                      ),
-                    ),
-                    child: Text(
-                      h,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: selected ? Colors.white : AppColorsMinimal.textPrimary,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            // Preference (≥3 dinners)
-            if (showPreference) ...[
-              const SizedBox(height: 24),
-              const Text(
-                '下次想認識什麼樣的人？',
-                style: TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w600,
-                  color: AppColorsMinimal.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ..._preferences.map((p) {
-                final selected = provider.preferenceForNext == p;
-                return GestureDetector(
-                  onTap: () => provider.setPreferenceForNext(
-                      selected ? null : p),
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColorsMinimal.primaryBackground
-                          : AppColorsMinimal.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: selected
-                            ? AppColorsMinimal.primary
-                            : AppColorsMinimal.divider,
-                      ),
-                    ),
-                    child: Text(
-                      p,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: selected
-                            ? AppColorsMinimal.primary
-                            : AppColorsMinimal.textPrimary,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-
-            const SizedBox(height: 24),
-
-            // Submit
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: provider.experienceRating != null
-                    ? () => Navigator.pop(context, true)
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorsMinimal.primary,
-                  disabledBackgroundColor: AppColorsMinimal.surfaceDisabled,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  '送出回饋 ✨',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
       ),
     );
   }

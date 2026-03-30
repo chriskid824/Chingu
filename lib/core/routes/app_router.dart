@@ -14,7 +14,6 @@ import '../../screens/profile/profile_setup_screen.dart';
 import '../../screens/profile/interests_selection_screen.dart';
 import '../../screens/profile/preferences_screen.dart';
 import '../../screens/profile/profile_detail_screen.dart';
-import '../../screens/profile/profile_preview_screen.dart';
 // Onboarding
 import '../../screens/onboarding/location_screen.dart';
 import '../../screens/onboarding/notification_permission_screen.dart';
@@ -42,8 +41,6 @@ import '../../models/dinner_group_model.dart';
 // Events 模組
 import '../../screens/events/event_detail_screen.dart';
 import '../../models/dinner_event_model.dart';
-// 訂閱模組
-import '../../screens/subscription/paywall_screen.dart';
 
 /// 路由名稱常量
 class AppRoutes {
@@ -67,8 +64,6 @@ class AppRoutes {
   static const String location = '/location';
   static const String notificationPermission = '/notification-permission';
   static const String profileDetail = '/profile-detail';
-  static const String profilePreview = '/profile-preview';
-  
   // 聊天模組
   static const String chatList = '/chat-list';
   static const String chatDetail = '/chat-detail';
@@ -93,8 +88,6 @@ class AppRoutes {
   // Events 模組
   static const String eventDetail = '/event-detail';
   
-  // 訂閱模組
-  static const String paywall = '/paywall';
 }
 
 /// 應用程式路由配置
@@ -161,9 +154,6 @@ class AppRouter {
       case AppRoutes.profileDetail:
         return MaterialPageRoute(builder: (_) => const ProfileDetailScreen());
       
-      case AppRoutes.profilePreview:
-        return MaterialPageRoute(builder: (_) => const ProfilePreviewScreen());
-
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
         return MaterialPageRoute(builder: (_) => const ChatListScreen());
@@ -230,9 +220,6 @@ class AppRouter {
         final args = settings.arguments as Map<String, dynamic>;
         final group = args['group'] as DinnerGroupModel;
         return slideRoute(GroupDetailScreen(group: group));
-
-      case AppRoutes.paywall:
-        return slideRoute(const PaywallScreen());
 
       // ==================== Events 模組 ====================
       case AppRoutes.eventDetail:

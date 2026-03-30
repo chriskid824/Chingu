@@ -91,7 +91,7 @@ class UserModel {
       district: map['district'] ?? '',
       bio: map['bio'],
       avatarUrl: map['avatarUrl'],
-      diningPreference: map['diningPreference'] ?? map['preferredMatchType'] ?? 'any',
+      diningPreference: map['diningPreference'] ?? 'any',
       minAge: map['minAge'] ?? 18,
       maxAge: map['maxAge'] ?? 60,
       budgetRange: map['budgetRange'] ?? 1,

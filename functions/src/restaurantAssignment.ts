@@ -178,7 +178,7 @@ export async function assignRestaurant(
         restaurantImageUrl: chosenData.imageUrl || null,
     };
 
-    await db.collection("dinnerGroups").doc(groupId).update({
+    await db.collection("dinner_groups").doc(groupId).update({
         restaurantId: result.restaurantId,
         restaurantName: result.restaurantName,
         restaurantAddress: result.restaurantAddress,

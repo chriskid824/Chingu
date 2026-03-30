@@ -3,8 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// 系統主辦的每週大活動（無人數上限，報名後系統再切分 DinnerGroup）
 class DinnerEventModel {
   final String id; // e.g. "dinner_2026_03_25"
-  final DateTime eventDate; // 活動正式時間 (例如週三晚上8點)
-  final DateTime signupDeadline; // 報名截止時間 (例如週二中午12點)
+  final DateTime eventDate; // 活動正式時間（週四晚間）
+  final DateTime signupDeadline; // 報名截止時間（週二中午 12:00）
   
   // 狀態: 'open' (開放報名), 'matching' (配對中/已截止), 'revealed' (已解鎖資訊), 'completed' (已結束)
   final String status;

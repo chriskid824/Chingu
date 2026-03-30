@@ -69,7 +69,7 @@ class DatabaseSeeder {
       debugPrint('已清空測試用戶（保留當前用戶）');
       
       // 2. 清空其他集合
-      final collections = ['dinner_events', 'swipes', 'chat_rooms', 'messages'];
+      final collections = ['dinner_events', 'chat_rooms', 'messages'];
       
       for (var collection in collections) {
         final snapshot = await _firestore.collection(collection).get();
@@ -86,75 +86,6 @@ class DatabaseSeeder {
     }
   }
 
-  /// 生成互相喜歡的測試數據（用於測試配對成功流程）
-  /// 這會創建一些已經喜歡 test@gmail.com 的用戶
-  /// 當 test@gmail.com 喜歡他們時，就會觸發配對成功
-  Future<void> seedMutualLikes() async {
-    try {
-      debugPrint('開始生成互相喜歡的測試數據...');
-      
-      // 1. 查找測試用戶
-      final testUserQuery = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: 'test@gmail.com')
-          .limit(1)
-          .get();
-
-      if (testUserQuery.docs.isEmpty) {
-        debugPrint('❌ 找不到 test@gmail.com 用戶');
-        debugPrint('請確認您已經用 test@gmail.com 登入並完成個人資料設定');
-        return;
-      }
-
-      final testUserId = testUserQuery.docs.first.id;
-      final testUserData = testUserQuery.docs.first.data();
-      debugPrint('✓ 找到測試用戶: ${testUserData['name']} ($testUserId)');
-
-      // 2. 獲取其他用戶（排除測試用戶和已經滑過的）
-      final allUsersQuery = await _firestore
-          .collection('users')
-          .where(FieldPath.documentId, isNotEqualTo: testUserId)
-          .limit(10)
-          .get();
-
-      if (allUsersQuery.docs.isEmpty) {
-        debugPrint('❌ 沒有其他用戶可以配對');
-        debugPrint('請先運行 Seeder 生成測試用戶');
-        return;
-      }
-
-      // 3. 選擇 3 個用戶來喜歡測試用戶（但測試用戶還沒喜歡他們）
-      final candidateUsers = allUsersQuery.docs.take(3).toList();
-      debugPrint('\n準備創建 ${candidateUsers.length} 個單向喜歡記錄：');
-
-      for (var i = 0; i < candidateUsers.length; i++) {
-        final candidateId = candidateUsers[i].id;
-        final candidateData = candidateUsers[i].data();
-        final candidateName = candidateData['name'] ?? '用戶${i + 1}';
-
-        // 創建單向 swipe 記錄：對方喜歡測試用戶
-        await _firestore.collection('swipes').add({
-          'userId': candidateId,
-          'targetUserId': testUserId,
-          'isLike': true,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        debugPrint('  ${i + 1}. $candidateName (ID: ${candidateId.substring(0, 8)}...) 已喜歡你');
-      }
-
-      debugPrint('\n✅ 成功生成測試數據！');
-      debugPrint('\n📱 測試步驟：');
-      debugPrint('1. 進入配對頁面（Matching Screen）');
-      debugPrint('2. 找到以上用戶並滑動喜歡（或點擊愛心按鈕）');
-      debugPrint('3. 應該立即彈出 "It\'s a Match!" 慶祝畫面');
-      debugPrint('4. 並自動創建聊天室\n');
-    } catch (e, stackTrace) {
-      debugPrint('❌ 生成測試數據失敗: $e');
-      debugPrint('Stack trace: $stackTrace');
-      rethrow;
-    }
-  }
 
   Future<void> _seedUsers() async {
     final usersCollection = _firestore.collection('users');
@@ -357,24 +288,7 @@ class DatabaseSeeder {
         final matchUserData = matchUsers[i].data();
         final matchUserName = matchUserData['name'] ?? '用戶${i + 1}';
 
-        // 3.1 創建雙向 swipe 記錄
-        await _firestore.collection('swipes').add({
-          'userId': testUserId,
-          'targetUserId': matchUserId,
-          'isLike': true,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        await _firestore.collection('swipes').add({
-          'userId': matchUserId,
-          'targetUserId': testUserId,
-          'isLike': true,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        debugPrint('✓ 創建了與 $matchUserName 的配對記錄');
-
-        // 3.2 創建聊天室
+        // 3.1 創建聊天室（模擬雙向 👍 Match 後建立）
         final chatRoomId = _uuid.v4();
         final chatRoomData = {
           'id': chatRoomId,
@@ -944,9 +858,7 @@ class DatabaseSeeder {
         'revieweeId': myUid,
         'groupId': group4Id,
         'eventId': pastEvent1Id,
-        'wantToMeetAgain': true,
-        'experienceRating': 5,
-        'experienceHighlights': ['有趣的對話', '很有共鳴'],
+        'result': 'like',
         'createdAt': Timestamp.now(),
       });
       debugPrint('✓ Reverse review 已生成（Sophie → 你：想再見面）');
