@@ -29,7 +29,6 @@ import 'screens/settings/about_screen_demo.dart';
 import 'screens/common/loading_screen_demo.dart';
 import 'screens/common/error_screen_demo.dart';
 import 'screens/common/empty_state_screen_demo.dart';
-import 'screens/common/theme_comparison_demo.dart';
 
 void main() {
   runApp(const WidgetbookApp());
@@ -43,22 +42,6 @@ class WidgetbookApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Widgetbook.material(
       directories: [
-        // 🎨 主題對比
-        WidgetbookFolder(
-          name: '🎨 主題風格對比',
-          children: [
-            WidgetbookComponent(
-              name: '主題對比預覽',
-              useCases: [
-                WidgetbookUseCase(
-                  name: '橙色 vs 極簡紫色',
-                  builder: (context) => const ThemeComparisonDemo(),
-                ),
-              ],
-            ),
-          ],
-        ),
-
         // 🔐 認證模組
         WidgetbookFolder(
           name: '🔐 認證模組 (5個)',
