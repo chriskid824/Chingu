@@ -1,68 +1,77 @@
 # Chingu 自動化測試清單
 
-> 最後更新：2026-02-08 | 測試狀態：**✅ 127 通過** / **0 失敗**
+> 最後更新：2026-03-30 | 需重新驗證（Pivot 後部分測試可能失效）
 
 ---
 
-## 📊 測試覆蓋總覽
+## 測試覆蓋總覽
 
-| 類別 | 測試檔案數 | 測試數量 | 狀態 |
-|------|-----------|---------|------|
-| Services | 8 | 56 | ✅ All Pass |
-| Providers | 2 | 12 | ✅ All Pass |
-| Widgets | 3 | 27 | ✅ All Pass |
-| Screens | 1 | 17 | ✅ All Pass |
-| Utils | 1 | 9 | ✅ All Pass |
-| App | 1 | 6 | ✅ All Pass |
-| **總計** | **16** | **127** | ✅ |
+| 類別 | 測試檔案數 | 說明 |
+|------|-----------|------|
+| Services | 5 | auth, badge_count, dinner_event, report_block, two_factor_auth |
+| Providers | 1 | auth_provider |
+| Screens | 3 | login_screen, chat_detail_screen, main_screens |
+| Widgets | 1 | booking_bottom_sheet |
+| System | 1 | core_features (整合測試) |
+| App | 1 | widget_test |
+| **總計** | **12** | |
 
 ---
 
-## 📁 測試檔案清單
+## 測試檔案清單
 
-### Services (8 檔案)
-| 檔案 | 測試項目 |
-|------|----------|
-| `auth_service_test.dart` | 錯誤代碼映射、Email/密碼驗證、認證狀態 |
-| `report_block_service_test.dart` | 封鎖/解封、舉報、雙向封鎖檢查 |
-| `chat_service_test.dart` | 聊天室建立、訊息發送、已讀狀態 |
-| `dinner_event_service_test.dart` | 活動 CRUD、6人限制、狀態管理 |
-| `matching_service_test.dart` | 配對邏輯、Swipe 記錄、分數計算 |
-| `two_factor_auth_service_test.dart` | 驗證碼、2FA 開關、電話驗證 |
-| `notification_ab_service_test.dart` | A/B 測試群組分配 |
-| `badge_count_service_test.dart` | 徽章計數邏輯 |
+### Services (5 檔案)
+| 檔案 | 測試項目 | 備註 |
+|------|----------|------|
+| `auth_service_test.dart` | 錯誤代碼映射、Email/密碼驗證、認證狀態 | |
+| `badge_count_service_test.dart` | 徽章計數邏輯 | |
+| `dinner_event_service_test.dart` | 活動 CRUD、6 人限制、狀態管理 | |
+| `report_block_service_test.dart` | 封鎖/解封、舉報、雙向封鎖檢查 | |
+| `two_factor_auth_service_test.dart` | 驗證碼、2FA 開關 | 待確認是否仍需要 |
 
-### Providers (2 檔案)
+### Providers (1 檔案)
 | 檔案 | 測試項目 |
 |------|----------|
 | `auth_provider_test.dart` | AuthStatus、狀態管理、Profile 完成度 |
-| `dinner_event_provider_test.dart` | 活動狀態管理 |
 
-### Widgets (3 檔案)
+### Screens (3 檔案)
 | 檔案 | 測試項目 |
 |------|----------|
-| `avatar_badge_test.dart` | 頭像徽章顯示 |
-| `custom_bottom_sheet_test.dart` | 底部彈窗行為 |
-| `empty_state_test.dart` | 空狀態顯示 |
+| `login_screen_test.dart` | 登入頁面 Widget 測試 |
+| `chat_detail_screen_test.dart` | 聊天詳情頁 Widget 測試 |
+| `main_screens_test.dart` | 主頁面結構、導航 |
 
-### Screens (1 檔案)
+### Widgets (1 檔案)
 | 檔案 | 測試項目 |
 |------|----------|
-| `main_screens_test.dart` | 登入、註冊、設定、聊天、活動頁 Widget |
+| `booking_bottom_sheet_test.dart` | 報名底部彈窗行為 |
 
-### Utils (1 檔案)
+### System (1 檔案)
 | 檔案 | 測試項目 |
 |------|----------|
-| `ab_test_manager_test.dart` | A/B 測試管理器 |
+| `core_features_test.dart` | 核心功能整合測試 |
 
 ### App (1 檔案)
 | 檔案 | 測試項目 |
 |------|----------|
-| `widget_test.dart` | App 結構、主題、導航 |
+| `widget_test.dart` | App 結構、主題 |
 
 ---
 
-## 🚀 執行命令
+## 待新增測試（依 Pivot 需求）
+
+| 優先級 | 測試項目 | 說明 |
+|--------|---------|------|
+| P0 | 首頁 4 狀態切換 | 未報名/配對中/部分解鎖/完全解鎖 |
+| P0 | 雙盲評價邏輯 | 👍/👎 互評、72 小時逾期跳過 |
+| P0 | 聊天室權限閘門 | 僅雙向 👍 後才能看到聊天室 |
+| P1 | DinnerGroup 配對演算法 | 6 人分組、飲食偏好、性別平衡 |
+| P1 | 階段式解鎖邏輯 | 時間軸驅動的狀態轉換 |
+| P2 | 餐廳配對邏輯 | 飲食聯集 + 預算交集 + 地理中心 |
+
+---
+
+## 執行命令
 
 ```bash
 # 執行全部測試
@@ -71,8 +80,9 @@ flutter test
 # 詳細輸出
 flutter test --reporter expanded
 
-# 執行特定測試
+# 執行特定模組
 flutter test test/services/
+flutter test test/screens/
 
 # 覆蓋率報告
 flutter test --coverage
@@ -82,29 +92,28 @@ open coverage/html/index.html
 
 ---
 
-## 📁 測試目錄結構
+## 測試目錄結構
 
 ```
 test/
 ├── providers/
-│   ├── auth_provider_test.dart         ✅
-│   └── dinner_event_provider_test.dart ✅
-├── services/
-│   ├── auth_service_test.dart          ✅
-│   ├── report_block_service_test.dart  ✅
-│   ├── chat_service_test.dart          ✅
-│   ├── dinner_event_service_test.dart  ✅
-│   ├── matching_service_test.dart      ✅
-│   ├── two_factor_auth_service_test.dart ✅
-│   ├── notification_ab_service_test.dart ✅
-│   └── badge_count_service_test.dart   ✅
+│   └── auth_provider_test.dart
 ├── screens/
-│   └── main_screens_test.dart          ✅
-├── widgets/
-│   ├── avatar_badge_test.dart          ✅
-│   ├── custom_bottom_sheet_test.dart   ✅
-│   └── empty_state_test.dart           ✅
-├── utils/
-│   └── ab_test_manager_test.dart       ✅
-└── widget_test.dart                    ✅
+│   ├── auth/
+│   │   └── login_screen_test.dart
+│   ├── chat/
+│   │   └── chat_detail_screen_test.dart
+│   ├── home/
+│   │   └── widgets/
+│   │       └── booking_bottom_sheet_test.dart
+│   └── main_screens_test.dart
+├── services/
+│   ├── auth_service_test.dart
+│   ├── badge_count_service_test.dart
+│   ├── dinner_event_service_test.dart
+│   ├── report_block_service_test.dart
+│   └── two_factor_auth_service_test.dart
+├── system/
+│   └── core_features_test.dart
+└── widget_test.dart
 ```
