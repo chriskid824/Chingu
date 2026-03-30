@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
+import 'package:chingu/core/theme/app_animations.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/review_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -179,14 +181,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final isNo = choice == 'dislike';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceLG),
+      padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+        color: AppColorsMinimal.surface,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
         border: Border.all(
           color: isYes
-              ? AppColorsMinimal.primary
+              ? AppColorsMinimal.secondary
               : isNo
                   ? AppColorsMinimal.divider
                   : AppColorsMinimal.surfaceVariant,
@@ -195,122 +197,83 @@ class _ReviewScreenState extends State<ReviewScreen> {
         boxShadow: const [
           BoxShadow(
             color: AppColorsMinimal.shadowLight,
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            blurRadius: 20,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Avatar
-          GeometricAvatar(
-            seed: user.uid,
-            photoUrl: user.avatarUrl,
-            showPhoto: PhotoVisibility.isReviewPhotoVisible(),
-            size: 56,
-            name: user.name,
-          ),
-          const SizedBox(width: 14),
-
-          // Name & info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColorsMinimal.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${user.age} 歲 · ${user.job}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColorsMinimal.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Action buttons
+          // 人物資訊
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              // 想再見面
-              _buildChoiceButton(
-                icon: Icons.favorite_rounded,
-                label: '想見面',
-                isSelected: isYes,
-                selectedColor: AppColorsMinimal.error,
-                onTap: () => provider.setReviewChoice(user.uid, 'like'),
+              GeometricAvatar(
+                seed: user.uid,
+                photoUrl: user.avatarUrl,
+                showPhoto: PhotoVisibility.isReviewPhotoVisible(),
+                size: 64,
+                name: user.name,
               ),
-              const SizedBox(width: 8),
-              // 下次再說
-              _buildChoiceButton(
-                icon: Icons.close_rounded,
-                label: '下次',
-                isSelected: isNo,
-                selectedColor: AppColorsMinimal.textTertiary,
-                onTap: () => provider.setReviewChoice(user.uid, 'dislike'),
+              const SizedBox(width: AppColorsMinimal.spaceLG),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColorsMinimal.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: AppColorsMinimal.spaceXS),
+                    Text(
+                      '${user.age} 歲 · ${user.job}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColorsMinimal.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppColorsMinimal.spaceXL),
+
+          // 操作按鈕 — 兩個大圓形按鈕並排
+          Row(
+            children: [
+              Expanded(
+                child: _ReviewChoiceButton(
+                  icon: Icons.close_rounded,
+                  label: '下次再說',
+                  isSelected: isNo,
+                  baseColor: AppColorsMinimal.textTertiary,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    provider.setReviewChoice(user.uid, 'dislike');
+                  },
+                ),
+              ),
+              const SizedBox(width: AppColorsMinimal.spaceLG),
+              Expanded(
+                child: _ReviewChoiceButton(
+                  icon: Icons.favorite_rounded,
+                  label: '想再見面',
+                  isSelected: isYes,
+                  baseColor: AppColorsMinimal.secondary,
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    provider.setReviewChoice(user.uid, 'like');
+                  },
+                ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildChoiceButton({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required Color selectedColor,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
-        splashColor: selectedColor.withValues(alpha: 0.2),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? selectedColor.withValues(alpha: 0.1)
-                : Colors.transparent, // 讓底下 Material 的水波紋可以被看見
-            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
-            border: Border.all(
-              color: isSelected ? selectedColor : AppColorsMinimal.divider,
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isSelected ? selectedColor : AppColorsMinimal.textTertiary,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected ? selectedColor : AppColorsMinimal.textTertiary,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -546,6 +509,127 @@ class _ReviewScreenState extends State<ReviewScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 評價選擇按鈕 — 大尺寸 + 回彈動畫 + Haptic
+class _ReviewChoiceButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final Color baseColor;
+  final VoidCallback onTap;
+
+  const _ReviewChoiceButton({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.baseColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_ReviewChoiceButton> createState() => _ReviewChoiceButtonState();
+}
+
+class _ReviewChoiceButtonState extends State<_ReviewChoiceButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppAnimations.bounceButton,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: AppAnimations.bounceScale,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: AppAnimations.bounceCurve,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) => _controller.forward();
+
+  void _onTapUp(TapUpDetails _) {
+    _controller.reverse();
+    widget.onTap();
+  }
+
+  void _onTapCancel() => _controller.reverse();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.baseColor;
+    final isSelected = widget.isSelected;
+
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: AppColorsMinimal.spaceLG),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.12) : AppColorsMinimal.surfaceVariant,
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+            border: Border.all(
+              color: isSelected ? color : AppColorsMinimal.border,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: isSelected ? 52 : 44,
+                height: isSelected ? 52 : 44,
+                decoration: BoxDecoration(
+                  color: isSelected ? color : color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: isSelected ? 28 : 24,
+                  color: isSelected ? Colors.white : color,
+                ),
+              ),
+              const SizedBox(height: AppColorsMinimal.spaceSM),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? color : AppColorsMinimal.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

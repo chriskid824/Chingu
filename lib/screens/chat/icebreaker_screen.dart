@@ -1,64 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 
-class IcebreakerScreen extends StatelessWidget {
+/// 破冰話題包 — 卡片式 PageView，一次一題，左右滑動，字大
+class IcebreakerScreen extends StatefulWidget {
   const IcebreakerScreen({super.key});
 
-  // 莫蘭迪色系話題色 — 與 GeometricAvatar 同風格
-  static const _topicColors = [
-    Color(0xFF8B6F5E), // 莫蘭迪棕
-    Color(0xFF6B93B8), // 莫蘭迪藍
-    Color(0xFF8E7A6D), // 莫蘭迪駝
-    Color(0xFF7A9E7E), // 莫蘭迪綠
-    Color(0xFF9B7A6A), // 莫蘭迪磚
-    Color(0xFF6E8898), // 莫蘭迪灰藍
+  @override
+  State<IcebreakerScreen> createState() => _IcebreakerScreenState();
+}
+
+class _IcebreakerScreenState extends State<IcebreakerScreen> {
+  int _currentPage = 0;
+  late final PageController _pageController;
+
+  // 三層級話題 — 暖場 / 深入 / 靈魂拷問
+  static const _levels = [
+    _TopicLevel('暖場', AppColorsMinimal.info, Icons.wb_sunny_rounded),
+    _TopicLevel('深入', AppColorsMinimal.secondary, Icons.explore_rounded),
+    _TopicLevel('靈魂拷問', AppColorsMinimal.primary, Icons.psychology_rounded),
+  ];
+
+  // 莫蘭迪色卡片背景
+  static const _cardColors = [
+    Color(0xFF6B93B8), Color(0xFF8B6F5E), Color(0xFF7A9E7E), // 暖場
+    Color(0xFFA64A25), Color(0xFF8E7A6D), Color(0xFF6E8898), Color(0xFF9B7A6A), // 深入
+    Color(0xFF2E5364), Color(0xFF885520), Color(0xFF6B93B8), // 靈魂拷問
+  ];
+
+  final List<Map<String, dynamic>> _questions = [
+    // 暖場 (3 題)
+    {'q': '你最喜歡的餐廳是哪一家？\n為什麼？', 'level': 0},
+    {'q': '如果明天放假\n你會做什麼？', 'level': 0},
+    {'q': '你最近追的劇或看的書\n是什麼？', 'level': 0},
+    // 深入 (4 題)
+    {'q': '你做過最勇敢的\n一件事是什麼？', 'level': 1},
+    {'q': '有什麼事情是\n你一直想嘗試的？', 'level': 1},
+    {'q': '你覺得什麼樣的人\n最值得深交？', 'level': 1},
+    {'q': '如果可以回到過去\n你會改變什麼？', 'level': 1},
+    // 靈魂拷問 (3 題)
+    {'q': '你認為幸福的\n定義是什麼？', 'level': 2},
+    {'q': '你最害怕失去\n什麼？', 'level': 2},
+    {'q': '你希望別人\n怎麼記住你？', 'level': 2},
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.85);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> topics = [
-      {
-        'title': '美食探索',
-        'question': '你最喜歡的餐廳是哪一家？',
-        'icon': Icons.restaurant_menu_rounded,
-        'color': _topicColors[0],
-      },
-      {
-        'title': '旅遊經驗',
-        'question': '你去過最難忘的地方是哪裡？',
-        'icon': Icons.flight_takeoff_rounded,
-        'color': _topicColors[1],
-      },
-      {
-        'title': '電影音樂',
-        'question': '最近有看什麼好看的電影嗎？',
-        'icon': Icons.movie_filter_rounded,
-        'color': _topicColors[2],
-      },
-      {
-        'title': '興趣愛好',
-        'question': '你平常喜歡做什麼休閒活動？',
-        'icon': Icons.sports_esports_rounded,
-        'color': _topicColors[3],
-      },
-      {
-        'title': '工作生活',
-        'question': '你的工作中最有趣的部分是什麼？',
-        'icon': Icons.work_outline_rounded,
-        'color': _topicColors[4],
-      },
-      {
-        'title': '寵物',
-        'question': '你有養寵物嗎？',
-        'icon': Icons.pets_rounded,
-        'color': _topicColors[5],
-      },
-    ];
+    final level = _levels[_questions[_currentPage]['level'] as int];
 
     return Scaffold(
       backgroundColor: AppColorsMinimal.background,
       appBar: AppBar(
-        title: Text('破冰話題',
+        title: Text('破冰話題包',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: AppColorsMinimal.textPrimary,
@@ -67,151 +71,184 @@ class IcebreakerScreen extends StatelessWidget {
         foregroundColor: AppColorsMinimal.textPrimary,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: AppColorsMinimal.primaryGradient,
-                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColorsMinimal.primary.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+      body: Column(
+        children: [
+          const SizedBox(height: AppColorsMinimal.spaceLG),
+
+          // 層級指示
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              key: ValueKey(level.label),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppColorsMinimal.spaceLG,
+                vertical: AppColorsMinimal.spaceSM,
               ),
-              child: const Column(
+              decoration: BoxDecoration(
+                color: level.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusFull),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lightbulb_outline_rounded, size: 48, color: Colors.white),
-                  SizedBox(height: AppColorsMinimal.spaceLG),
+                  Icon(level.icon, size: 16, color: level.color),
+                  const SizedBox(width: 6),
                   Text(
-                    '需要一些話題靈感？',
-                    textAlign: TextAlign.center,
+                    level.label,
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: level.color,
                     ),
                   ),
-                  SizedBox(height: AppColorsMinimal.spaceSM),
-                  Text(
-                    '選擇一個話題開始對話',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: AppColorsMinimal.spaceXL),
-            Text(
-              '熱門話題',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColorsMinimal.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppColorsMinimal.spaceMD),
-            ...topics.map((topic) => _buildTopicCard(
-                  context,
-                  topic['icon'] as IconData,
-                  topic['title'] as String,
-                  topic['question'] as String,
-                  topic['color'] as Color,
-                )),
-            const SizedBox(height: AppColorsMinimal.spaceXL),
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: Icon(Icons.refresh_rounded, color: AppColorsMinimal.primary),
-              label: Text('換一批話題', style: TextStyle(color: AppColorsMinimal.primary)),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: AppColorsMinimal.spaceLG),
-                side: BorderSide(color: AppColorsMinimal.primary),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopicCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String question,
-    Color color,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceMD),
-      decoration: BoxDecoration(
-        color: AppColorsMinimal.surface,
-        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-        border: Border.all(color: AppColorsMinimal.surfaceVariant),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorsMinimal.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
           ),
+
+          const SizedBox(height: AppColorsMinimal.spaceLG),
+
+          // 進度指示
+          Text(
+            '${_currentPage + 1} / ${_questions.length}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColorsMinimal.textTertiary,
+            ),
+          ),
+
+          const SizedBox(height: AppColorsMinimal.spaceXL),
+
+          // PageView 話題卡片
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _questions.length,
+              onPageChanged: (index) => setState(() => _currentPage = index),
+              itemBuilder: (context, index) {
+                final question = _questions[index];
+                final cardColor = _cardColors[index % _cardColors.length];
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppColorsMinimal.spaceSM,
+                    vertical: AppColorsMinimal.spaceLG,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          cardColor,
+                          cardColor.withValues(alpha: 0.85),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cardColor.withValues(alpha: 0.3),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppColorsMinimal.space2XL),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // 題號
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: AppColorsMinimal.space2XL),
+
+                          // 問題文字 — 大字體，方便餐桌上大家看
+                          Text(
+                            question['q'] as String,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              height: 1.4,
+                            ),
+                          ),
+
+                          const Spacer(),
+
+                          // 左右滑動提示
+                          Text(
+                            '← 左右滑動切換 →',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // 底部進度條
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppColorsMinimal.space3XL,
+              vertical: AppColorsMinimal.spaceXL,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_questions.length, (i) {
+                final isActive = i == _currentPage;
+                final qLevel = _questions[i]['level'] as int;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: isActive ? 24 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? _levels[qLevel].color
+                        : AppColorsMinimal.surfaceVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                );
+              }),
+            ),
+          ),
+
+          const SizedBox(height: AppColorsMinimal.spaceLG),
         ],
       ),
-      child: InkWell(
-        onTap: () {},
-        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-        child: Padding(
-          padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppColorsMinimal.spaceMD),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: AppColorsMinimal.spaceLG),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColorsMinimal.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppColorsMinimal.spaceXS),
-                    Text(
-                      question,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColorsMinimal.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: AppColorsMinimal.textTertiary,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
+}
+
+class _TopicLevel {
+  final String label;
+  final Color color;
+  final IconData icon;
+  const _TopicLevel(this.label, this.color, this.icon);
 }

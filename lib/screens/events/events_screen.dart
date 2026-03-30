@@ -256,32 +256,51 @@ class _EventsScreenState extends State<EventsScreen> {
         if (pastEvents.isEmpty) {
           return SliverFillRemaining(
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.restaurant_rounded,
-                    size: 56,
-                    color: AppColorsMinimal.textTertiary.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '還沒有任何活動紀錄',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColorsMinimal.textSecondary,
+              child: Padding(
+                padding: const EdgeInsets.all(AppColorsMinimal.space2XL),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: AppColorsMinimal.surface,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColorsMinimal.shadowLight,
+                            blurRadius: 20,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.restaurant_rounded,
+                        size: 44,
+                        color: AppColorsMinimal.textTertiary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '報名你的第一場晚餐吧！',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColorsMinimal.textTertiary,
+                    const SizedBox(height: AppColorsMinimal.spaceXL),
+                    Text(
+                      '還沒有晚餐回憶',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColorsMinimal.textPrimary,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppColorsMinimal.spaceSM),
+                    Text(
+                      '報名你的第一場晚餐\n每一次相遇都是新的故事',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColorsMinimal.textSecondary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
