@@ -152,7 +152,7 @@ jobs:
           echo "Build #${{ github.run_number }}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
-          EOF
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 🚀 上傳至 Firebase App Distribution
         run: |
