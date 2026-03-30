@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_animations.dart';
 // 認證模組
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -101,20 +102,20 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const SplashScreen());
 
       case AppRoutes.debug:
-        return MaterialPageRoute(builder: (_) => const DebugScreen());
-      
+        return _chinguRoute(const DebugScreen());
+
       case AppRoutes.login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
-      
+        return _chinguRoute(const LoginScreen());
+
       case AppRoutes.register:
-        return MaterialPageRoute(builder: (_) => const RegisterScreen());
-      
+        return _chinguRoute(const RegisterScreen());
+
       case AppRoutes.forgotPassword:
-        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
-      
+        return _chinguRoute(const ForgotPasswordScreen());
+
       case AppRoutes.emailVerification:
-        return MaterialPageRoute(builder: (_) => const EmailVerificationScreen());
-      
+        return _chinguRoute(const EmailVerificationScreen());
+
       // ==================== 主導航 ====================
       case AppRoutes.mainNavigation:
         final args = settings.arguments;
@@ -122,111 +123,100 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => MainScreen(initialIndex: initialIndex),
         );
-      
+
       // ==================== 首頁子頁面 ====================
       case AppRoutes.home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
-      
-      case AppRoutes.notifications:
-        return MaterialPageRoute(builder: (_) => const NotificationsScreen());
-      
+        return _chinguRoute(const HomeScreen());
 
-      
+      case AppRoutes.notifications:
+        return _chinguRoute(const NotificationsScreen());
+
       // ==================== 個人資料流程 ====================
       case AppRoutes.profileSetup:
-        return MaterialPageRoute(builder: (_) => const ProfileSetupScreen());
-      
+        return _chinguRoute(const ProfileSetupScreen());
+
       case AppRoutes.interestsSelection:
-        return MaterialPageRoute(builder: (_) => const InterestsSelectionScreen());
-      
+        return _chinguRoute(const InterestsSelectionScreen());
+
       case AppRoutes.preferences:
-        return MaterialPageRoute(builder: (_) => const PreferencesScreen());
+        return _chinguRoute(const PreferencesScreen());
 
       case AppRoutes.editPreferences:
-        return MaterialPageRoute(builder: (_) => const EditPreferencesScreen());
+        return _chinguRoute(const EditPreferencesScreen());
 
       case AppRoutes.location:
-        return MaterialPageRoute(builder: (_) => const LocationScreen());
-      
+        return _chinguRoute(const LocationScreen());
+
       case AppRoutes.notificationPermission:
-        return MaterialPageRoute(builder: (_) => const NotificationPermissionScreen());
+        return _chinguRoute(const NotificationPermissionScreen());
 
       case AppRoutes.profileDetail:
-        return MaterialPageRoute(builder: (_) => const ProfileDetailScreen());
-      
+        return _chinguRoute(const ProfileDetailScreen());
+
       // ==================== 聊天模組 ====================
       case AppRoutes.chatList:
-        return MaterialPageRoute(builder: (_) => const ChatListScreen());
-      
+        return _chinguRoute(const ChatListScreen());
+
       case AppRoutes.chatDetail:
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) => const ChatDetailScreen(),
-        );
-      
+        return _chinguRoute(const ChatDetailScreen(), settings: settings);
+
       case AppRoutes.icebreaker:
-        return MaterialPageRoute(builder: (_) => const IcebreakerScreen());
+        return _chinguRoute(const IcebreakerScreen());
 
       case AppRoutes.review:
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) => const ReviewScreen(),
-        );
-      
+        return _chinguRoute(const ReviewScreen(), settings: settings);
 
       // ==================== 設定模組 ====================
       case AppRoutes.settings:
-        return MaterialPageRoute(builder: (_) => const SettingsScreen());
-      
+        return _chinguRoute(const SettingsScreen());
+
       case AppRoutes.editProfile:
-        return MaterialPageRoute(builder: (_) => const EditProfileScreen());
-      
+        return _chinguRoute(const EditProfileScreen());
+
       case AppRoutes.privacySettings:
-        return MaterialPageRoute(builder: (_) => const PrivacySettingsScreen());
-      
+        return _chinguRoute(const PrivacySettingsScreen());
+
       case AppRoutes.notificationSettings:
-        return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
-      
+        return _chinguRoute(const NotificationSettingsScreen());
+
       case AppRoutes.notificationPreview:
-        return MaterialPageRoute(builder: (_) => const NotificationPreviewScreen());
+        return _chinguRoute(const NotificationPreviewScreen());
 
       case AppRoutes.helpCenter:
-        return MaterialPageRoute(builder: (_) => const HelpCenterScreen());
+        return _chinguRoute(const HelpCenterScreen());
 
       case AppRoutes.about:
-        return MaterialPageRoute(builder: (_) => const AboutScreen());
+        return _chinguRoute(const AboutScreen());
 
       case AppRoutes.reportUser:
         final args = settings.arguments as Map<String, dynamic>?;
         if (args == null) {
-          return MaterialPageRoute(
-            builder: (_) => Scaffold(
+          return _chinguRoute(
+            const Scaffold(
               body: Center(child: Text('Error: Missing arguments for report user')),
             ),
           );
         }
-        return MaterialPageRoute(
-          builder: (_) => ReportUserScreen(
-            reportedUserId: args['reportedUserId'],
-            reportedUserName: args['reportedUserName'],
-          ),
-        );
+        return _chinguRoute(ReportUserScreen(
+          reportedUserId: args['reportedUserId'],
+          reportedUserName: args['reportedUserName'],
+        ));
 
       case AppRoutes.blockedUsers:
-        return MaterialPageRoute(builder: (_) => const BlockedUsersScreen());
+        return _chinguRoute(const BlockedUsersScreen());
 
       // ==================== 群組路由 ====================
       case AppRoutes.groupDetail:
         final args = settings.arguments as Map<String, dynamic>;
         final group = args['group'] as DinnerGroupModel;
-        return slideRoute(GroupDetailScreen(group: group));
+        return _chinguRoute(GroupDetailScreen(group: group));
 
       // ==================== Events 模組 ====================
       case AppRoutes.eventDetail:
         final args = settings.arguments as Map<String, dynamic>;
         final event = args['event'] as DinnerEventModel;
         final group = args['group'] as DinnerGroupModel?;
-        return slideRoute(EventDetailScreen(event: event, group: group));
+        return _chinguRoute(EventDetailScreen(event: event, group: group));
 
       // ==================== 404 ====================
       default:
@@ -240,33 +230,46 @@ class AppRouter {
     }
   }
   
-  /// 自定義頁面切換動畫（從右往左滑入）
-  static Route<dynamic> slideRoute(Widget page) {
+  /// 統一頁面轉場：右滑入 + 淡入，easeOutCubic 350ms
+  static Route<dynamic> _chinguRoute(Widget page, {RouteSettings? settings}) {
     return PageRouteBuilder(
+      settings: settings,
+      transitionDuration: AppAnimations.pageTransition,
+      reverseTransitionDuration: AppAnimations.pageTransition,
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(1.0, 0.0);
-        const end = Offset.zero;
-        const curve = Curves.easeInOut;
-        
-        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-        var offsetAnimation = animation.drive(tween);
-        
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: AppAnimations.pageTransitionCurve,
+        );
         return SlideTransition(
-          position: offsetAnimation,
-          child: child,
+          position: Tween(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(curvedAnimation),
+          child: FadeTransition(
+            opacity: curvedAnimation,
+            child: child,
+          ),
         );
       },
     );
   }
-  
+
+  /// 自定義頁面切換動畫（從右往左滑入）— 使用統一常量
+  static Route<dynamic> slideRoute(Widget page) => _chinguRoute(page);
+
   /// 淡入淡出動畫
   static Route<dynamic> fadeRoute(Widget page) {
     return PageRouteBuilder(
+      transitionDuration: AppAnimations.pageTransition,
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
-          opacity: animation,
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: AppAnimations.pageTransitionCurve,
+          ),
           child: child,
         );
       },

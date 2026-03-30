@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/models/dinner_group_model.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 
 /// 狀態 3：部分解鎖 — 飯友輪廓列表（幾何頭像 + 星座/產業/年齡段）
 class CompanionPreviewCard extends StatelessWidget {
@@ -12,28 +13,6 @@ class CompanionPreviewCard extends StatelessWidget {
     required this.group,
     required this.currentUserId,
   });
-
-  // 幾何頭像的顏色輪轉
-  static const _avatarColors = [
-    Color(0xFF6B93B8),
-    Color(0xFFD67756),
-    Color(0xFF8DB6C9),
-    Color(0xFFA64A25),
-    Color(0xFF4CAF50),
-    Color(0xFF885520),
-    Color(0xFFEF5350),
-  ];
-
-  // 幾何頭像圖標
-  static const _avatarIcons = [
-    Icons.hexagon_rounded,
-    Icons.change_history_rounded,
-    Icons.circle_outlined,
-    Icons.square_rounded,
-    Icons.pentagon_rounded,
-    Icons.star_rounded,
-    Icons.diamond_rounded,
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -156,8 +135,8 @@ class CompanionPreviewCard extends StatelessWidget {
 
   /// 有 companionPreviews 資料的飯友卡
   Widget _buildCompanionTile(int index, Map<String, dynamic> preview) {
-    final color = _avatarColors[index % _avatarColors.length];
-    final icon = _avatarIcons[index % _avatarIcons.length];
+    final color = GeometricAvatar.colors[index % GeometricAvatar.colors.length];
+    final icon = GeometricAvatar.icons[index % GeometricAvatar.icons.length];
     final zodiac = preview['zodiac'] as String? ?? '?';
     final industry = preview['industryCategory'] as String? ?? '?';
     final ageGroup = preview['ageGroup'] as String? ?? '?';
@@ -202,8 +181,8 @@ class CompanionPreviewCard extends StatelessWidget {
 
   /// 沒有 companionPreviews 時的 placeholder
   Widget _buildPlaceholderTile(int index) {
-    final color = _avatarColors[index % _avatarColors.length];
-    final icon = _avatarIcons[index % _avatarIcons.length];
+    final color = GeometricAvatar.colors[index % GeometricAvatar.colors.length];
+    final icon = GeometricAvatar.icons[index % GeometricAvatar.icons.length];
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceSM),

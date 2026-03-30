@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/chat_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -18,7 +19,7 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  int _currentTab = 1; // 0: 群組聚餐, 1: 1對1 聊天 (預設 1對1)
+  int _currentTab = 1;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -41,28 +42,27 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
+    final chinguTheme = Theme.of(context).extension<ChinguTheme>();
     final chatProvider = context.watch<ChatProvider>();
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Very light gray-blue background
-      appBar: _buildAppBar(theme, chinguTheme),
+      backgroundColor: AppColorsMinimal.background,
+      appBar: _buildAppBar(chinguTheme),
       body: SafeArea(
         child: chatProvider.isLoading
             ? const ChatListSkeleton()
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 8),
-                  _buildSegmentedControl(theme, chinguTheme),
-                  const SizedBox(height: 16),
-                  _buildSearchBar(theme, chinguTheme),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppColorsMinimal.spaceSM),
+                  _buildSegmentedControl(),
+                  const SizedBox(height: AppColorsMinimal.spaceLG),
+                  _buildSearchBar(),
+                  const SizedBox(height: AppColorsMinimal.spaceLG),
                   Expanded(
                     child: _currentTab == 0
-                        ? _buildGroupChatTab(context, theme, chinguTheme)
-                        : _buildOneOnOneTab(context, chatProvider, theme, chinguTheme),
+                        ? _buildGroupChatTab(context, chinguTheme)
+                        : _buildOneOnOneTab(context, chatProvider, chinguTheme),
                   ),
                 ],
               ),
@@ -70,19 +70,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ThemeData theme, ChinguTheme? chinguTheme) {
+  PreferredSizeWidget _buildAppBar(ChinguTheme? chinguTheme) {
     return AppBar(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: AppColorsMinimal.background,
       elevation: 0,
-      scrolledUnderElevation: 0, // Prevent color change on scroll
+      scrolledUnderElevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.menu, color: theme.colorScheme.primary),
-        onPressed: () {
-          Scaffold.of(context).openDrawer();
-        },
+        icon: Icon(Icons.menu, color: AppColorsMinimal.primary),
+        onPressed: () => Scaffold.of(context).openDrawer(),
       ),
       title: ShaderMask(
-        shaderCallback: (bounds) => (chinguTheme?.appBarTitleGradient ?? const LinearGradient(colors: [Color(0xFF6B93B8), Color(0xFF8DB6C9)])).createShader(bounds),
+        shaderCallback: (bounds) =>
+            (chinguTheme?.appBarTitleGradient ?? AppColorsMinimal.primaryGradient)
+                .createShader(bounds),
         child: const Text(
           'Chingu',
           style: TextStyle(
@@ -96,25 +96,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
       centerTitle: true,
       actions: [
         IconButton(
-          icon: Icon(Icons.notifications, color: theme.colorScheme.primary),
+          icon: Icon(Icons.notifications, color: AppColorsMinimal.primary),
           onPressed: () {},
         ),
       ],
     );
   }
 
-
-  Widget _buildSegmentedControl(ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildSegmentedControl() {
     return Container(
       height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceXL),
+      padding: const EdgeInsets.all(AppColorsMinimal.spaceXS),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: AppColorsMinimal.surface,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: AppColorsMinimal.shadowLight,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -122,14 +121,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       child: Row(
         children: [
-          _buildSegmentTab(0, '群組聚餐', theme),
-          _buildSegmentTab(1, '1對1 聊天', theme),
+          _buildSegmentTab(0, '群組聚餐'),
+          _buildSegmentTab(1, '1對1 聊天'),
         ],
       ),
     );
   }
 
-  Widget _buildSegmentTab(int index, String title, ThemeData theme) {
+  Widget _buildSegmentTab(int index, String title) {
     final isSelected = _currentTab == index;
     return Expanded(
       child: GestureDetector(
@@ -137,7 +136,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF0F4F8) : Colors.transparent,
+            color: isSelected ? AppColorsMinimal.surfaceVariant : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           alignment: Alignment.center,
@@ -145,7 +144,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             title,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? theme.colorScheme.primary : Colors.grey.shade500,
+              color: isSelected ? AppColorsMinimal.primary : AppColorsMinimal.textTertiary,
               fontSize: 15,
             ),
           ),
@@ -154,22 +153,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildSearchBar(ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildSearchBar() {
     return Container(
       height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceXL),
       decoration: BoxDecoration(
-        color: (chinguTheme?.surfaceVariant ?? theme.colorScheme.surfaceContainerHighest).withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(24),
+        color: AppColorsMinimal.surfaceVariant.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
       ),
       child: TextField(
         controller: _searchController,
         onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
-        style: TextStyle(fontSize: 15, color: theme.colorScheme.primary),
+        style: TextStyle(fontSize: 15, color: AppColorsMinimal.primary),
         decoration: InputDecoration(
           hintText: '搜尋聊天內容...',
-          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-          prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20),
+          hintStyle: TextStyle(color: AppColorsMinimal.textTertiary, fontSize: 15),
+          prefixIcon: Icon(Icons.search, color: AppColorsMinimal.textTertiary, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
@@ -177,29 +176,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildGroupChatTab(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildGroupChatTab(BuildContext context, ChinguTheme? chinguTheme) {
     return Consumer<DinnerGroupProvider>(
       builder: (context, groupProvider, _) {
-        if (groupProvider.isLoading) {
-          return const ChatListSkeleton();
-        }
+        if (groupProvider.isLoading) return const ChatListSkeleton();
 
         final groups = groupProvider.myGroups;
-        
-        // 過濾搜尋字串
         final filteredGroups = groups.where((group) {
           if (_searchQuery.isEmpty) return true;
-          final title = '晚餐聚會 🥘';
+          final title = '晚餐聚會';
           final restaurant = group.restaurantName ?? '';
           return title.toLowerCase().contains(_searchQuery) ||
-                 restaurant.toLowerCase().contains(_searchQuery);
+              restaurant.toLowerCase().contains(_searchQuery);
         }).toList();
 
         if (filteredGroups.isEmpty) {
           return Center(
             child: Text(
               '沒有找到群組聚餐',
-              style: TextStyle(color: theme.colorScheme.primary, fontSize: 16),
+              style: TextStyle(color: AppColorsMinimal.textSecondary, fontSize: 16),
             ),
           );
         }
@@ -212,11 +207,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
             }
           },
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppColorsMinimal.spaceXL,
+              vertical: AppColorsMinimal.spaceSM,
+            ),
             itemCount: filteredGroups.length,
             itemBuilder: (context, index) {
-              final group = filteredGroups[index];
-              return _buildDinnerGroupBanner(context, theme, chinguTheme, group);
+              return _buildDinnerGroupBanner(context, filteredGroups[index]);
             },
           ),
         );
@@ -224,22 +221,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildOneOnOneTab(
-      BuildContext context, ChatProvider chatProvider, ThemeData theme, ChinguTheme? chinguTheme) {
-    
-    // 過濾搜尋字串
+  Widget _buildOneOnOneTab(BuildContext context, ChatProvider chatProvider, ChinguTheme? chinguTheme) {
     final filteredRooms = chatProvider.chatRooms.where((room) {
       if (_searchQuery.isEmpty) return true;
       final otherUser = room['otherUser'];
       final lastMessage = room['lastMessage'] ?? '';
-      final name = otherUser.name.toLowerCase();
-      final msg = lastMessage.toLowerCase();
-      return name.contains(_searchQuery) || msg.contains(_searchQuery);
+      return otherUser.name.toLowerCase().contains(_searchQuery) ||
+          lastMessage.toLowerCase().contains(_searchQuery);
     }).toList();
 
-    if (filteredRooms.isEmpty) {
-      return _buildEmptyState(context, theme);
-    }
+    if (filteredRooms.isEmpty) return _buildEmptyState();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -249,18 +240,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
         }
       },
       child: ListView.builder(
-        padding: const EdgeInsets.only(left: 24, right: 24, top: 4, bottom: 80),
+        padding: EdgeInsets.only(
+          left: AppColorsMinimal.spaceXL,
+          right: AppColorsMinimal.spaceXL,
+          top: AppColorsMinimal.spaceXS,
+          bottom: 80,
+        ),
         itemCount: filteredRooms.length,
         itemBuilder: (context, index) {
-          final chatRoom = filteredRooms[index];
-          // 加上一些變化的時間文字作為假資料展示 (如果沒有真實資料)
-          return _buildChatCard(context, chatRoom, index, theme, chinguTheme);
+          return _buildChatCard(context, filteredRooms[index], index);
         },
       ),
     );
   }
 
-  Widget _buildChatCard(BuildContext context, Map<String, dynamic> chatRoom, int index, ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildChatCard(BuildContext context, Map<String, dynamic> chatRoom, int index) {
     final otherUser = chatRoom['otherUser'];
     final lastMessage = chatRoom['lastMessage'] ?? '';
     final lastMessageAt = chatRoom['lastMessageAt'];
@@ -277,8 +271,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       } else if (difference.inDays == 1) {
         timeText = '昨天';
       } else if (difference.inDays < 7) {
-        // e.g. 週二
-        final weekdays = ['週一','週二','週三','週四','週五','週六','週日'];
+        final weekdays = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
         timeText = weekdays[timestamp.weekday - 1];
       } else {
         timeText = DateFormat('MM/dd').format(timestamp);
@@ -288,13 +281,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final isSystemMessage = lastMessage == '這則訊息已被收回';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceMD),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
+        color: AppColorsMinimal.surface,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: AppColorsMinimal.shadowLight,
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -303,7 +296,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
           onTap: () {
             Navigator.pushNamed(
               context,
@@ -315,10 +308,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppColorsMinimal.spaceLG,
+              vertical: 14,
+            ),
             child: Row(
               children: [
-                // Avatar with online status badge
+                // Avatar with online status
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -329,7 +325,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       size: 52,
                       name: otherUser.name,
                     ),
-                    // Status dot (Green for online, or brown based on some logic)
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -337,16 +332,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: index % 3 == 0 ? (chinguTheme?.warning ?? Colors.orange) : (chinguTheme?.success ?? Colors.green), // Mock alternating status matching design
+                          color: AppColorsMinimal.success,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: AppColorsMinimal.surface, width: 2),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(width: 16),
-                
+                const SizedBox(width: AppColorsMinimal.spaceLG),
+
                 // Name & Message
                 Expanded(
                   child: Column(
@@ -357,17 +352,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: theme.colorScheme.onSurface,
+                          color: AppColorsMinimal.textPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppColorsMinimal.spaceXS),
                       Text(
                         lastMessage.isEmpty ? 'Say hi!' : lastMessage,
                         style: TextStyle(
                           fontSize: 14,
-                          color: isSystemMessage ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isSystemMessage
+                              ? AppColorsMinimal.textTertiary
+                              : AppColorsMinimal.textSecondary,
                           fontStyle: isSystemMessage ? FontStyle.italic : FontStyle.normal,
                         ),
                         maxLines: 1,
@@ -376,8 +373,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                
+                const SizedBox(width: AppColorsMinimal.spaceMD),
+
                 // Time & Unread Badge
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -386,7 +383,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       timeText,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: AppColorsMinimal.textTertiary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -396,7 +393,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
                         decoration: BoxDecoration(
-                          color: (chinguTheme?.badgeColor ?? Colors.orange), // Characteristic reddish brown
+                          color: AppColorsMinimal.secondary,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         alignment: Alignment.center,
@@ -410,8 +407,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                       )
-                    else 
-                      const SizedBox(height: 20), // Placeholder to keep alignment
+                    else
+                      const SizedBox(height: 20),
                   ],
                 ),
               ],
@@ -422,10 +419,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, ThemeData theme) {
+  Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppColorsMinimal.space2XL),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -433,26 +430,38 @@ class _ChatListScreenState extends State<ChatListScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColorsMinimal.surface,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: AppColorsMinimal.shadowLight,
                     blurRadius: 10,
                   )
                 ],
               ),
-              child: const Center(
-                child: Text('💬', style: TextStyle(fontSize: 40)),
+              child: Center(
+                child: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 40,
+                  color: AppColorsMinimal.textTertiary,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppColorsMinimal.spaceXL),
             Text(
-              '沒有找到對話',
+              '還沒有對話',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+                color: AppColorsMinimal.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppColorsMinimal.spaceSM),
+            Text(
+              '參加晚餐互評後即可開始聊天',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColorsMinimal.textSecondary,
               ),
             ),
           ],
@@ -461,20 +470,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  /// 晚餐群組互動卡片結構
-  Widget _buildDinnerGroupBanner(BuildContext context, ThemeData theme, ChinguTheme? chinguTheme, DinnerGroupModel group) {
+  Widget _buildDinnerGroupBanner(BuildContext context, DinnerGroupModel group) {
     final timeText = DateFormat('MM/dd').format(group.createdAt);
     final statusLabel = _groupStatusLabel(group.status);
-    final title = group.restaurantName ?? '晚餐聚會 🥘';
-    
+    final title = group.restaurantName ?? '晚餐聚會';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceMD),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
+        color: AppColorsMinimal.surface,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: AppColorsMinimal.shadowLight,
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -483,7 +491,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
           onTap: () {
             Navigator.pushNamed(
               context,
@@ -492,24 +500,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 參與者大頭貼堆疊
                 SizedBox(
                   width: 52,
                   height: 52,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Positioned(left: 0, child: _buildMiniAvatar('👨')),
+                      Positioned(left: 0, child: _buildMiniAvatar(0)),
                       if (group.participantIds.length > 1)
-                        Positioned(left: 15, child: _buildMiniAvatar('👧')),
+                        Positioned(left: 15, child: _buildMiniAvatar(1)),
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppColorsMinimal.spaceLG),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,16 +526,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
+                          color: AppColorsMinimal.textPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppColorsMinimal.spaceXS),
                       Text(
                         '$statusLabel · ${group.participantIds.length} 人同桌',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: AppColorsMinimal.textSecondary,
                           fontSize: 14,
                         ),
                         maxLines: 1,
@@ -537,17 +544,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      timeText,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                    ),
-                    const SizedBox(height: 6),
-                    const SizedBox(height: 20),
-                  ],
+                const SizedBox(width: AppColorsMinimal.spaceSM),
+                Text(
+                  timeText,
+                  style: TextStyle(fontSize: 12, color: AppColorsMinimal.textTertiary),
                 ),
               ],
             ),
@@ -559,25 +559,32 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   String _groupStatusLabel(String status) {
     switch (status) {
-      case 'pending': return '⏳ 等待揭曉';
-      case 'info_revealed': return '👀 同伴已揭曉';
-      case 'location_revealed': return '🎉 餐廳已揭曉';
-      case 'completed': return '✅ 已結束';
-      default: return status;
+      case 'pending':
+        return '等待揭曉';
+      case 'info_revealed':
+        return '同伴已揭曉';
+      case 'location_revealed':
+        return '餐廳已揭曉';
+      case 'completed':
+        return '已結束';
+      default:
+        return status;
     }
   }
 
-  Widget _buildMiniAvatar(String emoji) {
+  Widget _buildMiniAvatar(int index) {
+    final color = GeometricAvatar.colors[index % GeometricAvatar.colors.length];
+    final icon = GeometricAvatar.icons[index % GeometricAvatar.icons.length];
     return Container(
       width: 38,
       height: 38,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFEAF2F6),
-        border: Border.all(color: Colors.white, width: 2),
+        color: color.withValues(alpha: 0.15),
+        border: Border.all(color: AppColorsMinimal.surface, width: 2),
       ),
       child: Center(
-        child: Text(emoji, style: const TextStyle(fontSize: 18)),
+        child: Icon(icon, size: 18, color: color),
       ),
     );
   }

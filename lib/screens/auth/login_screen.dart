@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:chingu/core/theme/app_theme.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/widgets/gradient_button.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import '../../core/routes/app_router.dart';
@@ -129,33 +129,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final chinguTheme = theme.extension<ChinguTheme>();
-
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFD6EAF8),  // 頂部淡藍
-              Color(0xFFEBF5FB),  // 中段更淡
-              Colors.white,       // 底部白色
+              AppColorsMinimal.primaryBackground,
+              AppColorsMinimal.background,
+              AppColorsMinimal.surface,
             ],
-            stops: [0.0, 0.35, 0.6],
+            stops: const [0.0, 0.35, 0.6],
           ),
         ),
         child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 8),
-                
+                const SizedBox(height: AppColorsMinimal.spaceSM),
+
                 // Mascot
                 Center(
                   child: Image.asset(
@@ -165,66 +162,64 @@ class _LoginScreenState extends State<LoginScreen> {
                     fit: BoxFit.contain,
                   ),
                 ),
-                
-                const SizedBox(height: 24),
-                
+
+                const SizedBox(height: AppColorsMinimal.spaceXL),
+
                 // Title
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       '歡迎回來',
-                      style: theme.textTheme.displaySmall?.copyWith(
+                      style: TextStyle(
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        color: AppColorsMinimal.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text('👋', style: TextStyle(fontSize: 32)),
                   ],
                 ),
-                
-                const SizedBox(height: 8),
-                
+
+                const SizedBox(height: AppColorsMinimal.spaceSM),
+
                 Text(
                   '登入以繼續您的晚餐之旅',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColorsMinimal.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
-                const SizedBox(height: 32),
+
+                const SizedBox(height: AppColorsMinimal.space2XL),
 
                 // ===== Social Login =====
-                // Apple Sign-In（所有平台都顯示）
                 _buildAppleButton(),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppColorsMinimal.spaceMD),
+                _buildGoogleButton(),
 
-                // Google Sign-In
-                _buildGoogleButton(theme, chinguTheme),
+                const SizedBox(height: AppColorsMinimal.spaceXL),
 
-                const SizedBox(height: 24),
-                
                 // Divider
                 Row(
                   children: [
-                    Expanded(child: Divider(color: theme.dividerTheme.color)),
+                    Expanded(child: Divider(color: AppColorsMinimal.border)),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceLG),
                       child: Text(
                         '或使用電子郵件',
                         style: TextStyle(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: AppColorsMinimal.textTertiary,
                           fontSize: 13,
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: theme.dividerTheme.color)),
+                    Expanded(child: Divider(color: AppColorsMinimal.border)),
                   ],
                 ),
-                
-                const SizedBox(height: 24),
-                
+
+                const SizedBox(height: AppColorsMinimal.spaceXL),
+
                 // Email
                 TextFormField(
                   controller: _emailController,
@@ -235,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     hintText: 'your@email.com',
                     prefixIcon: Icon(
                       Icons.email_rounded,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: AppColorsMinimal.textTertiary,
                     ),
                   ),
                   validator: (value) {
@@ -248,9 +243,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                
-                const SizedBox(height: 16),
-                
+
+                const SizedBox(height: AppColorsMinimal.spaceLG),
+
                 // Password
                 TextFormField(
                   controller: _passwordController,
@@ -261,18 +256,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     hintText: '••••••••',
                     prefixIcon: Icon(
                       Icons.lock_rounded,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: AppColorsMinimal.textTertiary,
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: AppColorsMinimal.textTertiary,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: (value) {
@@ -285,25 +276,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                
+
                 // 登入錯誤提示
                 if (_loginError != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppColorsMinimal.spaceMD),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceMD, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
+                      color: AppColorsMinimal.errorLight,
+                      borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+                      border: Border.all(color: AppColorsMinimal.error.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                        const SizedBox(width: 8),
+                        Icon(Icons.error_outline, color: AppColorsMinimal.error, size: 20),
+                        const SizedBox(width: AppColorsMinimal.spaceSM),
                         Expanded(
                           child: Text(
                             _loginError!,
-                            style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                            style: TextStyle(color: AppColorsMinimal.error, fontSize: 13),
                           ),
                         ),
                       ],
@@ -311,8 +302,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
 
-                const SizedBox(height: 8),
-                
+                const SizedBox(height: AppColorsMinimal.spaceSM),
+
                 // Forgot password
                 Align(
                   alignment: Alignment.centerRight,
@@ -320,37 +311,35 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _isLoading ? null : () => Navigator.pushNamed(context, AppRoutes.forgotPassword),
                     child: Text(
                       '忘記密碼？',
-                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                      style: TextStyle(color: AppColorsMinimal.textTertiary),
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 24),
-                
+
+                const SizedBox(height: AppColorsMinimal.spaceXL),
+
                 // Login button
                 GradientButton(
                   text: _isLoading ? '登入中...' : '登入',
                   onPressed: _isLoading ? () {} : _handleLogin,
                 ),
 
+                const SizedBox(height: AppColorsMinimal.space2XL),
 
-                
-                const SizedBox(height: 32),
-                
                 // Register link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       '還沒有帳號？',
-                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                      style: TextStyle(color: AppColorsMinimal.textSecondary),
                     ),
                     TextButton(
                       onPressed: _isLoading ? null : () => Navigator.pushNamed(context, AppRoutes.register),
                       child: Text(
                         '立即註冊',
                         style: TextStyle(
-                          color: theme.colorScheme.primary,
+                          color: AppColorsMinimal.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -369,30 +358,30 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Apple 登入按鈕
   Widget _buildAppleButton() {
     return SizedBox(
-      height: 54,
+      height: 50,
       child: OutlinedButton(
         onPressed: _isLoading ? null : _handleAppleLogin,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          backgroundColor: AppColorsMinimal.surface,
+          foregroundColor: AppColorsMinimal.textPrimary,
           elevation: 0,
-          side: BorderSide(color: Colors.grey.shade300),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          side: BorderSide(color: AppColorsMinimal.border),
+          padding: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceLG),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 3),
-              child: Icon(Icons.apple, size: 30, color: Colors.black),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Icon(Icons.apple, size: 30, color: AppColorsMinimal.textPrimary),
             ),
-            const SizedBox(width: 8),
-            const Text(
+            const SizedBox(width: AppColorsMinimal.spaceSM),
+            Text(
               '使用 Apple 登入',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColorsMinimal.textPrimary),
             ),
           ],
         ),
@@ -401,37 +390,36 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Google 登入按鈕
-  Widget _buildGoogleButton(ThemeData theme, ChinguTheme? chinguTheme) {
+  Widget _buildGoogleButton() {
     return SizedBox(
-      height: 54,
+      height: 50,
       child: OutlinedButton(
         onPressed: _isLoading ? null : _handleGoogleLogin,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          backgroundColor: AppColorsMinimal.surface,
+          foregroundColor: AppColorsMinimal.textPrimary,
           elevation: 0,
-          side: BorderSide(color: Colors.grey.shade300),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          side: BorderSide(color: AppColorsMinimal.border),
+          padding: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceLG),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Google 官方彩色 logo
             Image.asset(
               'assets/images/google_logo.png',
               width: 30,
               height: 30,
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               '使用 Google 登入',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                color: AppColorsMinimal.textPrimary,
               ),
             ),
           ],

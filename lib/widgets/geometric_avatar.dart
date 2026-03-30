@@ -33,8 +33,8 @@ class GeometricAvatar extends StatelessWidget {
     this.name,
   });
 
-  // 7 種莫蘭迪色調
-  static const _colors = [
+  // 7 種莫蘭迪色調（公開供其他元件引用）
+  static const colors = [
     Color(0xFF6B93B8), // 藍灰
     Color(0xFFD67756), // 磚橘
     Color(0xFF8DB6C9), // 淺藍
@@ -44,8 +44,8 @@ class GeometricAvatar extends StatelessWidget {
     Color(0xFFB88A6B), // 駝色
   ];
 
-  // 7 種幾何圖形
-  static const _icons = [
+  // 7 種幾何圖形（公開供其他元件引用）
+  static const icons = [
     Icons.hexagon_rounded,
     Icons.change_history_rounded, // 三角
     Icons.circle_outlined,
@@ -82,8 +82,8 @@ class GeometricAvatar extends StatelessWidget {
 
   Widget _buildGeometricAvatar() {
     final index = _seedToIndex(seed);
-    final color = _colors[index % _colors.length];
-    final icon = _icons[index % _icons.length];
+    final color = colors[index % colors.length];
+    final icon = icons[index % icons.length];
 
     return Container(
       width: size,

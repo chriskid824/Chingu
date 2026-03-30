@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/models/dinner_group_model.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 import 'package:chingu/providers/dinner_group_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
@@ -407,15 +408,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
     );
   }
 
-  // 同伴卡片差異化顏色 — 使用莫蘭迪色系
-  static const _companionColors = [
-    Color(0xFF6B93B8), // 藍灰
-    Color(0xFFD67756), // 磚橘
-    Color(0xFF8DB6C9), // 淺藍
-    Color(0xFFA64A25), // 深磚橘
-    Color(0xFF7CAF7C), // 莫蘭迪綠
-    Color(0xFF885520), // 棕色
-  ];
+  // 同伴卡片差異化顏色 — 引用 GeometricAvatar 統一莫蘭迪色系
 
   Widget _buildCompanionCard(Map<String, dynamic> preview) {
     final zodiac = preview['zodiac'] ?? '尚未設定';
@@ -424,7 +417,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
     final interests = List<String>.from(preview['topInterests'] ?? []);
     final nationality = preview['nationality'] ?? '';
     final index = preview['index'] as int? ?? 0;
-    final cardColor = _companionColors[index % _companionColors.length];
+    final cardColor = GeometricAvatar.colors[index % GeometricAvatar.colors.length];
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceMD),

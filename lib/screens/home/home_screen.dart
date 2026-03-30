@@ -8,6 +8,7 @@ import 'package:chingu/screens/home/widgets/companion_preview_card.dart';
 import 'package:chingu/screens/home/widgets/restaurant_reveal_card.dart';
 import 'package:chingu/screens/home/widgets/pending_review_card.dart';
 import 'package:chingu/widgets/skeleton_loading.dart';
+import 'package:chingu/widgets/appear_animation.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
@@ -101,26 +102,47 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppColorsMinimal.spaceSM),
 
                   // ─── Zone 1: 問候區 ───
-                  _buildGreetingSection(),
+                  AppearAnimation(
+                    child: _buildGreetingSection(),
+                  ),
 
                   const SizedBox(height: AppColorsMinimal.spaceXL),
 
                   // ─── Zone 2: 主活動卡片（5 狀態切換）───
-                  _buildSectionTitle('本週晚餐'),
-                  const SizedBox(height: AppColorsMinimal.spaceMD),
-                  _buildMainActivityCard(),
+                  AppearAnimation(
+                    delay: const Duration(milliseconds: 100),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('本週晚餐'),
+                        const SizedBox(height: AppColorsMinimal.spaceMD),
+                        _buildMainActivityCard(),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: AppColorsMinimal.space2XL),
 
                   // ─── Zone 2.5: 我的群組 ───
-                  _buildMyGroupsSection(),
+                  AppearAnimation(
+                    delay: const Duration(milliseconds: 200),
+                    child: _buildMyGroupsSection(),
+                  ),
 
                   const SizedBox(height: AppColorsMinimal.space2XL),
 
                   // ─── Zone 3: 個人統計快捷卡 ───
-                  _buildSectionTitle('你的旅程'),
-                  const SizedBox(height: AppColorsMinimal.spaceMD),
-                  _buildStatsRow(),
+                  AppearAnimation(
+                    delay: const Duration(milliseconds: 300),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('你的旅程'),
+                        const SizedBox(height: AppColorsMinimal.spaceMD),
+                        _buildStatsRow(),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: AppColorsMinimal.space3XL),
                 ],

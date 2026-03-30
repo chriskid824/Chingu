@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/subscription_provider.dart';
@@ -55,7 +56,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('您已報名此日期，請選擇其他日期'),
-            backgroundColor: Colors.orange.shade700,
+            backgroundColor: AppColorsMinimal.warning,
           ),
         );
       }
@@ -105,7 +106,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(friendlyMsg),
-              backgroundColor: Colors.red.shade700,
+              backgroundColor: AppColorsMinimal.error,
             ),
           );
         }
@@ -115,7 +116,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('網路連線異常，請檢查網路後重試'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: AppColorsMinimal.error,
           ),
         );
       }
@@ -137,17 +138,18 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final provider = context.read<DinnerEventProvider>();
     final allDates = provider.getThursdayDates();
     final bookableDates = provider.getBookableDates();
     final reachedLimit = !provider.canBookMore;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColorsMinimal.background,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppColorsMinimal.radiusLG),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -157,38 +159,46 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
             child: Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: AppColorsMinimal.surfaceVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppColorsMinimal.spaceXL),
           Text('預約晚餐',
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
-          
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: AppColorsMinimal.textPrimary,
+            )),
+          const SizedBox(height: AppColorsMinimal.spaceXL),
+
           // 日期選擇
           Text('選擇日期 (每週四)',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColorsMinimal.textPrimary,
+            )),
+          const SizedBox(height: AppColorsMinimal.spaceMD),
 
           // 報名上限提示
           if (reachedLimit)
             Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(AppColorsMinimal.spaceMD),
+              margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceMD),
               decoration: BoxDecoration(
-                color: theme.colorScheme.error.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                color: AppColorsMinimal.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: theme.colorScheme.error, size: 18),
-                  const SizedBox(width: 8),
+                  Icon(Icons.info_outline, color: AppColorsMinimal.error, size: 18),
+                  const SizedBox(width: AppColorsMinimal.spaceSM),
                   Expanded(
                     child: Text(
                       '最多同時報名 ${DinnerEventProvider.maxActiveBookings} 場，完成或取消後可再報名',
-                      style: TextStyle(fontSize: 13, color: theme.colorScheme.error),
+                      style: TextStyle(fontSize: 13, color: AppColorsMinimal.error),
                     ),
                   ),
                 ],
@@ -205,7 +215,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
               final isExpired = !isBookable && !isBooked;
               final isSelected = _selectedDate == date;
               final canSelect = isBookable && !isBooked && !reachedLimit;
-              
+
               final label = _getDateLabel(date, allDates);
               final dateStr = DateFormat('MM/dd').format(date);
 
@@ -213,27 +223,27 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                 child: GestureDetector(
                   onTap: canSelect ? () => setState(() => _selectedDate = date) : null,
                   child: Container(
-                    margin: EdgeInsets.only(right: idx < allDates.length - 1 ? 8 : 0),
+                    margin: EdgeInsets.only(right: idx < allDates.length - 1 ? AppColorsMinimal.spaceSM : 0),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: isBooked
-                          ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                          ? AppColorsMinimal.primary.withValues(alpha: 0.1)
                           : isSelected
-                              ? theme.colorScheme.primary
-                              : theme.cardColor,
-                      borderRadius: BorderRadius.circular(12),
+                              ? AppColorsMinimal.primary
+                              : AppColorsMinimal.surface,
+                      borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
                       border: Border.all(
                         color: isBooked
-                            ? theme.colorScheme.primary
+                            ? AppColorsMinimal.primary
                             : isSelected
-                                ? theme.colorScheme.primary
+                                ? AppColorsMinimal.primary
                                 : isExpired || reachedLimit
-                                    ? Colors.grey[300]!
-                                    : Colors.grey[400]!,
+                                    ? AppColorsMinimal.border
+                                    : AppColorsMinimal.textTertiary,
                       ),
                       boxShadow: isSelected && canSelect
                           ? [BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                              color: AppColorsMinimal.primary.withValues(alpha: 0.3),
                               blurRadius: 8, offset: const Offset(0, 4))]
                           : null,
                     ),
@@ -243,36 +253,36 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                           label,
                           style: TextStyle(
                             color: isBooked
-                                ? theme.colorScheme.primary
+                                ? AppColorsMinimal.primary
                                 : isSelected
-                                    ? Colors.white
+                                    ? AppColorsMinimal.textInverse
                                     : isExpired || reachedLimit
-                                        ? Colors.grey
-                                        : theme.colorScheme.onSurface,
+                                        ? AppColorsMinimal.textTertiary
+                                        : AppColorsMinimal.textPrimary,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppColorsMinimal.spaceXS),
                         Text(
                           dateStr,
                           style: TextStyle(
                             color: isBooked
-                                ? theme.colorScheme.primary.withValues(alpha: 0.7)
+                                ? AppColorsMinimal.primary.withValues(alpha: 0.7)
                                 : isSelected
-                                    ? Colors.white.withValues(alpha: 0.9)
-                                    : Colors.grey,
+                                    ? AppColorsMinimal.textInverse.withValues(alpha: 0.9)
+                                    : AppColorsMinimal.textSecondary,
                             fontSize: 13,
                           ),
                         ),
                         if (isBooked) ...[
-                          const SizedBox(height: 4),
-                          Text('已報名 ✅',
-                            style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: AppColorsMinimal.spaceXS),
+                          Text('已報名',
+                            style: TextStyle(fontSize: 11, color: AppColorsMinimal.primary, fontWeight: FontWeight.w600)),
                         ],
                         if (isExpired && !isBooked) ...[
-                          const SizedBox(height: 4),
-                          const Text('已截止', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          const SizedBox(height: AppColorsMinimal.spaceXS),
+                          Text('已截止', style: TextStyle(fontSize: 11, color: AppColorsMinimal.textTertiary)),
                         ],
                       ],
                     ),
@@ -281,23 +291,27 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
               );
             }).toList(),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // 地點選擇（2 個 Dropdown）
           Text('用餐地點',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColorsMinimal.textPrimary,
+            )),
+          const SizedBox(height: AppColorsMinimal.spaceMD),
           Row(
             children: [
               // 城市 Dropdown
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceMD),
                   decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
+                    color: AppColorsMinimal.surface,
+                    borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+                    border: Border.all(color: AppColorsMinimal.border),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -321,15 +335,15 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppColorsMinimal.spaceMD),
               // 地區 Dropdown
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: AppColorsMinimal.spaceMD),
                   decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
+                    color: AppColorsMinimal.surface,
+                    borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+                    border: Border.all(color: AppColorsMinimal.border),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -345,13 +359,13 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                               Text(
                                 district,
                                 style: TextStyle(
-                                  color: isEnabled ? null : Colors.grey,
+                                  color: isEnabled ? AppColorsMinimal.textPrimary : AppColorsMinimal.textTertiary,
                                 ),
                               ),
                               if (!isEnabled)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 8),
-                                  child: Icon(Icons.lock, size: 12, color: Colors.grey),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: AppColorsMinimal.spaceSM),
+                                  child: Icon(Icons.lock, size: 12, color: AppColorsMinimal.textTertiary),
                                 ),
                             ],
                           ),
@@ -368,7 +382,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
 
           // 用餐說明
@@ -376,36 +390,36 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColorsMinimal.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
             ),
             child: Column(
               children: [
                 Row(
                   children: [
-                    Icon(Icons.payments_rounded, size: 16, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
+                    Icon(Icons.payments_rounded, size: 16, color: AppColorsMinimal.primary),
+                    const SizedBox(width: AppColorsMinimal.spaceSM),
                     Expanded(
                       child: Text('餐費各付各的（Go Dutch），App 僅負責配對',
-                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                        style: TextStyle(fontSize: 12, color: AppColorsMinimal.textSecondary)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppColorsMinimal.spaceSM),
                 Row(
                   children: [
-                    Icon(Icons.auto_awesome_rounded, size: 16, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
+                    Icon(Icons.auto_awesome_rounded, size: 16, color: AppColorsMinimal.primary),
+                    const SizedBox(width: AppColorsMinimal.spaceSM),
                     Expanded(
-                      child: Text('🧠 智能配對 · 👫 性別平衡 · 🔒 匿名保護',
-                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                      child: Text('智能配對 · 性別平衡 · 匿名保護',
+                        style: TextStyle(fontSize: 12, color: AppColorsMinimal.textSecondary)),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppColorsMinimal.spaceLG),
 
           // 確認按鈕
           SizedBox(
@@ -416,9 +430,11 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                   ? null
                   : _handleBooking,
               style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: AppColorsMinimal.primary,
+                foregroundColor: AppColorsMinimal.textInverse,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+                ),
                 elevation: 0,
               ),
               child: _isBooking
@@ -428,7 +444,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppColorsMinimal.spaceLG),
         ],
       ),
     );
