@@ -166,3 +166,60 @@ export function getNotificationCopy(
 
     return { title, body };
 }
+
+/**
+ * 簡單的字符串哈希函數
+ */
+function getHash(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * 為用戶分配變體 (確定性分配)
+ * @param userId 用戶 ID
+ * @param testId 測試 ID
+ */
+export function assignVariant(userId: string, testId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || test.variants.length === 0) {
+        return 'control';
+    }
+
+    // 使用 userId 和 testId 組合進行哈希,確保不同測試分配不同
+    const hash = getHash(`${userId}_${testId}`);
+    const index = hash % test.variants.length;
+
+    return test.variants[index].variantId;
+}
+
+/**
+ * 獲取用戶的通知文案 (自動分配變體)
+ * @param userId 用戶 ID
+ * @param notificationType 通知類型
+ * @param params 文案替換參數
+ */
+export function getUserNotificationContent(
+    userId: string,
+    notificationType: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string } {
+    // 查找對應類型的測試
+    const test = allNotificationTests.find((t) => t.notificationType === notificationType);
+
+    // 如果沒有測試,返回空值 (調用者應處理 fallback)
+    if (!test) {
+        console.warn(`No A/B test found for notification type: ${notificationType}`);
+        return { title: '', body: '', variantId: '' };
+    }
+
+    const variantId = assignVariant(userId, test.testId);
+    const content = getNotificationCopy(test.testId, variantId, params);
+
+    return { ...content, variantId };
+}
