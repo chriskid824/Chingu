@@ -92,11 +92,12 @@ class RichNotificationService {
         final Map<String, dynamic> data = json.decode(response.payload!);
         final String? actionType = data['actionType'];
         final String? actionData = data['actionData'];
+        final String? deeplink = data['deeplink'];
 
         // 如果是點擊按鈕，actionId 會是按鈕的 ID
         final String? actionId = response.actionId;
 
-        _handleNavigation(actionType, actionData, actionId);
+        _handleNavigation(actionType, actionData, actionId, deeplink);
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
       }
@@ -104,7 +105,7 @@ class RichNotificationService {
   }
 
   /// 處理導航邏輯
-  void _handleNavigation(String? actionType, String? actionData, String? actionId) {
+  void _handleNavigation(String? actionType, String? actionData, String? actionId, String? deeplink) {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -112,6 +113,12 @@ class RichNotificationService {
     if (actionId != null && actionId != 'default') {
       _performAction(actionId, actionData, navigator);
       return;
+    }
+
+    // 處理 Deep Link
+    if (deeplink != null && deeplink.isNotEmpty) {
+      // TODO: Implement deep link handling
+      debugPrint('Handling deeplink: $deeplink');
     }
 
     // 處理一般通知點擊
@@ -208,6 +215,7 @@ class RichNotificationService {
     final Map<String, dynamic> payload = {
       'actionType': notification.actionType,
       'actionData': notification.actionData,
+      'deeplink': notification.deeplink,
       'notificationId': notification.id,
     };
 
