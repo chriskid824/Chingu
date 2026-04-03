@@ -18,10 +18,8 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _logoScale;
   late final Animation<double> _logoFade;
 
-  // Phase 2: 文字滑入（400 → 1400ms）
+  // Phase 2: 文字淡入（400 → 1400ms）
   late final AnimationController _textController;
-  late final Animation<Offset> _titleSlide;
-  late final Animation<double> _titleFade;
   late final Animation<double> _sloganFade;
 
   // Phase 3: 6 人圓桌動畫（800 → 2000ms）
@@ -47,20 +45,13 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
     );
 
-    // Phase 2: 文字
+    // Phase 2: 標語淡入
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic));
-    _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: const Interval(0.0, 0.6)),
-    );
     _sloganFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: const Interval(0.4, 1.0)),
+      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
     );
 
     // Phase 3: 6 人圓點
@@ -145,15 +136,10 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     const Spacer(flex: 3),
 
-                    // Logo
+                    // Logo（直接使用圖片，不包白框）
                     _buildLogo(),
 
-                    const SizedBox(height: 32),
-
-                    // App 名稱
-                    _buildTitle(),
-
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
 
                     // 標語
                     _buildSlogan(),
@@ -189,52 +175,30 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  /// Logo — 使用實際 Logo 圖片
+  /// Logo — 直接展示品牌圖片，不加額外外框
   Widget _buildLogo() {
     return FadeTransition(
       opacity: _logoFade,
       child: ScaleTransition(
         scale: _logoScale,
         child: Container(
-          width: 130,
-          height: 130,
+          width: 220,
+          height: 220,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 40,
-                offset: const Offset(0, 16),
+                offset: const Offset(0, 12),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(16),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(44),
             child: Image.asset(
               'assets/images/Chingu_Logo.jpg',
-              fit: BoxFit.contain,
+              fit: BoxFit.cover,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// App 名稱
-  Widget _buildTitle() {
-    return SlideTransition(
-      position: _titleSlide,
-      child: FadeTransition(
-        opacity: _titleFade,
-        child: const Text(
-          'Chingu',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-            letterSpacing: 2,
           ),
         ),
       ),
