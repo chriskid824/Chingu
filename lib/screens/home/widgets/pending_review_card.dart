@@ -124,36 +124,32 @@ class PendingReviewCard extends StatelessWidget {
                 final userId = authProvider.uid;
                 if (userId == null) return;
 
-                // 載入待評價群組，取得含 pendingReviewees 的完整 Map
+                // 從 service 載入含 pendingReviewees 的完整資料
                 await reviewProvider.loadPendingReviews(userId);
                 if (!context.mounted) return;
 
-                // 找到與本 group 匹配的待評價群組
-                final matchingGroup = reviewProvider.pendingGroups
-                    .where((g) => g['groupId'] == group.id)
-                    .toList();
-
-                if (matchingGroup.isNotEmpty) {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.review,
-                    arguments: {'group': matchingGroup.first},
+                if (reviewProvider.pendingGroups.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('目前沒有待評價的群組')),
                   );
-                } else {
-                  // fallback: 用 DinnerGroupModel 建構 Map
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.review,
-                    arguments: {
-                      'group': {
-                        'groupId': group.id,
-                        'eventId': group.eventId,
-                        'memberIds': group.participantIds,
-                        'pendingReviewees': otherIds,
-                      },
-                    },
-                  );
+                  return;
                 }
+
+                // 優先找與本 group 匹配的，找不到就用第一個
+                final match = reviewProvider.pendingGroups
+                    .cast<Map<String, dynamic>?>()
+                    .firstWhere(
+                      (g) => g!['groupId'] == group.id,
+                      orElse: () => null,
+                    );
+
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.review,
+                  arguments: {
+                    'group': match ?? reviewProvider.pendingGroups.first,
+                  },
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorsMinimal.secondary,

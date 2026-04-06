@@ -626,26 +626,6 @@ class DatabaseSeeder {
 
       // ── 1. 生成 16 個假用戶 ──
       debugPrint('步驟 1/7: 生成 16 個假測試用戶...');
-      // 先測試寫入權限
-      try {
-        final testDocId = '_permission_test_${DateTime.now().millisecondsSinceEpoch}';
-        await _firestore.collection('dinner_events').doc(testDocId).set({
-          'test': true,
-          'eventDate': Timestamp.now(),
-          'city': 'test',
-          'signedUpUsers': [myUid],
-          'status': 'test',
-          'createdAt': Timestamp.now(),
-          'signupDeadline': Timestamp.now(),
-        });
-        await _firestore.collection('dinner_events').doc(testDocId).delete();
-        debugPrint('✅ isDeveloper 權限驗證通過');
-      } catch (e) {
-        debugPrint('❌ isDeveloper 權限驗證失敗: $e');
-        debugPrint('   你的 email ($myEmail) 必須是 chriskid824@gmail.com');
-        debugPrint('   如果你用 Google 登入，檢查是否用對帳號');
-        rethrow;
-      }
       final mockUserIds = <String>[];
       final mockNames = ['Alex', 'Sophie', 'Kevin', 'Tina', 'Ryan', 'Lisa', 'David', 'Emma', 'John', 'Alice', 'Tom', 'Chloe', 'Eric', 'Zoe', 'Leo', 'Mia'];
       final mockGenders = ['male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female'];
@@ -682,6 +662,16 @@ class DatabaseSeeder {
       final part2 = [myUid, ...mockUserIds.sublist(4, 8)];
       final part3 = [myUid, ...mockUserIds.sublist(8, 12)];
       final part4 = [myUid, ...mockUserIds.sublist(12, 16)];
+
+      // 容錯 helper — 單步失敗不中斷整個流程
+      Future<void> safeStep(String name, Future<void> Function() action) async {
+        try {
+          await action();
+        } catch (e) {
+          debugPrint('⚠️ $name 失敗: $e');
+          debugPrint('   繼續執行下一步...');
+        }
+      }
 
       // ── 2. 生成 4 個活動 ──
       debugPrint('步驟 2/7: 生成 4 個活動...');
@@ -849,12 +839,12 @@ class DatabaseSeeder {
         });
       }
 
-      await _createGroupChat(group1Id, part1, "下次");
-      await _createGroupChat(group2Id, part2, "週末");
-      await _createGroupChat(group3Id, part3, "週三");
-      await _createGroupChat(group4Id, part4, "上次");
-      
-      debugPrint('✓ 4 個群組聊天室生成完畢');
+      await safeStep('群組聊天 1', () => _createGroupChat(group1Id, part1, "下次"));
+      await safeStep('群組聊天 2', () => _createGroupChat(group2Id, part2, "週末"));
+      await safeStep('群組聊天 3', () => _createGroupChat(group3Id, part3, "週三"));
+      await safeStep('群組聊天 4', () => _createGroupChat(group4Id, part4, "上次"));
+
+      debugPrint('✓ 群組聊天室步驟完畢');
 
       // ── 5. 生成 1v1 Mutual Match 聊天室 ──
       debugPrint('步驟 5/7: 生成 1v1 聊天室...');

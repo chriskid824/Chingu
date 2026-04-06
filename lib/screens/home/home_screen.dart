@@ -170,8 +170,9 @@ class _HomeScreenState extends State<HomeScreen> {
           userId: userId,
         );
 
-        // 只在非「未報名」狀態下顯示快捷入口
-        if (result.state == HomeState.notSignedUp) {
+        // InviteCard 已有報名按鈕，這兩個狀態不需要額外入口
+        if (result.state == HomeState.notSignedUp ||
+            result.state == HomeState.pendingReview) {
           return const SizedBox.shrink();
         }
 

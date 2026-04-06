@@ -64,17 +64,22 @@ service cloud.firestore {
 
     // ===== 聊天室 =====
     match /chat_rooms/{chatRoomId} {
-      // 只有參與者可讀
+      // 參與者或開發者可讀
       allow read: if isChatParticipant() || isDeveloper();
-      // Cloud Functions 建立，開發者也可
-      allow create: if isAuthenticated() || isDeveloper();
-      allow update: if isChatParticipant();
+      // 已登入用戶可建立（雙向 Match 時由 App 建立）
+      allow create: if isAuthenticated();
+      // 參與者可更新（發訊息時更新 lastMessage / unreadCount）
+      allow update: if isChatParticipant() || isDeveloper();
       allow delete: if isDeveloper();
 
-      // 訊息子集合
+      // 訊息子集合 — 透過 get() 驗證是否為聊天室參與者
       match /messages/{messageId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
+        function isChatMember() {
+          return request.auth.uid in
+            get(/databases/$(database)/documents/chat_rooms/$(chatRoomId)).data.participantIds;
+        }
+        allow read: if isAuthenticated() && isChatMember();
+        allow create: if isAuthenticated() && isChatMember();
         allow update: if false;
         allow delete: if isDeveloper();
       }
