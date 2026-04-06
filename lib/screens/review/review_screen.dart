@@ -30,8 +30,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
       final args = ModalRoute.of(context)?.settings.arguments
           as Map<String, dynamic>?;
       if (args != null && args['group'] != null) {
-        final reviewProvider = context.read<ReviewProvider>();
-        reviewProvider.loadRevieweesForGroup(args['group']);
+        // 延到 frame 結束後再呼叫，避免 build phase 中觸發 notifyListeners
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.read<ReviewProvider>().loadRevieweesForGroup(args['group']);
+          }
+        });
       }
     }
   }

@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chingu/widgets/gif_picker.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 import 'package:chingu/widgets/dialogs/report_dialog.dart';
 
 
@@ -297,8 +298,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildMessageBubble(BuildContext context, Map<String, dynamic> message, bool isMe) {
-
-
     final timestamp = message['timestamp'] as Timestamp?;
     final timeText = timestamp != null
         ? DateFormat('HH:mm').format(timestamp.toDate())
@@ -307,146 +306,178 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final text = message['text'] ?? '';
     final type = message['type'] as String?;
     final isImage = (type == 'image' || type == 'gif') || (type == null && (text as String).endsWith('.gif'));
+    final senderId = message['senderId'] as String? ?? '';
 
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+    // 訊息氣泡內容
+    final bubble = Container(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.70,
+      ),
+      padding: isImage
+          ? const EdgeInsets.all(4)
+          : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: (isMe && !isImage) ? AppColorsMinimal.primaryGradient : null,
+        color: (isMe && !isImage) ? null : AppColorsMinimal.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(20),
+          topRight: const Radius.circular(20),
+          bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
+          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
         ),
-        padding: isImage
-            ? const EdgeInsets.all(4)
-            : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: (isMe && !isImage) ? AppColorsMinimal.primaryGradient : null,
-          color: (isMe && !isImage) ? null : AppColorsMinimal.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColorsMinimal.shadowLight,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColorsMinimal.shadowLight,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isImage)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedNetworkImage(
+                imageUrl: text,
+                placeholder: (context, url) => Container(
+                  height: 150,
+                  width: 150,
+                  color: AppColorsMinimal.surfaceVariant,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  height: 150,
+                  width: 150,
+                  color: AppColorsMinimal.surfaceVariant,
+                  child: const Icon(Icons.error),
+                ),
+              ),
+            )
+          else
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 16,
+                color: isMe ? Colors.white : AppColorsMinimal.textPrimary,
+              ),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 4),
+          Padding(
+            padding: isImage ? const EdgeInsets.only(left: 8, right: 8, bottom: 4) : EdgeInsets.zero,
+            child: Text(
+              timeText,
+              style: TextStyle(
+                color: (isMe && !isImage) ? Colors.white.withValues(alpha: 0.7) : AppColorsMinimal.textTertiary,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // 對方訊息：頭像 + 氣泡
+    if (!isMe) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (isImage)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: text,
-                  placeholder: (context, url) => Container(
-                    height: 150,
-                    width: 150,
-                    color: AppColorsMinimal.surfaceVariant,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    height: 150,
-                    width: 150,
-                    color: AppColorsMinimal.surfaceVariant,
-                    child: const Icon(Icons.error),
-                  ),
-                ),
-              )
-            else
-              Text(
-                text,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isMe ? Colors.white : AppColorsMinimal.textPrimary,
-                ),
-              ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: isImage ? const EdgeInsets.only(left: 8, right: 8, bottom: 4) : EdgeInsets.zero,
-              child: Text(
-                timeText,
-                style: TextStyle(
-                  color: (isMe && !isImage) ? Colors.white.withValues(alpha: 0.7) : AppColorsMinimal.textTertiary,
-                  fontSize: 10,
-                ),
-              ),
+            GeometricAvatar(
+              seed: senderId,
+              photoUrl: _isGroup ? null : _otherUser?.avatarUrl,
+              showPhoto: !_isGroup && PhotoVisibility.isDirectChatPhotoVisible(),
+              size: 32,
             ),
+            const SizedBox(width: 8),
+            Flexible(child: bubble),
           ],
         ),
+      );
+    }
+
+    // 自己的訊息：靠右
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: bubble,
       ),
     );
   }
 
   Widget _buildMessageInput(BuildContext context) {
-
-
-
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
-        color: AppColorsMinimal.background,
+        color: AppColorsMinimal.surface,
         boxShadow: [
           BoxShadow(
             color: AppColorsMinimal.shadowLight,
             blurRadius: 10,
-            offset: const Offset(0, -4),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Expanded(
+            // GIF 按鈕（縮小）
+            GestureDetector(
+              onTap: _openGifPicker,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                width: 36,
+                height: 36,
+                margin: const EdgeInsets.only(bottom: 2),
                 decoration: BoxDecoration(
                   color: AppColorsMinimal.surfaceVariant,
-                  borderRadius: BorderRadius.circular(24),
+                  shape: BoxShape.circle,
                 ),
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: '輸入訊息...',
-                    hintStyle: TextStyle(color: AppColorsMinimal.textTertiary),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  style: TextStyle(fontSize: 16, color: AppColorsMinimal.textPrimary),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColorsMinimal.surfaceVariant,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                onPressed: _openGifPicker,
-                icon: Icon(Icons.gif_box_outlined, color: AppColorsMinimal.primary, size: 20),
+                child: Icon(Icons.gif_box_outlined, color: AppColorsMinimal.textTertiary, size: 20),
               ),
             ),
             const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                gradient: AppColorsMinimal.primaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColorsMinimal.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+            // 輸入框
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 120),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColorsMinimal.surfaceVariant,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: TextField(
+                  controller: _messageController,
+                  maxLines: null,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: '輸入訊息...',
+                    hintStyle: TextStyle(color: AppColorsMinimal.textTertiary, fontSize: 15),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    isDense: true,
                   ),
-                ],
+                  style: TextStyle(fontSize: 15, color: AppColorsMinimal.textPrimary),
+                ),
               ),
-              child: IconButton(
-                onPressed: _sendMessage,
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 8),
+            // 發送按鈕
+            GestureDetector(
+              onTap: _sendMessage,
+              child: Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(bottom: 2),
+                decoration: BoxDecoration(
+                  gradient: AppColorsMinimal.accentGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
               ),
             ),
           ],
