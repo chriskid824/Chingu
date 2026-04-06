@@ -963,20 +963,14 @@ class DatabaseSeeder {
     }
     debugPrint('  ✓ 刪除了 ${chats.docs.length} 個聊天室 + $msgCount 則訊息');
 
-    // 5. 刪除所有 reviewer 或 reviewee 是自己的評價
+    // 5. 刪除自己作為 reviewer 的評價（reviewee 的因雙盲 Rules 無法讀取，跳過）
     final reviewsAsReviewer = await _firestore.collection('dinner_reviews')
         .where('reviewerId', isEqualTo: myUid)
         .get();
     for (var doc in reviewsAsReviewer.docs) {
       await doc.reference.delete();
     }
-    final reviewsAsReviewee = await _firestore.collection('dinner_reviews')
-        .where('revieweeId', isEqualTo: myUid)
-        .get();
-    for (var doc in reviewsAsReviewee.docs) {
-      await doc.reference.delete();
-    }
-    debugPrint('  ✓ 刪除了 ${reviewsAsReviewer.docs.length + reviewsAsReviewee.docs.length} 筆評價');
+    debugPrint('  ✓ 刪除了 ${reviewsAsReviewer.docs.length} 筆評價（僅 reviewer）');
     
     debugPrint('  🧹 強力清理完畢！');
   }
