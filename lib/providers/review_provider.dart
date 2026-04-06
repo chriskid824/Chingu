@@ -96,7 +96,7 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 提交所有評價
+  /// 提交所有評價（每筆獨立 try-catch，一筆失敗不影響其他）
   Future<void> submitAllReviews({
     required String reviewerId,
     required String groupId,
@@ -107,8 +107,14 @@ class ReviewProvider extends ChangeNotifier {
     _newChatRoomIds = [];
     notifyListeners();
 
-    try {
-      for (final entry in _reviewChoices.entries) {
+    int successCount = 0;
+    int failCount = 0;
+
+    // 複製一份避免遍歷時修改
+    final choices = Map<String, String>.from(_reviewChoices);
+
+    for (final entry in choices.entries) {
+      try {
         final chatRoomId = await _reviewService.submitReview(
           reviewerId: reviewerId,
           revieweeId: entry.key,
@@ -120,16 +126,25 @@ class ReviewProvider extends ChangeNotifier {
         if (chatRoomId != null) {
           _newChatRoomIds.add(chatRoomId);
         }
+        successCount++;
+      } catch (e) {
+        debugPrint('評價 ${entry.key} 失敗: $e');
+        failCount++;
       }
-
-      notifyListeners();
-    } catch (e) {
-      _error = '提交評價失敗: $e';
-      notifyListeners();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+
+    // 提交完成後清除待評價列表（防止重複進入）
+    _pendingReviewees = [];
+    _reviewChoices = {};
+
+    if (failCount > 0 && successCount == 0) {
+      _error = '提交評價失敗，請稍後再試';
+    } else if (failCount > 0) {
+      _error = '部分評價提交失敗（$successCount 成功，$failCount 失敗）';
+    }
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   /// 重設狀態

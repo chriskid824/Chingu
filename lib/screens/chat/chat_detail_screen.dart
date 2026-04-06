@@ -409,47 +409,36 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Widget _buildMessageInput(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      decoration: BoxDecoration(
-        color: AppColorsMinimal.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppColorsMinimal.shadowLight,
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColorsMinimal.surface,
+          boxShadow: [
+            BoxShadow(
+              color: AppColorsMinimal.shadowLight,
+              blurRadius: 8,
+              offset: const Offset(0, -1),
+            ),
+          ],
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // GIF 按鈕（縮小）
+            // GIF 按鈕
             GestureDetector(
               onTap: _openGifPicker,
-              child: Container(
-                width: 36,
-                height: 36,
-                margin: const EdgeInsets.only(bottom: 2),
-                decoration: BoxDecoration(
-                  color: AppColorsMinimal.surfaceVariant,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.gif_box_outlined, color: AppColorsMinimal.textTertiary, size: 20),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Icon(Icons.gif_box_outlined, color: AppColorsMinimal.textTertiary, size: 26),
               ),
             ),
-            const SizedBox(width: 8),
-            // 輸入框
+            const SizedBox(width: 6),
+            // 輸入框 — 無額外 Container padding
             Expanded(
-              child: Container(
+              child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 120),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColorsMinimal.surfaceVariant,
-                  borderRadius: BorderRadius.circular(22),
-                ),
                 child: TextField(
                   controller: _messageController,
                   maxLines: null,
@@ -457,27 +446,32 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   decoration: InputDecoration(
                     hintText: '輸入訊息...',
                     hintStyle: TextStyle(color: AppColorsMinimal.textTertiary, fontSize: 15),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    filled: true,
+                    fillColor: AppColorsMinimal.surfaceVariant,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     isDense: true,
                   ),
                   style: TextStyle(fontSize: 15, color: AppColorsMinimal.textPrimary),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             // 發送按鈕
             GestureDetector(
               onTap: _sendMessage,
               child: Container(
-                width: 40,
-                height: 40,
-                margin: const EdgeInsets.only(bottom: 2),
+                width: 36,
+                height: 36,
+                margin: const EdgeInsets.only(bottom: 4),
                 decoration: BoxDecoration(
                   gradient: AppColorsMinimal.accentGradient,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
               ),
             ),
           ],
