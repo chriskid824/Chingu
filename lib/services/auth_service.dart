@@ -86,6 +86,11 @@ class AuthService {
   /// 返回 User 或拋出異常
   Future<User> signInWithGoogle() async {
     try {
+      // 確保先清除舊的 Google session（解決登出後無法重新登入的問題）
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
+
       // 觸發 Google 登入流程
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
