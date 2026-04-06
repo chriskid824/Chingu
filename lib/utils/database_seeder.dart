@@ -609,14 +609,43 @@ class DatabaseSeeder {
         return;
       }
       final myUid = currentUser.uid;
-      debugPrint('🚀 開始生成完整測試情境資料... (UID: $myUid)');
+      final myEmail = currentUser.email;
+      debugPrint('🚀 開始生成完整測試情境資料...');
+      debugPrint('   UID: $myUid');
+      debugPrint('   Email: $myEmail');
+      debugPrint('   isDeveloper 預期: ${myEmail == "chriskid824@gmail.com"}');
 
       // ── 清理舊測試資料 ──
       debugPrint('步驟 0/7: 清理舊測試資料...');
-      await _cleanTestData(myUid);
+      try {
+        await _cleanTestData(myUid);
+      } catch (e) {
+        debugPrint('⚠️ 清理失敗（可能是首次運行）: $e');
+        // 不中斷，繼續生成
+      }
 
       // ── 1. 生成 16 個假用戶 ──
       debugPrint('步驟 1/7: 生成 16 個假測試用戶...');
+      // 先測試寫入權限
+      try {
+        final testDocId = '_permission_test_${DateTime.now().millisecondsSinceEpoch}';
+        await _firestore.collection('dinner_events').doc(testDocId).set({
+          'test': true,
+          'eventDate': Timestamp.now(),
+          'city': 'test',
+          'signedUpUsers': [myUid],
+          'status': 'test',
+          'createdAt': Timestamp.now(),
+          'signupDeadline': Timestamp.now(),
+        });
+        await _firestore.collection('dinner_events').doc(testDocId).delete();
+        debugPrint('✅ isDeveloper 權限驗證通過');
+      } catch (e) {
+        debugPrint('❌ isDeveloper 權限驗證失敗: $e');
+        debugPrint('   你的 email ($myEmail) 必須是 chriskid824@gmail.com');
+        debugPrint('   如果你用 Google 登入，檢查是否用對帳號');
+        rethrow;
+      }
       final mockUserIds = <String>[];
       final mockNames = ['Alex', 'Sophie', 'Kevin', 'Tina', 'Ryan', 'Lisa', 'David', 'Emma', 'John', 'Alice', 'Tom', 'Chloe', 'Eric', 'Zoe', 'Leo', 'Mia'];
       final mockGenders = ['male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female', 'male', 'female'];
