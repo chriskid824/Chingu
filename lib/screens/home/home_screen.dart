@@ -7,6 +7,7 @@ import 'package:chingu/screens/home/widgets/matching_card.dart';
 import 'package:chingu/screens/home/widgets/companion_preview_card.dart';
 import 'package:chingu/screens/home/widgets/restaurant_reveal_card.dart';
 import 'package:chingu/screens/home/widgets/pending_review_card.dart';
+import 'package:chingu/screens/home/widgets/booking_bottom_sheet.dart';
 import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/widgets/appear_animation.dart';
 import 'package:provider/provider.dart';
@@ -121,6 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
+                  // ─── 快捷報名入口（非未報名狀態時顯示）───
+                  _buildQuickBookingEntry(),
+
                   const SizedBox(height: AppColorsMinimal.space2XL),
 
                   // ─── Zone 2.5: 我的群組 ───
@@ -151,6 +155,77 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ============ 快捷報名入口 ============
+
+  Widget _buildQuickBookingEntry() {
+    return Consumer2<DinnerEventProvider, DinnerGroupProvider>(
+      builder: (context, eventProvider, groupProvider, _) {
+        final userId = context.read<AuthProvider>().uid ?? '';
+        final result = HomeStateResolver.resolve(
+          myEvents: eventProvider.myEvents,
+          myGroups: groupProvider.myGroups,
+          userId: userId,
+        );
+
+        // 只在非「未報名」狀態下顯示快捷入口
+        if (result.state == HomeState.notSignedUp) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: AppColorsMinimal.spaceMD),
+          child: GestureDetector(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const BookingBottomSheet(),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppColorsMinimal.spaceLG,
+                vertical: AppColorsMinimal.spaceMD,
+              ),
+              decoration: BoxDecoration(
+                color: AppColorsMinimal.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
+                border: Border.all(
+                  color: AppColorsMinimal.primary.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: AppColorsMinimal.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppColorsMinimal.spaceSM),
+                  Text(
+                    '報名下一場晚餐',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColorsMinimal.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColorsMinimal.primary,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

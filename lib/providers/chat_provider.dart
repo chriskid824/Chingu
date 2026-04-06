@@ -6,12 +6,14 @@ import 'package:chingu/services/badge_count_service.dart';
 class ChatProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  List<Map<String, dynamic>> _chatRooms = [];
+  List<Map<String, dynamic>> _chatRooms = [];       // 1 對 1
+  List<Map<String, dynamic>> _groupChatRooms = [];  // 群組聊天
   bool _isLoading = false;
   String? _errorMessage;
   int _totalUnreadCount = 0;
 
   List<Map<String, dynamic>> get chatRooms => _chatRooms;
+  List<Map<String, dynamic>> get groupChatRooms => _groupChatRooms;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   int get totalUnreadCount => _totalUnreadCount;
@@ -41,13 +43,38 @@ class ChatProvider with ChangeNotifier {
       final blockedUserIds = Set<String>.from(userData?['blockedUserIds'] ?? []);
 
       _chatRooms = [];
+      _groupChatRooms = [];
       int totalUnreadCount = 0;
 
       for (var doc in chatRoomsQuery.docs) {
         final data = doc.data();
         final participantIds = List<String>.from(data['participantIds'] ?? []);
-        
-        // 找到對方的 ID
+        final type = data['type'] as String? ?? 'direct';
+
+        // 獲取未讀數量
+        final unreadCountMap = Map<String, int>.from(
+          (data['unreadCount'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toInt()),
+          ) ?? {},
+        );
+        final unreadCount = unreadCountMap[userId] ?? 0;
+        totalUnreadCount += unreadCount;
+
+        // ─── 群組聊天 ───
+        if (type == 'group') {
+          _groupChatRooms.add({
+            'chatRoomId': doc.id,
+            'groupId': data['groupId'] ?? '',
+            'name': data['name'] ?? '晚餐群組',
+            'participantIds': participantIds,
+            'lastMessage': data['lastMessage'] ?? '',
+            'lastMessageAt': data['lastMessageAt'],
+            'unreadCount': unreadCount,
+          });
+          continue;
+        }
+
+        // ─── 1 對 1 聊天 ───
         final otherUserId = participantIds.firstWhere(
           (id) => id != userId,
           orElse: () => '',
@@ -60,7 +87,7 @@ class ChatProvider with ChangeNotifier {
 
         // 獲取對方的用戶資料
         final otherUserDoc = await _firestore.collection('users').doc(otherUserId).get();
-        
+
         if (!otherUserDoc.exists) continue;
 
         // 檢查對方是否也封鎖了我
@@ -72,11 +99,6 @@ class ChatProvider with ChangeNotifier {
           otherUserDoc.data() as Map<String, dynamic>,
           otherUserDoc.id,
         );
-
-        // 獲取未讀數量
-        final unreadCountMap = Map<String, int>.from(data['unreadCount'] ?? {});
-        final unreadCount = unreadCountMap[userId] ?? 0;
-        totalUnreadCount += unreadCount;
 
         _chatRooms.add({
           'chatRoomId': doc.id,

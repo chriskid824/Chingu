@@ -58,7 +58,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       ),
       body: Consumer<ReviewProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading && provider.pendingReviewees.isEmpty) {
+          if (provider.isLoading) {
             return const Center(
               child: CircularProgressIndicator(
                 color: AppColorsMinimal.primary,

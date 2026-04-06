@@ -8,8 +8,6 @@ import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/widgets/geometric_avatar.dart';
 import 'package:intl/intl.dart';
-import 'package:chingu/models/dinner_group_model.dart';
-import 'package:chingu/providers/dinner_group_provider.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -177,47 +175,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildGroupChatTab(BuildContext context, ChinguTheme? chinguTheme) {
-    return Consumer<DinnerGroupProvider>(
-      builder: (context, groupProvider, _) {
-        if (groupProvider.isLoading) return const ChatListSkeleton();
+    final chatProvider = context.watch<ChatProvider>();
+    final groupRooms = chatProvider.groupChatRooms.where((room) {
+      if (_searchQuery.isEmpty) return true;
+      final name = (room['name'] as String).toLowerCase();
+      final lastMsg = (room['lastMessage'] as String).toLowerCase();
+      return name.contains(_searchQuery) || lastMsg.contains(_searchQuery);
+    }).toList();
 
-        final groups = groupProvider.myGroups;
-        final filteredGroups = groups.where((group) {
-          if (_searchQuery.isEmpty) return true;
-          final title = '晚餐聚會';
-          final restaurant = group.restaurantName ?? '';
-          return title.toLowerCase().contains(_searchQuery) ||
-              restaurant.toLowerCase().contains(_searchQuery);
-        }).toList();
+    if (groupRooms.isEmpty) {
+      return _buildGroupEmptyState();
+    }
 
-        if (filteredGroups.isEmpty) {
-          return Center(
-            child: Text(
-              '沒有找到群組聚餐',
-              style: TextStyle(color: AppColorsMinimal.textSecondary, fontSize: 16),
-            ),
-          );
+    return RefreshIndicator(
+      onRefresh: () async {
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.uid != null) {
+          await chatProvider.loadChatRooms(authProvider.uid!);
         }
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            final authProvider = context.read<AuthProvider>();
-            if (authProvider.uid != null) {
-              await groupProvider.fetchMyGroups(authProvider.uid!);
-            }
-          },
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppColorsMinimal.spaceXL,
-              vertical: AppColorsMinimal.spaceSM,
-            ),
-            itemCount: filteredGroups.length,
-            itemBuilder: (context, index) {
-              return _buildDinnerGroupBanner(context, filteredGroups[index]);
-            },
-          ),
-        );
       },
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppColorsMinimal.spaceXL,
+          vertical: AppColorsMinimal.spaceSM,
+        ),
+        itemCount: groupRooms.length,
+        itemBuilder: (context, index) {
+          return _buildGroupChatCard(context, groupRooms[index]);
+        },
+      ),
     );
   }
 
@@ -470,10 +456,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildDinnerGroupBanner(BuildContext context, DinnerGroupModel group) {
-    final timeText = DateFormat('MM/dd').format(group.createdAt);
-    final statusLabel = _groupStatusLabel(group.status);
-    final title = group.restaurantName ?? '晚餐聚會';
+  Widget _buildGroupChatCard(BuildContext context, Map<String, dynamic> room) {
+    final name = room['name'] as String;
+    final lastMessage = room['lastMessage'] as String;
+    final lastMessageAt = room['lastMessageAt'];
+    final int unreadCount = room['unreadCount'] ?? 0;
+    final participantIds = room['participantIds'] as List;
+    final chatRoomId = room['chatRoomId'] as String;
+
+    String timeText = '';
+    if (lastMessageAt != null) {
+      final timestamp = lastMessageAt.toDate();
+      final diff = DateTime.now().difference(timestamp);
+      if (diff.inDays == 0) {
+        timeText = DateFormat('HH:mm').format(timestamp);
+      } else if (diff.inDays == 1) {
+        timeText = '昨天';
+      } else {
+        timeText = DateFormat('MM/dd').format(timestamp);
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppColorsMinimal.spaceMD),
@@ -495,25 +497,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
           onTap: () {
             Navigator.pushNamed(
               context,
-              AppRoutes.groupDetail,
-              arguments: {'group': group},
+              AppRoutes.chatDetail,
+              arguments: {
+                'chatRoomId': chatRoomId,
+                'isGroup': true,
+                'groupName': name,
+              },
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppColorsMinimal.spaceLG,
+              vertical: 14,
+            ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(
+                // 群組圖標
+                Container(
                   width: 52,
                   height: 52,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(left: 0, child: _buildMiniAvatar(0)),
-                      if (group.participantIds.length > 1)
-                        Positioned(left: 15, child: _buildMiniAvatar(1)),
-                    ],
+                  decoration: BoxDecoration(
+                    color: AppColorsMinimal.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.groups_rounded,
+                      color: AppColorsMinimal.primary,
+                      size: 26,
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppColorsMinimal.spaceLG),
@@ -522,10 +534,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        name,
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           color: AppColorsMinimal.textPrimary,
                         ),
                         maxLines: 1,
@@ -533,10 +545,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                       const SizedBox(height: AppColorsMinimal.spaceXS),
                       Text(
-                        '$statusLabel · ${group.participantIds.length} 人同桌',
+                        lastMessage.isEmpty
+                            ? '${participantIds.length} 人群組'
+                            : lastMessage,
                         style: TextStyle(
-                          color: AppColorsMinimal.textSecondary,
                           fontSize: 14,
+                          color: AppColorsMinimal.textSecondary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -544,10 +558,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: AppColorsMinimal.spaceSM),
-                Text(
-                  timeText,
-                  style: TextStyle(fontSize: 12, color: AppColorsMinimal.textTertiary),
+                const SizedBox(width: AppColorsMinimal.spaceMD),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      timeText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColorsMinimal.textTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (unreadCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                        decoration: BoxDecoration(
+                          color: AppColorsMinimal.secondary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 20),
+                  ],
                 ),
               ],
             ),
@@ -557,34 +600,48 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  String _groupStatusLabel(String status) {
-    switch (status) {
-      case 'pending':
-        return '等待揭曉';
-      case 'info_revealed':
-        return '同伴已揭曉';
-      case 'location_revealed':
-        return '餐廳已揭曉';
-      case 'completed':
-        return '已結束';
-      default:
-        return status;
-    }
-  }
-
-  Widget _buildMiniAvatar(int index) {
-    final color = GeometricAvatar.colors[index % GeometricAvatar.colors.length];
-    final icon = GeometricAvatar.icons[index % GeometricAvatar.icons.length];
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.15),
-        border: Border.all(color: AppColorsMinimal.surface, width: 2),
-      ),
-      child: Center(
-        child: Icon(icon, size: 18, color: color),
+  Widget _buildGroupEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppColorsMinimal.space2XL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColorsMinimal.surface,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: AppColorsMinimal.shadowLight, blurRadius: 10),
+                ],
+              ),
+              child: Icon(
+                Icons.groups_rounded,
+                size: 40,
+                color: AppColorsMinimal.textTertiary,
+              ),
+            ),
+            const SizedBox(height: AppColorsMinimal.spaceXL),
+            Text(
+              '還沒有群組聊天',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColorsMinimal.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppColorsMinimal.spaceSM),
+            Text(
+              '週三完全解鎖後會自動建立群組聊天室',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColorsMinimal.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
