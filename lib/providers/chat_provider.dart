@@ -134,14 +134,25 @@ class ChatProvider with ChangeNotifier {
         .collection('chat_rooms')
         .doc(chatRoomId)
         .collection('messages')
-        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final messages = snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
+
+      // Dart 端排序（避免需要 Firestore composite index）
+      messages.sort((a, b) {
+        final t1 = a['timestamp'] as Timestamp?;
+        final t2 = b['timestamp'] as Timestamp?;
+        if (t1 == null && t2 == null) return 0;
+        if (t1 == null) return 1;
+        if (t2 == null) return -1;
+        return t2.compareTo(t1); // 降序：最新的在前
+      });
+
+      return messages;
     });
   }
 

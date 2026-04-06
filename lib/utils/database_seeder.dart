@@ -292,10 +292,12 @@ class DatabaseSeeder {
         final chatRoomId = _uuid.v4();
         final chatRoomData = {
           'id': chatRoomId,
+          'type': 'direct',
           'participantIds': [testUserId, matchUserId],
           'createdAt': FieldValue.serverTimestamp(),
           'lastMessageAt': FieldValue.serverTimestamp(),
           'lastMessage': '嗨！很高興認識你 😊',
+          'unreadCount': {testUserId: 1, matchUserId: 0},
         };
 
         await _firestore.collection('chat_rooms').doc(chatRoomId).set(chatRoomData);
@@ -304,16 +306,16 @@ class DatabaseSeeder {
         // 3.3 添加測試訊息
         final messages = [
           {
-            'chatRoomId': chatRoomId,
             'senderId': matchUserId,
             'text': '嗨！很高興認識你 😊',
+            'type': 'text',
             'timestamp': FieldValue.serverTimestamp(),
             'isRead': false,
           },
           {
-            'chatRoomId': chatRoomId,
             'senderId': matchUserId,
             'text': '你好呀！有空一起吃飯嗎？',
+            'type': 'text',
             'timestamp': FieldValue.serverTimestamp(),
             'isRead': false,
           },
@@ -800,6 +802,7 @@ class DatabaseSeeder {
           'participantIds': pIds,
           'type': 'group',
           'groupId': gId,
+          'name': '$eventTitle 晚餐群組',
           'lastMessage': '期待 $eventTitle 的聚餐 🎉',
           'lastMessageAt': FieldValue.serverTimestamp(),
           'unreadCount': {myUid: 1},
@@ -832,6 +835,7 @@ class DatabaseSeeder {
 
       await _firestore.collection('chat_rooms').doc(matchChatId).set({
         'id': matchChatId,
+        'type': 'direct',
         'participantIds': sortedIds,
         'participants': sortedIds, // review_service 用 participants
         'groupId': group4Id,

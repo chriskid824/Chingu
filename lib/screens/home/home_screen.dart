@@ -6,7 +6,7 @@ import 'package:chingu/screens/home/widgets/invite_card.dart';
 import 'package:chingu/screens/home/widgets/matching_card.dart';
 import 'package:chingu/screens/home/widgets/companion_preview_card.dart';
 import 'package:chingu/screens/home/widgets/restaurant_reveal_card.dart';
-import 'package:chingu/screens/home/widgets/pending_review_card.dart';
+// PendingReviewCard 移至 Events Tab，首頁只顯示晚餐狀態
 import 'package:chingu/screens/home/widgets/booking_bottom_sheet.dart';
 import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/widgets/appear_animation.dart';
@@ -315,11 +315,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
       case HomeState.pendingReview:
-        return PendingReviewCard(
-          key: const ValueKey('pendingReview'),
-          group: result.group!,
-          currentUserId: userId,
-        );
+        // 評價功能移至 Events Tab，首頁回到未報名狀態
+        return const InviteCard(key: ValueKey('invite_after_review'));
     }
   }
 

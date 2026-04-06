@@ -521,14 +521,43 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'New people are waiting for you!',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColorsMinimal.textSecondary,
+          // 參與者暱稱列表
+          if (_participants.isNotEmpty) ...[
+            const SizedBox(height: AppColorsMinimal.spaceMD),
+            Wrap(
+              spacing: AppColorsMinimal.spaceSM,
+              runSpacing: AppColorsMinimal.spaceXS,
+              children: _participants.map((user) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppColorsMinimal.spaceSM,
+                    vertical: AppColorsMinimal.spaceXS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColorsMinimal.surfaceVariant,
+                    borderRadius: BorderRadius.circular(AppColorsMinimal.radiusFull),
+                  ),
+                  child: Text(
+                    user.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColorsMinimal.textSecondary,
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-          ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              '等待參與者揭曉',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColorsMinimal.textSecondary,
+              ),
+            ),
+          ],
 
           // Industries
           if (previews.isNotEmpty) ...[

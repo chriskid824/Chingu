@@ -23,6 +23,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   String? _chatRoomId;
   UserModel? _otherUser;
+  bool _isGroup = false;
+  String _groupName = '';
   bool _isInit = false;
 
   @override
@@ -33,6 +35,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       if (args != null) {
         _chatRoomId = args['chatRoomId'];
         _otherUser = args['otherUser'];
+        _isGroup = args['isGroup'] == true;
+        _groupName = args['groupName'] as String? ?? '群組聊天';
       }
       _isInit = true;
     }
@@ -129,7 +133,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget build(BuildContext context) {
 
 
-    if (_chatRoomId == null || _otherUser == null) {
+    if (_chatRoomId == null || (!_isGroup && _otherUser == null)) {
       return Scaffold(
         backgroundColor: AppColorsMinimal.background,
         body: const Center(child: CircularProgressIndicator(color: AppColorsMinimal.primary)),
@@ -148,23 +152,28 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: AppColorsMinimal.primaryGradient,
+                color: _isGroup
+                    ? AppColorsMinimal.primary.withValues(alpha: 0.12)
+                    : null,
+                gradient: _isGroup ? null : AppColorsMinimal.primaryGradient,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: Center(
-                child: Text(
-                  _otherUser!.name[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isGroup
+                    ? Icon(Icons.groups_rounded, color: AppColorsMinimal.primary, size: 20)
+                    : Text(
+                        _otherUser!.name[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 12),
             Text(
-              _otherUser!.name,
+              _isGroup ? _groupName : _otherUser!.name,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
