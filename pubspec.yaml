@@ -134,6 +134,6 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/Chingu_Logo.jpg"
+  image_path: "assets/images/Chingu_Logo_Icon.jpeg"
   min_sdk_android: 21
   remove_alpha_ios: true
