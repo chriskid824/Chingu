@@ -56,7 +56,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           const Duration(seconds: 3),
         );
         if (user != null) users.add(user);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('載入用戶 $uid 失敗: $e');
+      }
     }
     
     if (mounted) {
@@ -380,7 +382,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 height: 32,
                 child: Stack(
                   children: List.generate(
-                    (group?.participantIds.length ?? 3).clamp(0, 5),
+                    (group?.participantIds.length ?? 0).clamp(0, 7),
                     (i) => Positioned(
                       left: i * 20.0,
                       child: _buildSmallAvatar(i),
@@ -458,7 +460,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final participantCount = group?.participantIds.length 
         ?? event.signedUpUsers.length;
     final previews = group?.companionPreviews ?? [];
-    final displayCount = participantCount > 0 ? participantCount : 6;
+    final displayCount = participantCount > 0 ? participantCount : 0;
 
     return Container(
       width: double.infinity,

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/models/dinner_group_model.dart';
+import 'package:chingu/providers/review_provider.dart';
+import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/widgets/geometric_avatar.dart';
 
 /// 狀態 5：待評價 — 飯友頭像列 + CTA 跳轉 ReviewScreen
 class PendingReviewCard extends StatelessWidget {
@@ -14,25 +18,6 @@ class PendingReviewCard extends StatelessWidget {
     required this.currentUserId,
   });
 
-  static const _avatarColors = [
-    Color(0xFF6B93B8),
-    Color(0xFFD67756),
-    Color(0xFF8DB6C9),
-    Color(0xFFA64A25),
-    Color(0xFF4CAF50),
-    Color(0xFF885520),
-    Color(0xFFEF5350),
-  ];
-
-  static const _avatarIcons = [
-    Icons.hexagon_rounded,
-    Icons.change_history_rounded,
-    Icons.circle_outlined,
-    Icons.square_rounded,
-    Icons.pentagon_rounded,
-    Icons.star_rounded,
-    Icons.diamond_rounded,
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -98,8 +83,8 @@ class PendingReviewCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: otherIds.asMap().entries.map((entry) {
               final i = entry.key;
-              final color = _avatarColors[i % _avatarColors.length];
-              final icon = _avatarIcons[i % _avatarIcons.length];
+              final color = GeometricAvatar.colors[i % GeometricAvatar.colors.length];
+              final icon = GeometricAvatar.icons[i % GeometricAvatar.icons.length];
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 width: 40,
@@ -133,15 +118,42 @@ class PendingReviewCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.review,
-                  arguments: {
-                    'groupId': group.id,
-                    'eventId': group.eventId,
-                  },
-                );
+              onPressed: () async {
+                final authProvider = context.read<AuthProvider>();
+                final reviewProvider = context.read<ReviewProvider>();
+                final userId = authProvider.uid;
+                if (userId == null) return;
+
+                // 載入待評價群組，取得含 pendingReviewees 的完整 Map
+                await reviewProvider.loadPendingReviews(userId);
+                if (!context.mounted) return;
+
+                // 找到與本 group 匹配的待評價群組
+                final matchingGroup = reviewProvider.pendingGroups
+                    .where((g) => g['groupId'] == group.id)
+                    .toList();
+
+                if (matchingGroup.isNotEmpty) {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.review,
+                    arguments: {'group': matchingGroup.first},
+                  );
+                } else {
+                  // fallback: 用 DinnerGroupModel 建構 Map
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.review,
+                    arguments: {
+                      'group': {
+                        'groupId': group.id,
+                        'eventId': group.eventId,
+                        'memberIds': group.participantIds,
+                        'pendingReviewees': otherIds,
+                      },
+                    },
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorsMinimal.secondary,

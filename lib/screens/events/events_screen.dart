@@ -69,12 +69,18 @@ class _EventsScreenState extends State<EventsScreen> {
                 ),
               ),
 
+              // 回饋 Banner
+              SliverToBoxAdapter(child: _buildFeedbackBanner()),
+
+              // 即將到來
+              _buildUpcomingSection(),
+
               // Past 分區標題
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                   child: Text(
-                    'Past',
+                    '過去的晚餐',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -84,15 +90,129 @@ class _EventsScreenState extends State<EventsScreen> {
                 ),
               ),
 
-              // 回饋 Banner
-              SliverToBoxAdapter(child: _buildFeedbackBanner()),
-
               // 歷史活動列表
               _buildEventsList(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// 即將到來的晚餐
+  Widget _buildUpcomingSection() {
+    return Consumer<DinnerEventProvider>(
+      builder: (context, eventProvider, _) {
+        final now = DateTime.now().toUtc();
+        final upcomingEvents = eventProvider.myEvents
+            .where((e) => e.eventDate.toUtc().isAfter(now))
+            .toList()
+          ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
+
+        if (upcomingEvents.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+        return SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+                child: Text(
+                  '即將到來',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColorsMinimal.primary,
+                  ),
+                ),
+              ),
+              ...upcomingEvents.map((event) {
+                final dayOfWeek = DateFormat('EEEE', 'zh_TW').format(event.eventDate);
+                final dateStr = DateFormat('MM/dd').format(event.eventDate);
+                final daysLeft = event.eventDate.difference(DateTime.now()).inDays;
+                final daysText = daysLeft == 0 ? '今天' : '$daysLeft 天後';
+
+                return GestureDetector(
+                  onTap: () => _navigateToDetail(event),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                    padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorsMinimal.primary.withValues(alpha: 0.08),
+                          AppColorsMinimal.surface,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+                      border: Border.all(
+                        color: AppColorsMinimal.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColorsMinimal.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+                          ),
+                          child: Icon(
+                            Icons.calendar_today_rounded,
+                            color: AppColorsMinimal.primary,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: AppColorsMinimal.spaceLG),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$dayOfWeek · $dateStr',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColorsMinimal.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                event.city,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColorsMinimal.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColorsMinimal.primary,
+                            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusFull),
+                          ),
+                          child: Text(
+                            daysText,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: AppColorsMinimal.spaceSM),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -126,30 +246,35 @@ class _EventsScreenState extends State<EventsScreen> {
               Row(
                 children: [
                   const Spacer(),
-                  // 成員頭像疊加
-                  SizedBox(
-                    width: 120,
-                    height: 36,
-                    child: Stack(
-                      children: List.generate(5, (i) => Positioned(
-                        left: i * 22.0,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColorsMinimal.primaryBackground,
-                            border: Border.all(color: Colors.white, width: 2),
+                  // 成員頭像疊加（動態數量）
+                  Builder(builder: (context) {
+                    final count = (reviewProvider.pendingGroups.isNotEmpty
+                        ? (reviewProvider.pendingGroups.first['memberIds'] as List?)?.length ?? 5
+                        : 5).clamp(2, 7);
+                    return SizedBox(
+                      width: count * 22.0 + 14,
+                      height: 36,
+                      child: Stack(
+                        children: List.generate(count, (i) => Positioned(
+                          left: i * 22.0,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColorsMinimal.primaryBackground,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: Icon(
+                              Icons.person_rounded,
+                              size: 18,
+                              color: AppColorsMinimal.textTertiary,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.person_rounded,
-                            size: 18,
-                            color: AppColorsMinimal.textTertiary,
-                          ),
-                        ),
-                      )),
-                    ),
-                  ),
+                        )),
+                      ),
+                    );
+                  }),
                   const Spacer(),
                   // 關閉按鈕
                   GestureDetector(
@@ -248,8 +373,9 @@ class _EventsScreenState extends State<EventsScreen> {
           );
         }
 
+        final now = DateTime.now().toUtc();
         final pastEvents = eventProvider.myEvents
-            .where((e) => e.eventDate.isBefore(DateTime.now()))
+            .where((e) => e.eventDate.toUtc().isBefore(now))
             .toList()
           ..sort((a, b) => b.eventDate.compareTo(a.eventDate));
 

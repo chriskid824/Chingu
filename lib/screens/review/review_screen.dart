@@ -229,7 +229,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     ),
                     const SizedBox(height: AppColorsMinimal.spaceXS),
                     Text(
-                      '${user.age} 歲 · ${user.job}',
+                      user.age > 0 ? '${user.age} 歲 · ${user.job}' : user.job,
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppColorsMinimal.textSecondary,

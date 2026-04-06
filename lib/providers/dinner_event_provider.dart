@@ -58,8 +58,8 @@ class DinnerEventProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _myEvents = await _dinnerEventService.getUserEvents(userId);
-      // 按日期升序排列，最近的在前
-      _myEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      // 按日期降序排列，最新的在前（與 Service 一致）
+      _myEvents.sort((a, b) => b.eventDate.compareTo(a.eventDate));
       _setLoading(false);
     } catch (e) {
       debugPrint('獲取我的活動失敗: $e');

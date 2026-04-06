@@ -26,6 +26,7 @@ class ReviewProvider extends ChangeNotifier {
   bool get hasPendingReviews => _pendingGroups.isNotEmpty;
   bool get allReviewsCompleted =>
       _pendingReviewees.isNotEmpty &&
+      _reviewChoices.isNotEmpty &&
       _reviewChoices.length == _pendingReviewees.length;
 
   /// 載入待評價群組
@@ -147,12 +148,12 @@ class ReviewProvider extends ChangeNotifier {
       uid: uid,
       email: '',
       name: '飯友 ${index + 1}',
-      age: 0,
+      age: -1, // -1 表示未知，UI 端不顯示
       gender: '',
       city: '',
       district: '',
       country: '',
-      job: '',
+      job: '資料載入中',
       interests: const [],
       diningPreference: 'any',
       minAge: 18,

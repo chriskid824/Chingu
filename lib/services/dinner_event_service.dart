@@ -114,7 +114,7 @@ class DinnerEventService {
         }
 
         final data = snapshot.data() as Map<String, dynamic>;
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final participantIds = List<String>.from(data['signedUpUsers'] ?? []);
         
         if (participantIds.contains(userId)) {
           throw Exception('您已加入此活動');
