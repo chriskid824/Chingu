@@ -128,31 +128,24 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  /// 獲取聊天室訊息流
+  /// 獲取聊天室訊息流（子集合 chat_rooms/{id}/messages）
   Stream<List<Map<String, dynamic>>> getMessages(String chatRoomId) {
     return _firestore
+        .collection('chat_rooms')
+        .doc(chatRoomId)
         .collection('messages')
-        .where('chatRoomId', isEqualTo: chatRoomId)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      final messages = snapshot.docs.map((doc) {
+      return snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
-
-      // 在內存中排序
-      messages.sort((a, b) {
-        final t1 = a['timestamp'] as Timestamp?;
-        final t2 = b['timestamp'] as Timestamp?;
-        if (t1 == null || t2 == null) return 0;
-        return t2.compareTo(t1); // 降序
-      });
-
-      return messages;
     });
   }
 
+  /// 發送訊息（寫入子集合 chat_rooms/{id}/messages）
   Future<void> sendMessage({
     required String chatRoomId,
     required String senderId,
@@ -162,9 +155,12 @@ class ChatProvider with ChangeNotifier {
     try {
       final timestamp = FieldValue.serverTimestamp();
 
-      // 1. 新增訊息
-      await _firestore.collection('messages').add({
-        'chatRoomId': chatRoomId,
+      // 1. 新增訊息到子集合
+      await _firestore
+          .collection('chat_rooms')
+          .doc(chatRoomId)
+          .collection('messages')
+          .add({
         'senderId': senderId,
         'text': text,
         'type': type,
@@ -178,18 +174,18 @@ class ChatProvider with ChangeNotifier {
         'lastMessageAt': timestamp,
       });
 
-      // 3. 遞增對方的 unreadCount
+      // 3. 遞增其他參與者的 unreadCount
       final chatRoomDoc = await _firestore.collection('chat_rooms').doc(chatRoomId).get();
       if (chatRoomDoc.exists) {
         final participantIds = List<String>.from(chatRoomDoc.data()?['participantIds'] ?? []);
-        final otherUserId = participantIds.firstWhere(
-          (id) => id != senderId,
-          orElse: () => '',
-        );
-        if (otherUserId.isNotEmpty) {
-          await _firestore.collection('chat_rooms').doc(chatRoomId).update({
-            'unreadCount.$otherUserId': FieldValue.increment(1),
-          });
+        final updates = <String, dynamic>{};
+        for (final id in participantIds) {
+          if (id != senderId) {
+            updates['unreadCount.$id'] = FieldValue.increment(1);
+          }
+        }
+        if (updates.isNotEmpty) {
+          await _firestore.collection('chat_rooms').doc(chatRoomId).update(updates);
         }
       }
     } catch (e) {

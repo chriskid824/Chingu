@@ -320,7 +320,11 @@ class DatabaseSeeder {
         ];
 
         for (var message in messages) {
-          await _firestore.collection('messages').add(message);
+          await _firestore
+              .collection('chat_rooms')
+              .doc(chatRoomId)
+              .collection('messages')
+              .add(message);
         }
 
         debugPrint('✓ 添加了測試訊息');
@@ -800,8 +804,11 @@ class DatabaseSeeder {
           'lastMessageAt': FieldValue.serverTimestamp(),
           'unreadCount': {myUid: 1},
         });
-        await _firestore.collection('messages').add({
-          'chatRoomId': chatRoomId,
+        await _firestore
+            .collection('chat_rooms')
+            .doc(chatRoomId)
+            .collection('messages')
+            .add({
           'senderId': pIds.last,
           'text': '期待 $eventTitle 的聚餐 🎉',
           'type': 'text',
@@ -836,16 +843,22 @@ class DatabaseSeeder {
         'unreadCount': {myUid: 1, matchPartnerId: 0},
       });
 
-      await _firestore.collection('messages').add({
-        'chatRoomId': matchChatId,
+      await _firestore
+          .collection('chat_rooms')
+          .doc(matchChatId)
+          .collection('messages')
+          .add({
         'senderId': matchPartnerId,
         'text': '嗨！很高興上次有跟你同桌 🙌',
         'type': 'text',
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
       });
-      await _firestore.collection('messages').add({
-        'chatRoomId': matchChatId,
+      await _firestore
+          .collection('chat_rooms')
+          .doc(matchChatId)
+          .collection('messages')
+          .add({
         'senderId': matchPartnerId,
         'text': '上次聚餐很開心！有空再約 😊',
         'type': 'text',
@@ -932,9 +945,11 @@ class DatabaseSeeder {
         .get();
     int msgCount = 0;
     for (var doc in chats.docs) {
-      // 先刪除該聊天室的所有訊息
-      final msgs = await _firestore.collection('messages')
-          .where('chatRoomId', isEqualTo: doc.id)
+      // 先刪除該聊天室子集合的所有訊息
+      final msgs = await _firestore
+          .collection('chat_rooms')
+          .doc(doc.id)
+          .collection('messages')
           .get();
       for (var mDoc in msgs.docs) {
         await mDoc.reference.delete();
