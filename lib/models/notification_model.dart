@@ -1,17 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// 通知模型
+///
+/// 包含類型(match/message/event)、標題、內容、時間戳、已讀狀態、deeplink 路由
 class NotificationModel {
   final String id;
   final String userId;
   final String type; // 'match', 'event', 'message', 'rating', 'system'
   final String title;
-  final String message;
+  final String message; // 內容 (Content)
   final String? imageUrl;
-  final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
-  final String? actionData; // JSON string or ID
+  final String? actionType; // Deprecated or alternative to deeplink
+  final String? actionData; // Deprecated or alternative to deeplink
+  final String? deeplink; // deeplink 路由 (Deeplink route), e.g., '/chat/123'
   final bool isRead;
-  final DateTime createdAt;
+  final DateTime createdAt; // 時間戳 (Timestamp)
 
   NotificationModel({
     required this.id,
@@ -22,6 +25,7 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.deeplink,
     this.isRead = false,
     required this.createdAt,
   });
@@ -43,6 +47,7 @@ class NotificationModel {
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      deeplink: map['deeplink'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -58,6 +63,7 @@ class NotificationModel {
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -74,6 +80,7 @@ class NotificationModel {
       imageUrl: imageUrl,
       actionType: actionType,
       actionData: actionData,
+      deeplink: deeplink,
       isRead: true,
       createdAt: createdAt,
     );
@@ -96,27 +103,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
