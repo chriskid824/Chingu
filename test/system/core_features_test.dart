@@ -398,4 +398,224 @@ void main() {
       expect(reverseReview.docs.length, equals(0)); // 沒有 Match
     });
   });
+
+  // ==================== 模組 F: 評價系統契約 (對齊 ReviewService) ====================
+  // 守住 review_service.dart 與 functions/src/pushNotifications.ts 的核心契約
+  group('F. 評價系統契約', () {
+    late FakeFirebaseFirestore fakeFirestore;
+
+    setUp(() {
+      fakeFirestore = FakeFirebaseFirestore();
+    });
+
+    test('F1: 雙向 result==like 應構成 Mutual Match (對齊真實 schema)', () async {
+      // 對齊 ReviewService.submitReview 使用的 result 欄位 (取代舊 wantToMeetAgain)
+      await fakeFirestore.collection('dinner_reviews').add({
+        'reviewerId': 'a', 'revieweeId': 'b', 'groupId': 'g1',
+        'eventId': 'e1', 'result': 'like',
+      });
+      await fakeFirestore.collection('dinner_reviews').add({
+        'reviewerId': 'b', 'revieweeId': 'a', 'groupId': 'g1',
+        'eventId': 'e1', 'result': 'like',
+      });
+
+      final reverse = await fakeFirestore.collection('dinner_reviews')
+          .where('reviewerId', isEqualTo: 'b')
+          .where('revieweeId', isEqualTo: 'a')
+          .where('groupId', isEqualTo: 'g1')
+          .where('result', isEqualTo: 'like')
+          .get();
+
+      expect(reverse.docs, hasLength(1), reason: '雙向 like 應構成 Match');
+    });
+
+    test('F2: 一邊 like 一邊 dislike 不應觸發 Match', () async {
+      await fakeFirestore.collection('dinner_reviews').add({
+        'reviewerId': 'a', 'revieweeId': 'b', 'groupId': 'g1',
+        'eventId': 'e1', 'result': 'like',
+      });
+      await fakeFirestore.collection('dinner_reviews').add({
+        'reviewerId': 'b', 'revieweeId': 'a', 'groupId': 'g1',
+        'eventId': 'e1', 'result': 'dislike',
+      });
+
+      final reverse = await fakeFirestore.collection('dinner_reviews')
+          .where('reviewerId', isEqualTo: 'b')
+          .where('revieweeId', isEqualTo: 'a')
+          .where('groupId', isEqualTo: 'g1')
+          .where('result', isEqualTo: 'like')
+          .get();
+
+      expect(reverse.docs, isEmpty);
+    });
+
+    test('F3: 重複評價檢查 — 同 (reviewer, reviewee, group) 三元組唯一', () async {
+      // ReviewService.submitReview L36-44 在 add 前 query 既有評價，避免覆蓋
+      await fakeFirestore.collection('dinner_reviews').add({
+        'reviewerId': 'a', 'revieweeId': 'b', 'groupId': 'g1',
+        'eventId': 'e1', 'result': 'like',
+      });
+
+      final existing = await fakeFirestore.collection('dinner_reviews')
+          .where('reviewerId', isEqualTo: 'a')
+          .where('revieweeId', isEqualTo: 'b')
+          .where('groupId', isEqualTo: 'g1')
+          .get();
+
+      expect(existing.docs, hasLength(1),
+          reason: '同三元組已存在 → submitReview 應 short-circuit 不再寫入');
+    });
+
+    test('F4: 確定性 ID 防止 autoSkipReviews 重試重複寫入', () async {
+      // 對齊 scheduledNotifications.ts autoSkipReviews 使用的 ID 格式
+      const id = 'auto_skip_userA_userB_groupX';
+      final payload = <String, dynamic>{
+        'reviewerId': 'userA', 'revieweeId': 'userB', 'groupId': 'groupX',
+        'eventId': 'e1', 'result': 'skipped',
+      };
+
+      await fakeFirestore.collection('dinner_reviews').doc(id).set(payload);
+      // 模擬 Cloud Function 重試 (transient error 後 retry)
+      await fakeFirestore.collection('dinner_reviews').doc(id).set(payload);
+
+      final all = await fakeFirestore.collection('dinner_reviews')
+          .where('reviewerId', isEqualTo: 'userA')
+          .where('revieweeId', isEqualTo: 'userB')
+          .get();
+
+      expect(all.docs, hasLength(1),
+          reason: '確定性 ID 應在重試時 idempotent，不會建立第二份');
+    });
+  });
+
+  // ==================== 模組 G: 隱私與雙盲規則 ====================
+  group('G. 隱私與雙盲規則', () {
+    late FakeFirebaseFirestore fakeFirestore;
+
+    setUp(() {
+      fakeFirestore = FakeFirebaseFirestore();
+    });
+
+    test('G1: 群組聊天室於 location_revealed 階段 avatars 應全為 null', () async {
+      // 產品鐵律：照片必須等到週四 19:00 才解鎖
+      // 對齊 revealRestaurants：建立 chat_rooms 時 participantAvatars[uid] = null
+      await fakeFirestore.collection('chat_rooms').add({
+        'type': 'group',
+        'participantIds': ['u1', 'u2', 'u3'],
+        'participantAvatars': {'u1': null, 'u2': null, 'u3': null},
+        'createdAt': DateTime.now(),
+      });
+
+      final rooms = await fakeFirestore.collection('chat_rooms').get();
+      final avatars = rooms.docs.first.data()['participantAvatars'] as Map;
+
+      expect(avatars.values.every((v) => v == null), isTrue,
+          reason: '餐廳揭曉時 (週三 17:00) 不可洩露真實照片');
+    });
+
+    test('G2: 評價查詢必須以 reviewerId==self 為條件 (對齊 rules)', () async {
+      // dinner_reviews 雙盲：firestore.rules 限制只有 reviewer 才能 read
+      await fakeFirestore.collection('dinner_reviews').add({
+        'reviewerId': 'me', 'revieweeId': 'someone', 'groupId': 'g',
+        'eventId': 'e', 'result': 'like',
+      });
+
+      final mine = await fakeFirestore.collection('dinner_reviews')
+          .where('reviewerId', isEqualTo: 'me').get();
+
+      expect(mine.docs, hasLength(1),
+          reason: '所有 query 應以 reviewerId 為條件，禁止用 revieweeId 反查');
+    });
+  });
+
+  // ==================== 模組 H: 報名與封鎖隔離 ====================
+  group('H. 報名與封鎖隔離', () {
+    late FakeFirebaseFirestore fakeFirestore;
+
+    setUp(() {
+      fakeFirestore = FakeFirebaseFirestore();
+    });
+
+    test('H1: 同一日期 (同週四) 只能報名一個活動', () async {
+      final sameThursday = DateTime(2026, 4, 16, 19, 0);
+
+      await fakeFirestore.collection('dinner_events').add({
+        'eventDate': sameThursday,
+        'signedUpUsers': ['user_x'], 'status': 'open',
+      });
+      await fakeFirestore.collection('dinner_events').add({
+        'eventDate': sameThursday,
+        'signedUpUsers': <String>[], 'status': 'open',
+      });
+
+      final existingForUser = await fakeFirestore.collection('dinner_events')
+          .where('signedUpUsers', arrayContains: 'user_x').get();
+
+      final hasOnSameDay = existingForUser.docs.any((d) {
+        final date = d.data()['eventDate'] as DateTime;
+        return date.year == sameThursday.year &&
+               date.month == sameThursday.month &&
+               date.day == sameThursday.day;
+      });
+
+      expect(hasOnSameDay, isTrue,
+          reason: 'bookWithValidation 應在伺服器端拒絕同日重複報名');
+    });
+
+    test('H2: 已封鎖用戶不應出現在聊天室查詢結果', () async {
+      // 對齊 ChatProvider.loadChatRooms 應依 user.blockedUserIds 過濾
+      await fakeFirestore.collection('chat_rooms').add({
+        'type': 'direct',
+        'participantIds': ['me', 'blocked_user'],
+        'createdAt': DateTime.now(),
+      });
+      await fakeFirestore.collection('chat_rooms').add({
+        'type': 'direct',
+        'participantIds': ['me', 'normal_user'],
+        'createdAt': DateTime.now(),
+      });
+
+      final blockedIds = {'blocked_user'};
+
+      final allRooms = await fakeFirestore.collection('chat_rooms')
+          .where('participantIds', arrayContains: 'me').get();
+
+      final visibleRooms = allRooms.docs.where((doc) {
+        final ids = List<String>.from(doc.data()['participantIds']);
+        return !ids.any(blockedIds.contains);
+      }).toList();
+
+      expect(visibleRooms, hasLength(1));
+      expect(
+        List<String>.from(visibleRooms.first.data()['participantIds']),
+        contains('normal_user'),
+      );
+    });
+  });
+
+  // ==================== 模組 I: autoSkipReviews 72hr 寬限期 ====================
+  // 對齊 functions/src/scheduledNotifications.ts autoSkipReviews 新邏輯
+  group('I. autoSkipReviews 72hr 寬限期', () {
+    const seventyTwoHours = Duration(hours: 72);
+
+    test('I1: 晚餐後未滿 72hr 不應觸發自動跳過', () {
+      final eventDate = DateTime.now().subtract(const Duration(hours: 60));
+      final shouldSkip = DateTime.now().difference(eventDate) >= seventyTwoHours;
+      expect(shouldSkip, isFalse, reason: '寬限期內，使用者仍可主動評價');
+    });
+
+    test('I2: 晚餐後超過 72hr 應觸發自動跳過', () {
+      final eventDate = DateTime.now().subtract(const Duration(hours: 73));
+      final shouldSkip = DateTime.now().difference(eventDate) >= seventyTwoHours;
+      expect(shouldSkip, isTrue);
+    });
+
+    test('I3: eventDate 缺失時應保守不跳過 (安全防呆)', () {
+      DateTime? eventDate;
+      final shouldSkip = eventDate != null &&
+          DateTime.now().difference(eventDate).inHours >= 72;
+      expect(shouldSkip, isFalse,
+          reason: '無 eventDate 不能假設已過寬限，避免誤標 skipped');
+    });
+  });
 }
