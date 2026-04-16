@@ -613,7 +613,8 @@ void main() {
     });
 
     test('I3: eventDate 缺失時應保守不跳過 (安全防呆)', () {
-      DateTime? eventDate;
+      final Map<String, dynamic> groupData = {'status': 'completed'};
+      final eventDate = groupData['eventDate'] as DateTime?;
       final shouldSkip = eventDate != null &&
           DateTime.now().difference(eventDate).inHours >= 72;
       expect(shouldSkip, isFalse,
