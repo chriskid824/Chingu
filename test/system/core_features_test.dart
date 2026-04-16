@@ -552,7 +552,9 @@ void main() {
           .where('signedUpUsers', arrayContains: 'user_x').get();
 
       final hasOnSameDay = existingForUser.docs.any((d) {
-        final date = d.data()['eventDate'] as DateTime;
+        // FakeFirebaseFirestore 會把 DateTime 序列化為 Timestamp
+        final raw = d.data()['eventDate'];
+        final date = raw is Timestamp ? raw.toDate() : raw as DateTime;
         return date.year == sameThursday.year &&
                date.month == sameThursday.month &&
                date.day == sameThursday.day;
