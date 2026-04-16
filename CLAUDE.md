@@ -261,39 +261,53 @@ MVP 僅限**台北市信義區**，後期再擴展。
 - UserModel 新增 dietaryPreferences
 - Firestore 集合名稱統一
 
-### Phase 3：動態首頁儀表板 — ⏳ 未完成
-- [ ] 首頁 4 狀態 UI（未報名/配對中/部分解鎖/完全解鎖）
-- [ ] 倒數圓環 Widget
-- [ ] 電子邀請卡 Widget
-- [ ] 餐廳地圖卡片
-- [ ] 破冰話題包入口
+### Phase 3：動態首頁儀表板 — ✅ 完成（2026-03-30）
+- [x] 首頁 5 狀態 UI（未報名 / 配對中 / 部分解鎖 / 完全解鎖 / 待評價）
+- [x] 倒數圓環 Widget — Apple Watch 風格、Timer 30 秒刷新（`countdown_ring.dart` 289 行）
+- [x] 電子邀請卡 Widget — 微光旋轉 + 脈衝動畫（`matching_card.dart` 260 行）
+- [x] 餐廳地圖卡片 — Google Maps 導航入口（`restaurant_reveal_card.dart` 117 行）
+- [x] 破冰話題包入口 — 完整 PageView 三層級（`icebreaker_screen.dart`）
+- [x] 首頁狀態機單元測試（`home_state_test.dart`）
 
-### Phase 4：評價與私訊解鎖 — ⏳ 部分完成
-- [x] review_screen.dart 已存在
-- [ ] 雙盲 👍/👎 評價邏輯（即時結算）
-- [ ] Cloud Function：雙向 👍 自動建立聊天室 + 推播
-- [ ] 72 小時逾期自動跳過
+### Phase 4：評價與私訊解鎖 — ✅ 完成（2026-03-30 ~ 2026-04-06）
+- [x] review_screen.dart — 雙盲 UI、Haptic 回饋、回彈動畫（641 行）
+- [x] 雙盲 👍/👎 評價邏輯（即時結算）— `review_service.dart` `_checkAndCreateMutualMatch()`
+- [x] Cloud Function：雙向 👍 自動建立聊天室 + 推播 — `pushNotifications.ts` `onMutualMatch()`
+- [x] 72 小時逾期自動跳過 — `scheduledNotifications.ts` `autoSkipReviews()` 週一 10:00 排程
+- [x] 防重複提交、防 race condition（確定性聊天室 ID）
 
-### Phase 5：UI 設計系統導入 — ⏳ 部分完成
-- [x] Design Token 建立（app_colors_minimal.dart）
-- [ ] 套用至所有頁面
-- [ ] 導入微動畫（圓環、翻牌、按鈕回彈）
+### Phase 5：UI 設計系統導入 — ⏳ 接近完成（核心頁已合規，邊緣頁殘留硬編碼）
+- [x] Design Token 建立（`app_colors_minimal.dart`，30+ 色彩 Token + 漸層 + 間距 + 圓角）
+- [x] 微動畫導入 — flip / bounce / appear / counter / skeleton 全到位
+- [x] 統一動畫常數（`app_animations.dart`）
+- [x] 核心頁面 Token 合規（home / chat / events / group）
+- [ ] **遺留**：auth (6) / profile (16) / settings (13) / debug (5) 等邊緣頁面仍有約 222 處硬編碼顏色
 
-### Phase 6：營運後台網站 — ⏳ 未開始
+### Phase 6：營運後台網站 — ⏳ 未開始（真正卡關）
 - [ ] Flutter Web 專案建立
 - [ ] 數據總覽 + 用戶列表
 - [ ] 報名管理 + 配對結果
-- [ ] 餐廳管理 + 指定餐廳
-- [ ] 破冰話題管理
+- [ ] 餐廳管理 + 指定餐廳（目前靠 `DatabaseSeeder` 硬寫 + Firebase Console 手改）
+- [ ] 破冰話題管理（目前只能在 Firebase Console 手動 CRUD）
+- [ ] 訂位工單 UI（目前需手動致電 + Console 改 `booking_tasks.status`）
+
+### 隱藏技術債（待處理）
+- [ ] `UserModel` 缺 `fcmToken` 欄位定義（推播實際運作但型別不安全）
+- [ ] `sendBroadcast.ts` 的 admin 權限檢查仍是 TODO 狀態
+- [ ] `firestore.rules` 的 `isDeveloper()` 還硬編碼 `chriskid824@gmail.com`，未抽象為 admins collection
 
 ### 其他已完成項目
 - [x] CI/CD：GitHub Actions → Firebase App Distribution
-- [x] Google / Apple 登入
+- [x] Google / Apple 登入（含 Android Client ID 修復、Apple 按鈕跨平台處理）
 - [x] Release Keystore 簽章
 - [x] 測試情境 Seeder（6 模組 15 個 User Case）
-- [x] 群組聊天功能
+- [x] 群組聊天功能（chat_rooms 子集合架構）
 - [x] Event 詳情頁 + Group 卡片
 - [x] 強制更新服務（force_update_service.dart）
+- [x] 抽象幾何頭像系統（`GeometricAvatar` + `PhotoVisibility`）
+- [x] 品牌開場動畫（Logo + 6 人圓桌動畫）
+- [x] 13 個 Firestore 複合索引建立完成
+- [x] 自動化系統測試（`test/system/core_features_test.dart`）
 
 ---
 
