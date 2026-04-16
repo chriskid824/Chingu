@@ -17,7 +17,12 @@ export const createWeeklyEvent = functions.pubsub
         // 計算本週四日期
         const now = new Date();
         const day = now.getDay(); // 2 = Tuesday
-        const daysUntilThursday = (4 - day + 7) % 7;
+        let daysUntilThursday = (4 - day + 7) % 7;
+        // 排程延遲到週四當天且已過 19:00 → 目標改成下週四
+        // （否則會建立一個「已過期」的活動）
+        if (daysUntilThursday === 0 && now.getHours() >= 19) {
+            daysUntilThursday = 7;
+        }
         const thursday = new Date(now);
         thursday.setDate(now.getDate() + daysUntilThursday);
         thursday.setHours(19, 0, 0, 0); // 19:00 晚餐

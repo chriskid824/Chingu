@@ -87,65 +87,86 @@ export const revealRestaurants = functions.pubsub
                 const restaurantName = groupData.restaurantName || "驚喜餐廳";
                 const restaurantAddress = groupData.restaurantAddress || "";
 
-                // 更新狀態為 location_revealed
-                await groupDoc.ref.update({
-                    status: "location_revealed",
-                });
-
-                // 建立群組聊天室
                 const chatRoomRef = db.collection("chat_rooms").doc();
-                const participantNames: Record<string, string> = {};
-                const participantAvatars: Record<string, string | null> = {};
-                const unreadCount: Record<string, number> = {};
-
-                const userDocs = await Promise.all(
-                    participants.map((uid) =>
-                        db.collection("users").doc(uid).get()
-                    )
-                );
-
                 const groupTokens: string[] = [];
 
-                for (const userDoc of userDocs) {
-                    if (!userDoc.exists) continue;
-                    const data = userDoc.data()!;
-                    participantNames[userDoc.id] = data.name || "匿名";
-                    participantAvatars[userDoc.id] = null; // 照片週四 19:00 才解鎖
-                    unreadCount[userDoc.id] = 1; // 系統訊息算一則未讀
-                    if (data.fcmToken) groupTokens.push(data.fcmToken);
+                try {
+                    // 更新狀態為 location_revealed
+                    await groupDoc.ref.update({
+                        status: "location_revealed",
+                    });
+
+                    // 建立群組聊天室
+                    const participantNames: Record<string, string> = {};
+                    const participantAvatars: Record<string, string | null> =
+                        {};
+                    const unreadCount: Record<string, number> = {};
+
+                    const userDocs = await Promise.all(
+                        participants.map((uid) =>
+                            db.collection("users").doc(uid).get()
+                        )
+                    );
+
+                    for (const userDoc of userDocs) {
+                        if (!userDoc.exists) continue;
+                        const data = userDoc.data()!;
+                        participantNames[userDoc.id] = data.name || "匿名";
+                        participantAvatars[userDoc.id] = null; // 照片週四 19:00 才解鎖
+                        unreadCount[userDoc.id] = 1; // 系統訊息算一則未讀
+                        if (data.fcmToken) groupTokens.push(data.fcmToken);
+                    }
+
+                    await chatRoomRef.set({
+                        type: "group",
+                        dinnerEventId: eventDoc.id,
+                        groupId: groupDoc.id,
+                        participantIds: participants,
+                        participantNames: participantNames,
+                        participantAvatars: participantAvatars,
+                        lastMessage: "群組聊天已開通！明晚見～",
+                        lastMessageTime:
+                            admin.firestore.FieldValue.serverTimestamp(),
+                        lastMessageSenderId: "system",
+                        unreadCount: unreadCount,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    });
+
+                    // 寫入系統歡迎訊息
+                    await chatRoomRef.collection("messages").add({
+                        chatRoomId: chatRoomRef.id,
+                        senderId: "system",
+                        senderName: "Chingu",
+                        message:
+                            "群組聊天已開通！明晚見～有任何問題可以在這裡討論。",
+                        type: "system",
+                        timestamp:
+                            admin.firestore.FieldValue.serverTimestamp(),
+                        readBy: [],
+                    });
+
+                    // 更新 DinnerGroup 的 groupChatId
+                    await groupDoc.ref.update({
+                        groupChatId: chatRoomRef.id,
+                    });
+                } catch (error) {
+                    // 聊天室建立失敗 → 回滾狀態，避免群組卡死在 location_revealed 但無聊天室
+                    console.error(
+                        `[revealRestaurants] Failed for group ${groupDoc.id}, rolling back:`,
+                        error
+                    );
+                    await groupDoc.ref
+                        .update({ status: "info_revealed" })
+                        .catch((rollbackErr) => {
+                            console.error(
+                                "[revealRestaurants] Rollback also failed:",
+                                rollbackErr
+                            );
+                        });
+                    continue; // 跳過推播，下次排程或人工介入處理
                 }
 
-                await chatRoomRef.set({
-                    type: "group",
-                    dinnerEventId: eventDoc.id,
-                    groupId: groupDoc.id,
-                    participantIds: participants,
-                    participantNames: participantNames,
-                    participantAvatars: participantAvatars,
-                    lastMessage: "群組聊天已開通！明晚見～",
-                    lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
-                    lastMessageSenderId: "system",
-                    unreadCount: unreadCount,
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-
-                // 寫入系統歡迎訊息
-                await chatRoomRef.collection("messages").add({
-                    chatRoomId: chatRoomRef.id,
-                    senderId: "system",
-                    senderName: "Chingu",
-                    message: "群組聊天已開通！明晚見～有任何問題可以在這裡討論。",
-                    type: "system",
-                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                    readBy: [],
-                });
-
-                // 更新 DinnerGroup 的 groupChatId
-                await groupDoc.ref.update({
-                    groupChatId: chatRoomRef.id,
-                });
-
-                // 推播餐廳資訊
+                // 推播餐廳資訊（聊天室建立成功後才發）
                 if (groupTokens.length > 0) {
                     await messaging.sendEachForMulticast({
                         notification: {
@@ -463,6 +484,9 @@ export const autoSkipReviews = functions.pubsub
     .onRun(async () => {
         console.log("[autoSkipReviews] Auto-skipping expired reviews...");
 
+        const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
+        const nowMs = Date.now();
+
         const groups = await db
             .collection("dinner_groups")
             .where("status", "==", "completed")
@@ -471,14 +495,45 @@ export const autoSkipReviews = functions.pubsub
 
         if (groups.empty) return;
 
+        // 批次取 eventDate 用於 72hr 寬限期檢查
+        const eventIds = Array.from(
+            new Set(
+                groups.docs
+                    .map((d) => d.data().eventId as string | undefined)
+                    .filter((id): id is string => !!id)
+            )
+        );
+
+        const eventDocs = await Promise.all(
+            eventIds.map((id) => db.collection("dinner_events").doc(id).get())
+        );
+
+        const eventDateMsById = new Map<string, number>();
+        for (const eventDoc of eventDocs) {
+            if (!eventDoc.exists) continue;
+            const ts = eventDoc.data()?.eventDate;
+            if (ts && typeof ts.toMillis === "function") {
+                eventDateMsById.set(eventDoc.id, ts.toMillis());
+            }
+        }
+
         let skippedCount = 0;
+        let groupsSkippedTooEarly = 0;
 
         for (const groupDoc of groups.docs) {
-            const participants: string[] = groupDoc.data().participantIds || [];
             const eventId: string = groupDoc.data().eventId || "";
+            const eventDateMs = eventDateMsById.get(eventId);
+
+            // 產品鐵律：必須真的超過 72 小時才自動跳過
+            // （防止改期或排程提前的群組被誤跳過）
+            if (!eventDateMs || nowMs - eventDateMs < SEVENTY_TWO_HOURS_MS) {
+                groupsSkippedTooEarly++;
+                continue;
+            }
+
+            const participants: string[] = groupDoc.data().participantIds || [];
 
             for (const userId of participants) {
-                // 找出這個人還沒評價的對象
                 const existingReviews = await db
                     .collection("dinner_reviews")
                     .where("reviewerId", "==", userId)
@@ -493,25 +548,33 @@ export const autoSkipReviews = functions.pubsub
                     (id) => id !== userId && !reviewedIds.has(id)
                 );
 
-                // 為每個未評價的對象自動建立 'skipped' 評價
+                // 用確定性 ID 防止 Cloud Function 重試時重複寫入
                 for (const revieweeId of pendingReviewees) {
-                    await db.collection("dinner_reviews").add({
-                        reviewerId: userId,
-                        revieweeId: revieweeId,
-                        groupId: groupDoc.id,
-                        eventId: eventId,
-                        result: "skipped",
-                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    });
+                    const deterministicId =
+                        `auto_skip_${userId}_${revieweeId}_${groupDoc.id}`;
+                    await db
+                        .collection("dinner_reviews")
+                        .doc(deterministicId)
+                        .set({
+                            reviewerId: userId,
+                            revieweeId: revieweeId,
+                            groupId: groupDoc.id,
+                            eventId: eventId,
+                            result: "skipped",
+                            createdAt:
+                                admin.firestore.FieldValue.serverTimestamp(),
+                        });
                     skippedCount++;
                 }
             }
 
-            // 更新群組評價狀態
             await groupDoc.ref.update({ reviewStatus: "completed" });
         }
 
-        console.log(`[autoSkipReviews] Created ${skippedCount} skipped reviews`);
+        console.log(
+            `[autoSkipReviews] Created ${skippedCount} skipped reviews;` +
+                ` deferred ${groupsSkippedTooEarly} groups still within 72hr`
+        );
     });
 
 // ────────────────────────────────────────────────────────

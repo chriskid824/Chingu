@@ -295,21 +295,15 @@ export const onMutualMatch = functions.firestore
             ),
         ]);
 
-        // 6. 更新雙方的 totalMatches
-        await Promise.all([
-            db
-                .collection("users")
-                .doc(reviewerId)
-                .update({
-                    totalMatches: admin.firestore.FieldValue.increment(1),
-                }),
-            db
-                .collection("users")
-                .doc(revieweeId)
-                .update({
-                    totalMatches: admin.firestore.FieldValue.increment(1),
-                }),
-        ]);
+        // 6. 更新雙方的 totalMatches（用 batch 保證原子，避免一邊加一邊沒加）
+        const batch = db.batch();
+        batch.update(db.collection("users").doc(reviewerId), {
+            totalMatches: admin.firestore.FieldValue.increment(1),
+        });
+        batch.update(db.collection("users").doc(revieweeId), {
+            totalMatches: admin.firestore.FieldValue.increment(1),
+        });
+        await batch.commit();
     });
 
 /**
