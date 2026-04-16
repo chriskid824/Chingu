@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue,Timestamp} from "firebase-admin/firestore";
 
 const db = admin.firestore();
 
@@ -83,8 +84,8 @@ export const bookWithValidation = functions.https.onCall(async (data, context) =
         const eventsQuery = await db
             .collection("dinner_events")
             .where("city", "==", city)
-            .where("eventDate", ">=", admin.firestore.Timestamp.fromDate(startOfDay))
-            .where("eventDate", "<=", admin.firestore.Timestamp.fromDate(endOfDay))
+            .where("eventDate", ">=", Timestamp.fromDate(startOfDay))
+            .where("eventDate", "<=", Timestamp.fromDate(endOfDay))
             .where("status", "==", "open")
             .limit(1)
             .get();
@@ -107,7 +108,7 @@ export const bookWithValidation = functions.https.onCall(async (data, context) =
             }
 
             transaction.update(eventRef, {
-                signedUpUsers: admin.firestore.FieldValue.arrayUnion(userId),
+                signedUpUsers: FieldValue.arrayUnion(userId),
             });
         } else {
             // 建立新活動
@@ -118,14 +119,14 @@ export const bookWithValidation = functions.https.onCall(async (data, context) =
 
             transaction.set(eventRef, {
                 id: eventId,
-                eventDate: admin.firestore.Timestamp.fromDate(eventDateTime),
-                signupDeadline: admin.firestore.Timestamp.fromDate(
+                eventDate: Timestamp.fromDate(eventDateTime),
+                signupDeadline: Timestamp.fromDate(
                     new Date(eventDateTime.getTime() - 24 * 60 * 60 * 1000)
                 ),
                 city,
                 signedUpUsers: [userId],
                 status: "open",
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: FieldValue.serverTimestamp(),
             });
         }
 

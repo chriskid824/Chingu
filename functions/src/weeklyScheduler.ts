@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue,Timestamp} from "firebase-admin/firestore";
 import { assignRestaurant } from "./restaurantAssignment";
 
 const db = admin.firestore();
@@ -80,12 +81,12 @@ export const processWeeklyGrouping = functions.pubsub
             .where(
                 "eventDate",
                 ">=",
-                admin.firestore.Timestamp.fromDate(thursdayStart)
+                Timestamp.fromDate(thursdayStart)
             )
             .where(
                 "eventDate",
                 "<=",
-                admin.firestore.Timestamp.fromDate(thursdayEnd)
+                Timestamp.fromDate(thursdayEnd)
             )
             .get();
 
@@ -156,7 +157,7 @@ export const processWeeklyGrouping = functions.pubsub
                     participantIds: group.participantIds,
                     status: "pending",
                     reviewStatus: "none",
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    createdAt: FieldValue.serverTimestamp(),
                     icebreakerQuestions: icebreakers,
                     restaurantId: null,
                     restaurantName: null,
@@ -547,7 +548,7 @@ async function handleInsufficientUsers(
  */
 async function notifyGroupedUsers(
     userIds: string[],
-    eventDate: admin.firestore.Timestamp
+    eventDate: Timestamp
 ): Promise<void> {
     const userDocs = await Promise.all(
         userIds.map((uid) => db.collection("users").doc(uid).get())

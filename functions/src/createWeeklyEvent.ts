@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue,Timestamp} from "firebase-admin/firestore";
 
 const db = admin.firestore();
 
@@ -17,7 +18,12 @@ export const createWeeklyEvent = functions.pubsub
         // 計算本週四日期
         const now = new Date();
         const day = now.getDay(); // 2 = Tuesday
-        const daysUntilThursday = (4 - day + 7) % 7;
+        let daysUntilThursday = (4 - day + 7) % 7;
+        // 排程延遲到週四當天且已過 19:00 → 目標改成下週四
+        // （否則會建立一個「已過期」的活動）
+        if (daysUntilThursday === 0 && now.getHours() >= 19) {
+            daysUntilThursday = 7;
+        }
         const thursday = new Date(now);
         thursday.setDate(now.getDate() + daysUntilThursday);
         thursday.setHours(19, 0, 0, 0); // 19:00 晚餐
@@ -37,12 +43,12 @@ export const createWeeklyEvent = functions.pubsub
             .where(
                 "eventDate",
                 ">=",
-                admin.firestore.Timestamp.fromDate(thursdayStart)
+                Timestamp.fromDate(thursdayStart)
             )
             .where(
                 "eventDate",
                 "<=",
-                admin.firestore.Timestamp.fromDate(thursdayEnd)
+                Timestamp.fromDate(thursdayEnd)
             )
             .get();
 
@@ -55,12 +61,12 @@ export const createWeeklyEvent = functions.pubsub
 
         // MVP：只建一個台北市信義區的晚餐活動
         await db.collection("dinner_events").add({
-            eventDate: admin.firestore.Timestamp.fromDate(thursday),
-            signupDeadline: admin.firestore.Timestamp.fromDate(signupDeadline),
+            eventDate: Timestamp.fromDate(thursday),
+            signupDeadline: Timestamp.fromDate(signupDeadline),
             city: "台北市",
             status: "open",
             signedUpUsers: [],
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
 
         console.log(

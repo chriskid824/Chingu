@@ -50,6 +50,13 @@
   - phoneNumber: string?
   - minAge: int
   - maxAge: int
+  - fcmToken: string?                  (FCM 推播 token，由 App/CF 寫入)
+
+/admins/{uid}
+  - addedAt: Timestamp                 (加入管理員的時間)
+  - addedBy: string                    (加他進來的 super-admin uid)
+  - role: string                       ('ops' | 'engineer' | 'super')，僅作為紀錄用，rules 不依此分權
+  - note: string?                      (備註，例如「2026 Q2 新進營運」)
 
 /ChatRooms/{chatId}
   - type: 'group' | 'direct'
@@ -106,20 +113,27 @@
 ## Firestore Security Rules 原則
 
 ### 讀取權限
-- `/Users/{uid}` — 只有本人和 Cloud Functions 可讀完整資料
+- `/Users/{uid}` — 所有登入用戶可讀（配對需要），上線前需收緊欄位
 - `/DinnerGroups/{groupId}` — 只有 participantIds 中的人可讀
-- `/ChatRooms/{chatId}` — 只有 participantIds 中的人可讀
+- `/ChatRooms/{chatId}` — 只有 participantIds 中的人或 `isAdmin()` 可讀
 - `/Reviews/` — 只有 reviewer 本人可讀自己的評價
-- `/IcebreakerQuestions/` — 所有已登入用戶可讀 isActive=true 的題目
-- `/Restaurants/` — Cloud Functions 和後台管理員可讀
+- `/IcebreakerQuestions/` — 所有已登入用戶可讀
+- `/Restaurants/` — 所有登入用戶可讀
+- `/admins/{uid}` — 只有 `isAdmin()` 可讀（後台需顯示成員列表）
 
 ### 寫入權限
-- `/Users/{uid}` — 只有本人可寫自己的資料
-- `/DinnerEvents/` — 只有 Cloud Functions 可建立；用戶只能修改 signedUpUsers（報名/取消）
-- `/DinnerGroups/` — 只有 Cloud Functions 可寫
+- `/Users/{uid}` — 只有本人可寫自己的資料；管理員可建立/刪除（封號用）
+- `/DinnerEvents/` — `isAdmin()` 或 Cloud Functions 可建立/刪除；用戶只能修改 signedUpUsers
+- `/DinnerGroups/` — `isAdmin()` 或 Cloud Functions 可寫
 - `/ChatRooms/{chatId}/messages/` — 只有 participantIds 中的人可新增訊息
 - `/Reviews/` — 每人對同一對象只能寫一次，不可修改
 - `/Reports/` — 已登入用戶可新增，不可修改/刪除
+- `/admins/{uid}` — **僅 `isDeveloper()`（super-admin）可建立/修改/刪除**
+
+### 權限模型
+- **isDeveloper()**：硬編碼 super-admin（`chriskid824@gmail.com`），唯一能管理 `/admins` collection 的身份
+- **isAdmin()**：在 `/admins/{uid}` 中註冊的人 OR `isDeveloper()`，用於日常營運操作
+- 設計理由：避免雞生蛋問題（第一個 admin 必須有人能寫入），同時讓營運人員的加入/移除透過 Firestore 文件管理而非 redeploy rules
 
 ### 絕對禁止
 - 任何用戶直接讀取其他用戶的 diningPreference（後端配對參數，前端不可見）
@@ -157,3 +171,4 @@
 - [ ] 對應的 Model（fromJson/toJson）是否已同步更新？
 - [ ] 計數/統計欄位是否由 Cloud Function 維護而非前端寫入？
 - [ ] 是否存在資料孤島風險？（例如刪除 Event 後 Group 變孤兒）
+- [ ] 任何敏感欄位（fcmToken / phoneNumber 等）是否在 toMap/fromMap 兩端都有處理？避免 App 寫入時靜默遺失

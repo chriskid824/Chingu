@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 
 const db = admin.firestore();
 
@@ -165,7 +166,7 @@ export async function assignRestaurant(
 
     // 8. 更新餐廳的 lastBookedAt
     await db.collection("restaurants").doc(chosen.id).update({
-        lastBookedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastBookedAt: FieldValue.serverTimestamp(),
     });
 
     // 9. 更新 DinnerGroup 的餐廳欄位（反正規化快取）

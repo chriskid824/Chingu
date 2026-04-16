@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {Timestamp} from "firebase-admin/firestore";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -89,7 +90,7 @@ export const revealCompanions = functions.pubsub
         const groups = await db
             .collection("dinner_groups")
             .where("status", "==", "pending")
-            .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(cutoff))
+            .where("createdAt", ">=", Timestamp.fromDate(cutoff))
             .get();
 
         if (groups.empty) {
@@ -121,7 +122,7 @@ export const revealCompanions = functions.pubsub
 
                 const age: number = data.age ?? 25;
                 const birthday = data.birthday
-                    ? (data.birthday as admin.firestore.Timestamp).toDate()
+                    ? (data.birthday as Timestamp).toDate()
                     : null;
 
                 const interests: string[] = data.interests ?? [];

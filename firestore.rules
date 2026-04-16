@@ -11,11 +11,20 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // 開發者權限（僅限資料種子工具使用）
+    // 超級管理員（bootstrap 用）：唯一可管理 /admins collection 的身份
+    // 設計理由：避免雞生蛋問題 — 第一個 admin 必須有人能寫入 /admins
     function isDeveloper() {
       return isAuthenticated() &&
              request.auth.token.email != null &&
              request.auth.token.email == 'chriskid824@gmail.com';
+    }
+
+    // 一般管理員：在 /admins/{uid} 中註冊的人，或 super-admin
+    // 用於日常營運操作（管理用戶、餐廳、話題、後台等）
+    function isAdmin() {
+      return isAuthenticated() &&
+             (isDeveloper() ||
+              exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
 
     // 是否為聊天室參與者
@@ -24,21 +33,28 @@ service cloud.firestore {
              request.auth.uid in resource.data.participantIds;
     }
 
+    // ===== 管理員名單 =====
+    // 只有 super-admin (isDeveloper) 可管理；任何 admin 可讀（後台需顯示成員列表）
+    match /admins/{userId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isDeveloper();
+    }
+
     // ===== 用戶 =====
     match /users/{userId} {
       // 所有登入用戶可讀（配對、聊天等需要讀取其他用戶基本資料）
       // 上線前收緊：只允許讀取有限欄位
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId) || isDeveloper();
+      allow create: if isOwner(userId) || isAdmin();
       allow update: if isOwner(userId);
-      allow delete: if isOwner(userId) || isDeveloper();
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     // ===== 訂閱 =====
     match /subscriptions/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId) || isDeveloper();
-      allow update: if isOwner(userId) || isDeveloper();
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
     }
 
     // ===== 晚餐活動 =====
@@ -46,9 +62,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // 用戶只能修改 signedUpUsers（報名/取消）
       allow update: if isAuthenticated();
-      // 只有 Cloud Functions 和開發者可建立/刪除
-      allow create: if isDeveloper();
-      allow delete: if isDeveloper();
+      // 只有 Cloud Functions 和管理員可建立/刪除
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // ===== 晚餐群組 =====
@@ -56,21 +72,21 @@ service cloud.firestore {
       // 只有參與者可讀
       allow read: if isAuthenticated() &&
                      request.auth.uid in resource.data.participantIds;
-      // 只有 Cloud Functions 和開發者可寫
-      allow create: if isDeveloper();
+      // 只有 Cloud Functions 和管理員可寫
+      allow create: if isAdmin();
       allow update: if isAuthenticated();
-      allow delete: if isDeveloper();
+      allow delete: if isAdmin();
     }
 
     // ===== 聊天室 =====
     match /chat_rooms/{chatRoomId} {
-      // 參與者或開發者可讀
-      allow read: if isChatParticipant() || isDeveloper();
+      // 參與者或管理員可讀
+      allow read: if isChatParticipant() || isAdmin();
       // 已登入用戶可建立（雙向 Match 時由 App 建立）
       allow create: if isAuthenticated();
       // 參與者可更新（發訊息時更新 lastMessage / unreadCount）
-      allow update: if isChatParticipant() || isDeveloper();
-      allow delete: if isDeveloper();
+      allow update: if isChatParticipant() || isAdmin();
+      allow delete: if isAdmin();
 
       // 訊息子集合 — 透過 get() 驗證是否為聊天室參與者
       match /messages/{messageId} {
@@ -81,7 +97,7 @@ service cloud.firestore {
         allow read: if isAuthenticated() && isChatMember();
         allow create: if isAuthenticated() && isChatMember();
         allow update: if false;
-        allow delete: if isDeveloper();
+        allow delete: if isAdmin();
       }
     }
 
@@ -91,19 +107,19 @@ service cloud.firestore {
                      resource.data.reviewerId == request.auth.uid;
       allow create: if isAuthenticated();
       allow update: if false;  // 評價不可修改
-      allow delete: if isDeveloper();
+      allow delete: if isAdmin();
     }
 
     // ===== 破冰話題 =====
     match /icebreaker_questions/{questionId} {
       allow read: if isAuthenticated();
-      allow write: if isDeveloper();
+      allow write: if isAdmin();
     }
 
     // ===== 餐廳 =====
     match /restaurants/{restaurantId} {
       allow read: if isAuthenticated();
-      allow write: if isDeveloper();
+      allow write: if isAdmin();
     }
 
     // ===== 檢舉 =====

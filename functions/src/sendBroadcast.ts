@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 
 // admin.initializeApp() is handled in index.ts
 
@@ -21,8 +22,8 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         );
     }
 
-    // TODO: Add admin role verification
-    // For now, we'll check if user is in an 'admins' collection
+    // Admin verification: caller must exist in /admins/{uid}
+    // 對應 firestore.rules 的 isAdmin() — 統一身份來源
     const adminDoc = await admin.firestore()
         .collection("admins")
         .doc(context.auth.uid)
@@ -77,7 +78,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 body,
                 targetType: "all",
                 sentBy: context.auth.uid,
-                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                sentAt: FieldValue.serverTimestamp(),
                 messageId: response,
             });
 
@@ -147,7 +148,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetType: targetUserIds.length > 0 ? "users" : "cities",
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
-            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: FieldValue.serverTimestamp(),
             successCount: response.successCount,
             failureCount: response.failureCount,
         });
