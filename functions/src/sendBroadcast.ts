@@ -22,8 +22,8 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
         );
     }
 
-    // TODO: Add admin role verification
-    // For now, we'll check if user is in an 'admins' collection
+    // Admin verification: caller must exist in /admins/{uid}
+    // 對應 firestore.rules 的 isAdmin() — 統一身份來源
     const adminDoc = await admin.firestore()
         .collection("admins")
         .doc(context.auth.uid)

@@ -145,6 +145,43 @@ MVP 僅限**台北市信義區**。
 3. 排除近 2 週已分配的餐廳
 4. 從結果中選一間，致電訂位
 
+## 管理員權限管理 SOP
+
+### 權限模型
+- **Super-admin**：硬編碼於 `firestore.rules` 的 `isDeveloper()`（目前唯一：`chriskid824@gmail.com`），是「能新增管理員」的唯一身份
+- **一般管理員**：在 Firestore `/admins/{uid}` 中註冊的人，可執行所有日常營運操作（管理用戶、餐廳、話題、配對、後台等）
+
+### 加入新管理員（由 super-admin 執行）
+
+**必須在 Firebase Console 手動建立 `/admins/{該人員 uid}` 文件**：
+```
+addedAt: <現在時間 Timestamp>
+addedBy: "<super-admin 的 uid>"
+role: "ops" | "engineer" | "super"   ← 僅紀錄用，不影響權限
+note: "<備註，如：2026 Q2 新進營運>"
+```
+
+成功條件：
+- 該人員下次登入即取得管理員權限（無需重 deploy rules / functions）
+- 後台網站登入後可看到管理功能
+- 可呼叫 `sendBroadcast` Callable Function
+
+### 移除管理員
+- Super-admin 從 Firebase Console 刪除對應 `/admins/{uid}` 文件
+- 該人員的下次操作會被 rules 拒絕
+
+### 權限稽核（每月一次）
+- [ ] 列出 `/admins` collection 全部文件
+- [ ] 確認每個 admin 仍是現職人員（離職者必須立刻移除）
+- [ ] 檢查 `broadcast_logs` 近 30 天紀錄，確認無異常推播
+
+### 注意事項
+- ⚠️ **不可把自己的密碼/帳號借給別人**：審計需追溯到個人
+- ⚠️ **Super-admin 帳號（`chriskid824@gmail.com`）必須開 2FA**：是整個管理體系的根
+- ⚠️ **若 super-admin 帳號失效**，需修改 `firestore.rules` 的 `isDeveloper()` 並重新 deploy
+
+---
+
 ## 審查清單（每次營運流程變動前必檢）
 
 - [ ] 新流程是否有對應的後台功能支援？
@@ -152,3 +189,4 @@ MVP 僅限**台北市信義區**。
 - [ ] 推播通知文案是否溫暖、不冰冷？
 - [ ] 操作是否可在手機上完成？（營運人員可能不在電腦前）
 - [ ] 是否有操作日誌/紀錄可追溯？
+- [ ] 涉及管理員權限的變動，是否已更新「管理員權限管理 SOP」？
