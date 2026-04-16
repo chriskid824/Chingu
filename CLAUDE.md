@@ -291,10 +291,10 @@ MVP 僅限**台北市信義區**，後期再擴展。
 - [ ] 破冰話題管理（目前只能在 Firebase Console 手動 CRUD）
 - [ ] 訂位工單 UI（目前需手動致電 + Console 改 `booking_tasks.status`）
 
-### 隱藏技術債（待處理）
-- [ ] `UserModel` 缺 `fcmToken` 欄位定義（推播實際運作但型別不安全）
-- [ ] `sendBroadcast.ts` 的 admin 權限檢查仍是 TODO 狀態
-- [ ] `firestore.rules` 的 `isDeveloper()` 還硬編碼 `chriskid824@gmail.com`，未抽象為 admins collection
+### 隱藏技術債（已處理）
+- [x] `UserModel` 補上 `fcmToken` 欄位（2026-04-16）— 修復 App `toMap()` 寫入時靜默遺失推播 token
+- [x] `sendBroadcast.ts` admin 檢查正式化（2026-04-16）— 與 `firestore.rules` 的 `isAdmin()` 統一身份來源
+- [x] `firestore.rules` 重構為 `isAdmin()` + `/admins` collection（2026-04-16）— `isDeveloper()` 保留為 super-admin bootstrap，日常營運操作改透過 Firestore 文件管理（無需 redeploy）
 
 ### 其他已完成項目
 - [x] CI/CD：GitHub Actions → Firebase App Distribution
