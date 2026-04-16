@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue,Timestamp} from "firebase-admin/firestore";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -68,8 +69,8 @@ export const revealRestaurants = functions.pubsub
         const events = await db
             .collection("dinner_events")
             .where("status", "==", "closed")
-            .where("eventDate", ">=", admin.firestore.Timestamp.fromDate(start))
-            .where("eventDate", "<=", admin.firestore.Timestamp.fromDate(end))
+            .where("eventDate", ">=", Timestamp.fromDate(start))
+            .where("eventDate", "<=", Timestamp.fromDate(end))
             .get();
 
         if (events.empty) return;
@@ -126,10 +127,10 @@ export const revealRestaurants = functions.pubsub
                         participantAvatars: participantAvatars,
                         lastMessage: "群組聊天已開通！明晚見～",
                         lastMessageTime:
-                            admin.firestore.FieldValue.serverTimestamp(),
+                            FieldValue.serverTimestamp(),
                         lastMessageSenderId: "system",
                         unreadCount: unreadCount,
-                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        createdAt: FieldValue.serverTimestamp(),
                     });
 
                     // 寫入系統歡迎訊息
@@ -141,7 +142,7 @@ export const revealRestaurants = functions.pubsub
                             "群組聊天已開通！明晚見～有任何問題可以在這裡討論。",
                         type: "system",
                         timestamp:
-                            admin.firestore.FieldValue.serverTimestamp(),
+                            FieldValue.serverTimestamp(),
                         readBy: [],
                     });
 
@@ -313,8 +314,8 @@ export const completeEvents = functions.pubsub
         const events = await db
             .collection("dinner_events")
             .where("status", "in", ["closed", "revealed"])
-            .where("eventDate", ">=", admin.firestore.Timestamp.fromDate(start))
-            .where("eventDate", "<=", admin.firestore.Timestamp.fromDate(end))
+            .where("eventDate", ">=", Timestamp.fromDate(start))
+            .where("eventDate", "<=", Timestamp.fromDate(end))
             .get();
 
         if (events.empty) return;
@@ -562,7 +563,7 @@ export const autoSkipReviews = functions.pubsub
                             eventId: eventId,
                             result: "skipped",
                             createdAt:
-                                admin.firestore.FieldValue.serverTimestamp(),
+                                FieldValue.serverTimestamp(),
                         });
                     skippedCount++;
                 }

@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue,Timestamp} from "firebase-admin/firestore";
 
 const db = admin.firestore();
 
@@ -42,12 +43,12 @@ export const createWeeklyEvent = functions.pubsub
             .where(
                 "eventDate",
                 ">=",
-                admin.firestore.Timestamp.fromDate(thursdayStart)
+                Timestamp.fromDate(thursdayStart)
             )
             .where(
                 "eventDate",
                 "<=",
-                admin.firestore.Timestamp.fromDate(thursdayEnd)
+                Timestamp.fromDate(thursdayEnd)
             )
             .get();
 
@@ -60,12 +61,12 @@ export const createWeeklyEvent = functions.pubsub
 
         // MVP：只建一個台北市信義區的晚餐活動
         await db.collection("dinner_events").add({
-            eventDate: admin.firestore.Timestamp.fromDate(thursday),
-            signupDeadline: admin.firestore.Timestamp.fromDate(signupDeadline),
+            eventDate: Timestamp.fromDate(thursday),
+            signupDeadline: Timestamp.fromDate(signupDeadline),
             city: "台北市",
             status: "open",
             signedUpUsers: [],
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
 
         console.log(

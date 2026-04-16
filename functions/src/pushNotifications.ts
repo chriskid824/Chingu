@@ -1,9 +1,14 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 
 // admin.initializeApp() is handled in index.ts
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+// 直接從 firebase-admin/firestore 解構 FieldValue
+// 避開 Functions Emulator 對 admin.firestore namespace 的 Proxy 干擾
+// （emulator runtime 下 FieldValue 會 undefined）
 
 /**
  * Trigger: 新聊天訊息推播
@@ -134,7 +139,7 @@ export const onNewChatMessage = functions.firestore
         const unreadUpdates: Record<string, number> = {};
         for (const uid of recipientIds) {
             unreadUpdates[`unreadCount.${uid}`] =
-                admin.firestore.FieldValue.increment(1) as unknown as number;
+                FieldValue.increment(1) as unknown as number;
         }
         await db.collection("chat_rooms").doc(chatRoomId).update(unreadUpdates);
     });
@@ -202,9 +207,9 @@ export const onMutualMatch = functions.firestore
             participantAvatars: {},
             dinnerEventId: eventId,
             groupId: groupId,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
             lastMessage: "你們互相想再見面！開始聊天吧",
-            lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
+            lastMessageTime: FieldValue.serverTimestamp(),
             lastMessageSenderId: "system",
             unreadCount: {
                 [reviewerId]: 1,
@@ -221,7 +226,7 @@ export const onMutualMatch = functions.firestore
             text: "🎉 恭喜！你們互相想再見面，聊天室已解鎖！",
             senderId: "system",
             type: "system",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
 
         // 5. 推播通知雙方
@@ -298,10 +303,10 @@ export const onMutualMatch = functions.firestore
         // 6. 更新雙方的 totalMatches（用 batch 保證原子，避免一邊加一邊沒加）
         const batch = db.batch();
         batch.update(db.collection("users").doc(reviewerId), {
-            totalMatches: admin.firestore.FieldValue.increment(1),
+            totalMatches: FieldValue.increment(1),
         });
         batch.update(db.collection("users").doc(revieweeId), {
-            totalMatches: admin.firestore.FieldValue.increment(1),
+            totalMatches: FieldValue.increment(1),
         });
         await batch.commit();
     });
@@ -340,7 +345,7 @@ async function cleanupInvalidTokens(
             const token = doc.data()?.fcmToken;
             if (token && invalidTokens.includes(token)) {
                 await db.collection("users").doc(doc.id).update({
-                    fcmToken: admin.firestore.FieldValue.delete(),
+                    fcmToken: FieldValue.delete(),
                 });
             }
         }

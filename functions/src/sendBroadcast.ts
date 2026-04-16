@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 
 // admin.initializeApp() is handled in index.ts
 
@@ -77,7 +78,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
                 body,
                 targetType: "all",
                 sentBy: context.auth.uid,
-                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                sentAt: FieldValue.serverTimestamp(),
                 messageId: response,
             });
 
@@ -147,7 +148,7 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             targetType: targetUserIds.length > 0 ? "users" : "cities",
             targetIds: targetUserIds.length > 0 ? targetUserIds : targetCities,
             sentBy: context.auth.uid,
-            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: FieldValue.serverTimestamp(),
             successCount: response.successCount,
             failureCount: response.failureCount,
         });
