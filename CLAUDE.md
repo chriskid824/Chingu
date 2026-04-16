@@ -283,13 +283,17 @@ MVP 僅限**台北市信義區**，後期再擴展。
 - [x] 核心頁面 Token 合規（home / chat / events / group）
 - [ ] **遺留**：auth (6) / profile (16) / settings (13) / debug (5) 等邊緣頁面仍有約 222 處硬編碼顏色
 
-### Phase 6：營運後台網站 — ⏳ 未開始（真正卡關）
-- [ ] Flutter Web 專案建立
-- [ ] 數據總覽 + 用戶列表
-- [ ] 報名管理 + 配對結果
-- [ ] 餐廳管理 + 指定餐廳（目前靠 `DatabaseSeeder` 硬寫 + Firebase Console 手改）
+### Phase 6：營運後台網站 — 🚧 進行中（MVP 骨架已完成）
+- [x] Flutter Web 入口建立（`lib/main_admin.dart` + `lib/admin/admin_app.dart`）
+- [x] 管理員登入頁 + AuthGate（`AdminAuthProvider` 對齊 `firestore.rules` 的 `isAdmin()`）
+- [x] 本週分組儀表板（`MatchingDashboardScreen` + `GroupCard` — 飲食聯集 / 預算交集 / 訂位狀態 chip）
+- [x] 餐廳指定 dialog（自動排除近 14 天指定過的）
+- [x] 餐廳 CRUD（`RestaurantManageScreen` — DataTable + 編輯彈窗）
+- [x] `DinnerGroupModel` 新增 `bookingStatus` 欄位（idle / pending / confirmed / failed）
+- [ ] Firebase Hosting 設定 + GitHub Actions deploy workflow
 - [ ] 破冰話題管理（目前只能在 Firebase Console 手動 CRUD）
-- [ ] 訂位工單 UI（目前需手動致電 + Console 改 `booking_tasks.status`）
+- [ ] 用戶列表 + 數據總覽（V2）
+- [ ] 訂位工單獨立 UI（目前用 group.bookingStatus 過渡，未來與 `booking_tasks` collection 整合）
 
 ### 隱藏技術債（已處理）
 - [x] `UserModel` 補上 `fcmToken` 欄位（2026-04-16）— 修復 App `toMap()` 寫入時靜默遺失推播 token

@@ -26,7 +26,10 @@ class DinnerGroupModel {
   
   // 評價狀態: 'none' (尚未開始), 'in_progress' (部分完成), 'completed' (全部完成)
   final String reviewStatus;
-  
+
+  // 訂位狀態 (營運後台用): 'idle' (未指定), 'pending' (待訂位), 'confirmed' (已訂位), 'failed' (訂位失敗)
+  final String bookingStatus;
+
   final DateTime createdAt;
   
   // 破冰問題
@@ -51,6 +54,7 @@ class DinnerGroupModel {
     this.restaurantImageUrl,
     this.status = 'pending',
     this.reviewStatus = 'none',
+    this.bookingStatus = 'idle',
     required this.createdAt,
     this.icebreakerQuestions = const [],
     this.companionPreviews = const [],
@@ -75,6 +79,7 @@ class DinnerGroupModel {
       restaurantImageUrl: map['restaurantImageUrl'],
       status: map['status'] ?? 'pending',
       reviewStatus: map['reviewStatus'] ?? 'none',
+      bookingStatus: map['bookingStatus'] ?? 'idle',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       icebreakerQuestions: List<String>.from(map['icebreakerQuestions'] ?? []),
       companionPreviews: (map['companionPreviews'] as List<dynamic>?)
@@ -96,6 +101,7 @@ class DinnerGroupModel {
       'restaurantImageUrl': restaurantImageUrl,
       'status': status,
       'reviewStatus': reviewStatus,
+      'bookingStatus': bookingStatus,
       'createdAt': Timestamp.fromDate(createdAt),
       'icebreakerQuestions': icebreakerQuestions,
       'companionPreviews': companionPreviews,
@@ -114,6 +120,7 @@ class DinnerGroupModel {
     String? restaurantImageUrl,
     String? status,
     String? reviewStatus,
+    String? bookingStatus,
     List<String>? icebreakerQuestions,
     List<Map<String, dynamic>>? companionPreviews,
     Map<String, bool>? attendanceConfirmed,
@@ -130,6 +137,7 @@ class DinnerGroupModel {
       restaurantImageUrl: restaurantImageUrl ?? this.restaurantImageUrl,
       status: status ?? this.status,
       reviewStatus: reviewStatus ?? this.reviewStatus,
+      bookingStatus: bookingStatus ?? this.bookingStatus,
       createdAt: createdAt,
       icebreakerQuestions: icebreakerQuestions ?? this.icebreakerQuestions,
       companionPreviews: companionPreviews ?? this.companionPreviews,
