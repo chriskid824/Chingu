@@ -1,0 +1,48 @@
+name: Deploy Admin Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/admin/**'
+      - 'lib/main_admin.dart'
+      - 'lib/models/**'
+      - 'web/**'
+      - 'firebase.json'
+      - '.github/workflows/deploy-admin.yml'
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze admin code
+        run: flutter analyze --no-fatal-infos lib/admin/ lib/main_admin.dart lib/models/
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build Flutter Web (admin entry)
+        run: flutter build web --target lib/main_admin.dart --release
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: chingu-98387
