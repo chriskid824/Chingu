@@ -14,6 +14,21 @@ export interface NotificationCopyTest {
     defaultVariantId: string;
 }
 
+/**
+ * 根據用戶 ID 獲取 A/B 測試分組
+ * @param userId 用戶 ID
+ * @returns 'control' 或 'variant_B'
+ */
+export function getUserGroup(userId: string): 'control' | 'variant_B' {
+    // 簡單的確定性哈希算法
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+        hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash) % 2 === 0 ? 'control' : 'variant_B';
+}
+
 // A/B 測試: 配對成功通知
 export const matchSuccessTest: NotificationCopyTest = {
     testId: 'match_success_copy_v1',
@@ -27,16 +42,10 @@ export const matchSuccessTest: NotificationCopyTest = {
             emoji: '🎉',
         },
         {
-            variantId: 'friendly',
-            title: '找到新朋友啦!',
-            body: '{userName} 也喜歡你！快去打個招呼吧',
-            emoji: '💕',
-        },
-        {
-            variantId: 'urgent',
-            title: '別錯過這個緣分!',
-            body: '你與 {userName} 互相喜歡，現在就開始聊天吧',
-            emoji: '✨',
+            variantId: 'variant_B',
+            title: '配對成功！{userName} 也在關注你',
+            body: '緣分來了！現在就傳送第一則訊息，開啟你們的對話吧 ✨',
+            emoji: '💖',
         },
     ],
 };
@@ -53,15 +62,10 @@ export const newMessageTest: NotificationCopyTest = {
             body: '{messagePreview}',
         },
         {
-            variantId: 'casual',
-            title: '{userName}',
-            body: '「{messagePreview}」',
-        },
-        {
-            variantId: 'engaging',
-            title: '{userName} 想和你聊聊',
-            body: '{messagePreview}',
-            emoji: '💬',
+            variantId: 'variant_B',
+            title: '{userName} 剛剛傳了訊息給你',
+            body: '似乎是有趣的話題？快點開來看看吧！',
+            emoji: '💌',
         },
     ],
 };
@@ -79,16 +83,10 @@ export const eventReminderTest: NotificationCopyTest = {
             emoji: '📅',
         },
         {
-            variantId: 'countdown',
-            title: '倒數計時!',
-            body: '{eventName} 還有 {timeLeft} 就要開始了',
+            variantId: 'variant_B',
+            title: '準備好參加 {eventName} 了嗎？',
+            body: '倒數 {timeLeft}！別忘了準時出席，大家都在等你喔！',
             emoji: '⏰',
-        },
-        {
-            variantId: 'motivating',
-            title: '準備好了嗎?',
-            body: '{eventName} 即將開始，期待與你見面!',
-            emoji: '🌟',
         },
     ],
 };
@@ -105,16 +103,10 @@ export const inactivityTest: NotificationCopyTest = {
             body: '有新的朋友在等著認識你',
         },
         {
-            variantId: 'curious',
-            title: '你錯過了什麼?',
-            body: '上來看看有誰對你感興趣吧',
-            emoji: '👀',
-        },
-        {
-            variantId: 'fomo',
-            title: '有 {count} 個人喜歡了你!',
-            body: '快來看看是誰吧',
-            emoji: '💝',
+            variantId: 'variant_B',
+            title: '嘿！最近好嗎？',
+            body: '你的 {count} 位新朋友正在線上等你，快回來看看錯過了什麼！',
+            emoji: '👋',
         },
     ],
 };
