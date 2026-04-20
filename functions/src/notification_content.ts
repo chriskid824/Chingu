@@ -1,3 +1,5 @@
+import * as admin from "firebase-admin";
+
 /// 通知文案 A/B 測試配置
 /// 用於測試不同通知文案對用戶參與度的影響
 export interface NotificationCopyVariant {
@@ -5,6 +7,7 @@ export interface NotificationCopyVariant {
     title: string;
     body: string;
     emoji?: string;
+    weight?: number; // 權重 (0-100)
 }
 
 export interface NotificationCopyTest {
@@ -25,18 +28,21 @@ export const matchSuccessTest: NotificationCopyTest = {
             title: '配對成功!',
             body: '你與 {userName} 配對成功了',
             emoji: '🎉',
+            weight: 34,
         },
         {
             variantId: 'friendly',
             title: '找到新朋友啦!',
             body: '{userName} 也喜歡你！快去打個招呼吧',
             emoji: '💕',
+            weight: 33,
         },
         {
             variantId: 'urgent',
             title: '別錯過這個緣分!',
             body: '你與 {userName} 互相喜歡，現在就開始聊天吧',
             emoji: '✨',
+            weight: 33,
         },
     ],
 };
@@ -51,17 +57,20 @@ export const newMessageTest: NotificationCopyTest = {
             variantId: 'control',
             title: '{userName} 傳來訊息',
             body: '{messagePreview}',
+            weight: 34,
         },
         {
             variantId: 'casual',
             title: '{userName}',
             body: '「{messagePreview}」',
+            weight: 33,
         },
         {
             variantId: 'engaging',
             title: '{userName} 想和你聊聊',
             body: '{messagePreview}',
             emoji: '💬',
+            weight: 33,
         },
     ],
 };
@@ -77,18 +86,21 @@ export const eventReminderTest: NotificationCopyTest = {
             title: '活動提醒',
             body: '{eventName} 將於 {time} 開始',
             emoji: '📅',
+            weight: 34,
         },
         {
             variantId: 'countdown',
             title: '倒數計時!',
             body: '{eventName} 還有 {timeLeft} 就要開始了',
             emoji: '⏰',
+            weight: 33,
         },
         {
             variantId: 'motivating',
             title: '準備好了嗎?',
             body: '{eventName} 即將開始，期待與你見面!',
             emoji: '🌟',
+            weight: 33,
         },
     ],
 };
@@ -103,18 +115,21 @@ export const inactivityTest: NotificationCopyTest = {
             variantId: 'control',
             title: '好久不見',
             body: '有新的朋友在等著認識你',
+            weight: 34,
         },
         {
             variantId: 'curious',
             title: '你錯過了什麼?',
             body: '上來看看有誰對你感興趣吧',
             emoji: '👀',
+            weight: 33,
         },
         {
             variantId: 'fomo',
             title: '有 {count} 個人喜歡了你!',
             body: '快來看看是誰吧',
             emoji: '💝',
+            weight: 33,
         },
     ],
 };
@@ -155,8 +170,9 @@ export function getNotificationCopy(
 
     // 替換參數
     for (const [key, value] of Object.entries(params)) {
-        title = title.replace(`{${key}}`, value);
-        body = body.replace(`{${key}}`, value);
+        // Replace all occurrences
+        title = title.split(`{${key}}`).join(value);
+        body = body.split(`{${key}}`).join(value);
     }
 
     // 添加 emoji
@@ -165,4 +181,82 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * 根據配置選擇變體 (純邏輯，便於測試)
+ */
+export function selectVariant(testConfig: NotificationCopyTest): string {
+    let assignedVariant = testConfig.defaultVariantId;
+    const totalWeight = testConfig.variants.reduce((sum, v) => sum + (v.weight || 0), 0);
+
+    if (totalWeight > 0) {
+        let random = Math.random() * totalWeight;
+        for (const variant of testConfig.variants) {
+            random -= (variant.weight || 0);
+            if (random <= 0) {
+                assignedVariant = variant.variantId;
+                break;
+            }
+        }
+    } else {
+            // Fallback to simple random if no weights
+            const randomIndex = Math.floor(Math.random() * testConfig.variants.length);
+            assignedVariant = testConfig.variants[randomIndex].variantId;
+    }
+    return assignedVariant;
+}
+
+/**
+ * 獲取用戶的 A/B 測試變體
+ * 如果未分配，則根據權重隨機分配並保存到 Firestore
+ * @param userId 用戶 ID
+ * @param testId 測試 ID
+ */
+export async function getUserVariant(userId: string, testId: string): Promise<string> {
+    const db = admin.firestore();
+    const userVariantRef = db.collection('users').doc(userId).collection('ab_test_variants').doc(testId);
+
+    try {
+        // 檢查是否已分配
+        const doc = await userVariantRef.get();
+        if (doc.exists) {
+            return doc.data()?.variant || 'control';
+        }
+
+        // 獲取測試配置
+        const testConfig = allNotificationTests.find(t => t.testId === testId);
+        if (!testConfig) return 'control';
+
+        // 選擇變體
+        const assignedVariant = selectVariant(testConfig);
+
+        // 保存分配結果
+        await userVariantRef.set({
+            variant: assignedVariant,
+            assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+            testId: testId
+        });
+
+        return assignedVariant;
+    } catch (error) {
+        console.error(`Error getting/assigning variant for user ${userId} test ${testId}:`, error);
+        return 'control'; // 出錯時返回對照組
+    }
+}
+
+/**
+ * 獲取用戶的通知內容 (包含變體分配邏輯)
+ * @param userId 用戶 ID
+ * @param testId 測試 ID
+ * @param params 文案替換參數
+ */
+export async function getUserNotificationContent(
+    userId: string,
+    testId: string,
+    params: Record<string, string>
+): Promise<{ title: string; body: string; variantId: string }> {
+    const variantId = await getUserVariant(userId, testId);
+    const content = getNotificationCopy(testId, variantId, params);
+    return { ...content, variantId };
 }
