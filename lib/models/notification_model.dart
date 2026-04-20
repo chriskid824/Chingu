@@ -4,14 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class NotificationModel {
   final String id;
   final String userId;
-  final String type; // 'match', 'event', 'message', 'rating', 'system'
+  /// 類型: 'match', 'message', 'event', 'rating', 'system'
+  final String type;
   final String title;
+  /// 內容 (映射到 message 欄位)
   final String message;
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
   final bool isRead;
   final DateTime createdAt;
+  /// Deep link 路由
+  final String? deeplink;
 
   NotificationModel({
     required this.id,
@@ -24,7 +28,14 @@ class NotificationModel {
     this.actionData,
     this.isRead = false,
     required this.createdAt,
+    this.deeplink,
   });
+
+  /// 獲取內容 (message 別名)
+  String get content => message;
+
+  /// 獲取時間戳 (createdAt 別名)
+  DateTime get timestamp => createdAt;
 
   /// 從 Firestore 文檔創建 NotificationModel
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
@@ -45,6 +56,7 @@ class NotificationModel {
       actionData: map['actionData'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      deeplink: map['deeplink'],
     );
   }
 
@@ -60,6 +72,7 @@ class NotificationModel {
       'actionData': actionData,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
+      'deeplink': deeplink,
     };
   }
 
@@ -76,6 +89,7 @@ class NotificationModel {
       actionData: actionData,
       isRead: true,
       createdAt: createdAt,
+      deeplink: deeplink,
     );
   }
 
@@ -96,27 +110,3 @@ class NotificationModel {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
