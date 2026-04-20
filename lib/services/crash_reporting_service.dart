@@ -9,34 +9,42 @@ class CrashReportingService {
 
   CrashReportingService._internal();
 
+  late FirebaseCrashlytics _crashlytics = FirebaseCrashlytics.instance;
+
+  @visibleForTesting
+  set crashlytics(FirebaseCrashlytics instance) {
+    _crashlytics = instance;
+  }
+
   Future<void> initialize() async {
     // Pass all uncaught "fatal" errors from the framework to Crashlytics
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    FlutterError.onError = _crashlytics.recordFlutterFatalError;
 
     // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      _crashlytics.recordError(error, stack, fatal: true);
       return true;
     };
   }
 
   /// Log a message to Crashlytics
   void log(String message) {
-    FirebaseCrashlytics.instance.log(message);
+    _crashlytics.log(message);
   }
 
   /// Record an error to Crashlytics
-  void recordError(dynamic exception, StackTrace? stack, {dynamic reason, bool fatal = false}) {
-    FirebaseCrashlytics.instance.recordError(exception, stack, reason: reason, fatal: fatal);
+  void recordError(dynamic exception, StackTrace? stack,
+      {dynamic reason, bool fatal = false}) {
+    _crashlytics.recordError(exception, stack, reason: reason, fatal: fatal);
   }
 
   /// Set a user identifier for crash reports
   Future<void> setUserIdentifier(String identifier) async {
-    await FirebaseCrashlytics.instance.setUserIdentifier(identifier);
+    await _crashlytics.setUserIdentifier(identifier);
   }
 
   /// Set custom keys for crash reports
   Future<void> setCustomKey(String key, Object value) async {
-    await FirebaseCrashlytics.instance.setCustomKey(key, value);
+    await _crashlytics.setCustomKey(key, value);
   }
 }
