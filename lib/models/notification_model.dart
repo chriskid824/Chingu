@@ -10,6 +10,7 @@ class NotificationModel {
   final String? imageUrl;
   final String? actionType; // 'navigate', 'open_event', 'open_chat', etc.
   final String? actionData; // JSON string or ID
+  final String? deeplink;
   final bool isRead;
   final DateTime createdAt;
 
@@ -22,6 +23,7 @@ class NotificationModel {
     this.imageUrl,
     this.actionType,
     this.actionData,
+    this.deeplink,
     this.isRead = false,
     required this.createdAt,
   });
@@ -43,6 +45,7 @@ class NotificationModel {
       imageUrl: map['imageUrl'],
       actionType: map['actionType'],
       actionData: map['actionData'],
+      deeplink: map['deeplink'],
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
@@ -58,6 +61,7 @@ class NotificationModel {
       'imageUrl': imageUrl,
       'actionType': actionType,
       'actionData': actionData,
+      'deeplink': deeplink,
       'isRead': isRead,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -65,17 +69,35 @@ class NotificationModel {
 
   /// 複製並標記為已讀
   NotificationModel markAsRead() {
+    return copyWith(isRead: true);
+  }
+
+  /// 複製並更新部分欄位
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? title,
+    String? message,
+    String? imageUrl,
+    String? actionType,
+    String? actionData,
+    String? deeplink,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
     return NotificationModel(
-      id: id,
-      userId: userId,
-      type: type,
-      title: title,
-      message: message,
-      imageUrl: imageUrl,
-      actionType: actionType,
-      actionData: actionData,
-      isRead: true,
-      createdAt: createdAt,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
+      actionType: actionType ?? this.actionType,
+      actionData: actionData ?? this.actionData,
+      deeplink: deeplink ?? this.deeplink,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
