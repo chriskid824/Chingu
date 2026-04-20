@@ -128,6 +128,26 @@ export const allNotificationTests: NotificationCopyTest[] = [
 ];
 
 /**
+ * 使用 DJB2 算法為用戶分配測試變體
+ * 實現確定性、無狀態的分配
+ */
+export function assignVariant(testId: string, userId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || test.variants.length === 0) {
+        return 'control';
+    }
+
+    const str = `${userId}${testId}`;
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i); /* hash * 33 + c */
+    }
+
+    const index = Math.abs(hash) % test.variants.length;
+    return test.variants[index].variantId;
+}
+
+/**
  * 根據用戶分配的變體獲取通知文案
  * @param testId 測試 ID
  * @param variantId 變體 ID
@@ -165,4 +185,21 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * 獲取為用戶定製的通知文案
+ */
+export function getNotificationContentForUser(
+    testId: string,
+    userId: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string } {
+    const variantId = assignVariant(testId, userId);
+    const content = getNotificationCopy(testId, variantId, params);
+
+    return {
+        ...content,
+        variantId,
+    };
 }
