@@ -38,6 +38,7 @@ class UserModel {
   final bool isTwoFactorEnabled;
   final String twoFactorMethod; // 'email', 'sms'
   final String? phoneNumber;
+  final String? fcmToken;
 
   // 推播通知 token（FCM）— 由 Cloud Function/App 寫入，必須隨 toMap 序列化
   final String? fcmToken;
