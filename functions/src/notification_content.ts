@@ -166,3 +166,57 @@ export function getNotificationCopy(
 
     return { title, body };
 }
+
+/**
+ * 簡單的字符串哈希函數
+ * @param str 輸入字符串
+ * @returns 32位整數哈希值
+ */
+function getHash(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * 根據用戶 ID 分配測試變體
+ * 使用確定性算法，確保同一用戶始終分配到相同的變體
+ *
+ * @param userId 用戶 ID
+ * @param testId 測試 ID
+ * @returns 變體 ID
+ */
+export function assignVariant(userId: string, testId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || !test.variants.length) {
+        return 'control';
+    }
+
+    // 結合 userId 和 testId 進行哈希，確保不同測試有不同的分配
+    const hash = getHash(`${userId}_${testId}`);
+    const index = hash % test.variants.length;
+
+    return test.variants[index].variantId;
+}
+
+/**
+ * 為特定用戶獲取通知文案 (包含自動分配變體)
+ *
+ * @param userId 用戶 ID
+ * @param testId 測試 ID
+ * @param params 替換參數
+ * @returns 包含標題、內容和分配的變體 ID 的對象
+ */
+export function getNotificationForUser(
+    userId: string,
+    testId: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string } {
+    const variantId = assignVariant(userId, testId);
+    const copy = getNotificationCopy(testId, variantId, params);
+    return { ...copy, variantId };
+}
