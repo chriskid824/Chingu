@@ -119,12 +119,34 @@ export const inactivityTest: NotificationCopyTest = {
     ],
 };
 
+// A/B 測試: 點擊率優化測試
+export const clickOptimizationTest: NotificationCopyTest = {
+    testId: 'push_copy_v1',
+    notificationType: 'click_optimization',
+    defaultVariantId: 'variant_a',
+    variants: [
+        {
+            variantId: 'variant_a',
+            title: '看看誰對你有興趣?',
+            body: '有人正在查看你的檔案，快去看看吧!',
+            emoji: '👋',
+        },
+        {
+            variantId: 'variant_b',
+            title: '你有新的潛在配對',
+            body: '根據你的喜好，我們為你推薦了幾位新朋友',
+            emoji: '🔔',
+        },
+    ],
+};
+
 // 所有測試配置
 export const allNotificationTests: NotificationCopyTest[] = [
     matchSuccessTest,
     newMessageTest,
     eventReminderTest,
     inactivityTest,
+    clickOptimizationTest,
 ];
 
 /**
