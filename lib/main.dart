@@ -16,6 +16,7 @@ import 'providers/chat_provider.dart';
 import 'providers/dinner_group_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'services/crash_reporting_service.dart';
+import 'services/analytics_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/rich_notification_service.dart';
 import 'services/push_notification_service.dart';
@@ -51,6 +52,9 @@ void main() async {
 
   // 初始化 Crashlytics
   await CrashReportingService().initialize();
+
+  // 初始化 Analytics
+  await AnalyticsService().initialize();
 
   // 初始化日期格式化
   await initializeDateFormatting('zh_TW', null);
@@ -97,6 +101,9 @@ class ChinguApp extends StatelessWidget {
             theme: themeController.theme,
             home: const AuthGate(),
             onGenerateRoute: AppRouter.generateRoute,
+            navigatorObservers: [
+              AnalyticsService().getAnalyticsObserver(),
+            ],
           );
         },
       ),
