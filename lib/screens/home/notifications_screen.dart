@@ -28,6 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       type: 'message',
       title: '李小美 傳送了一則訊息給您',
       message: '李小美 傳送了一則訊息給您',
+      deeplink: '/chat/123',
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
       isRead: false,
     ),
