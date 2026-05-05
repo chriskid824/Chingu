@@ -119,13 +119,69 @@ export const inactivityTest: NotificationCopyTest = {
     ],
 };
 
+// Task 170: 新增通用互動測試文案
+export const generalEngagementTest: NotificationCopyTest = {
+    testId: 'general_engagement_v1',
+    notificationType: 'general_engagement',
+    defaultVariantId: 'control',
+    variants: [
+        {
+            variantId: 'control',
+            title: '查看最新動態',
+            body: 'Chingu 有新的更新等你來探索',
+            emoji: '✨',
+        },
+        {
+            variantId: 'emotion', // Set A: 情感連結
+            title: '想念這裡的朋友嗎?',
+            body: '大家都在等你回來聊聊天',
+            emoji: '💖',
+        },
+        {
+            variantId: 'action', // Set B: 行動呼籲
+            title: '限時動態別錯過!',
+            body: '現在就上線看看發生了什麼有趣的事',
+            emoji: '🔥',
+        },
+    ],
+};
+
 // 所有測試配置
 export const allNotificationTests: NotificationCopyTest[] = [
     matchSuccessTest,
     newMessageTest,
     eventReminderTest,
     inactivityTest,
+    generalEngagementTest,
 ];
+
+/**
+ * Generates a deterministic hash for a string
+ */
+function getHash(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * Determines the variant for a specific user and test
+ * Uses deterministic hashing to ensure the user always sees the same variant for a given test
+ */
+export function getUserVariant(userId: string, testId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || !test.variants.length) return 'control';
+
+    // Combine userId and testId for unique hash per test
+    const hash = getHash(`${userId}:${testId}`);
+    const index = hash % test.variants.length;
+
+    return test.variants[index].variantId;
+}
 
 /**
  * 根據用戶分配的變體獲取通知文案
@@ -165,4 +221,20 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * Gets the complete notification content for a user, automatically handling variant selection
+ * @param userId User ID
+ * @param testId Test ID
+ * @param params Replacement parameters
+ */
+export function getNotificationContentForUser(
+    userId: string,
+    testId: string,
+    params: Record<string, string> = {}
+): { title: string; body: string; variantId: string } {
+    const variantId = getUserVariant(userId, testId);
+    const content = getNotificationCopy(testId, variantId, params);
+    return { ...content, variantId };
 }
