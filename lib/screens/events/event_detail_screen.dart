@@ -11,7 +11,7 @@ import 'package:chingu/services/firestore_service.dart';
 import 'package:chingu/providers/review_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 
-/// 活動詳情頁（參考 Timeleft 截圖 2 & 3）
+/// 活動詳情頁
 class EventDetailScreen extends StatefulWidget {
   final DinnerEventModel event;
   final DinnerGroupModel? group;
@@ -142,7 +142,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  /// Dinner 資訊卡（參考 Timeleft 截圖 2）
+  /// Dinner 資訊卡
   Widget _buildDinnerInfoCard() {
     final dateStr = DateFormat('EEEE, MMMM d', 'zh_TW').format(event.eventDate);
     final timeStr = DateFormat('HH:mm').format(event.eventDate);
@@ -225,7 +225,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  /// Restaurant 資訊卡（參考 Timeleft 截圖 2）
+  /// Restaurant 資訊卡
   Widget _buildRestaurantCard() {
     final hasRestaurant = group?.restaurantName != null;
 
@@ -345,7 +345,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  /// Feedback 區塊（參考 Timeleft 截圖 2/3）
+  /// Feedback 區塊
   Widget _buildFeedbackCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -454,7 +454,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  /// Group 區塊（參考 Timeleft 截圖 3）
+  /// Group 區塊
   Widget _buildGroupCard() {
     // 優先用群組資料，沒有則 fallback 到活動報名人數
     final participantCount = group?.participantIds.length 

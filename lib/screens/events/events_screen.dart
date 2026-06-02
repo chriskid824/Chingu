@@ -9,7 +9,7 @@ import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/models/dinner_event_model.dart';
 
-/// Events Tab — 歷史活動列表（參考 Timeleft Events 頁面設計）
+/// Events Tab — 歷史晚餐紀錄列表（往期回顧）
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
 
@@ -216,7 +216,7 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  /// 回饋提醒 Banner（參考 Timeleft 截圖 1）
+  /// 回饋提醒 Banner
   Widget _buildFeedbackBanner() {
     if (_bannerDismissed) return const SizedBox.shrink();
 
@@ -448,7 +448,7 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  /// 單張活動卡片（參考 Timeleft 截圖 1 的卡片設計）
+  /// 單張活動卡片
   Widget _buildEventCard(DinnerEventModel event) {
     final dayOfWeek = DateFormat('EEEE', 'zh_TW').format(event.eventDate);
     final dateStr = DateFormat('MM/dd').format(event.eventDate);
