@@ -10,7 +10,7 @@
         "lint": "eslint --ext .js,.ts .",
         "build": "tsc",
         "test": "jest --forceExit --detectOpenHandles",
-        "test:emu": "npm run build && jest --forceExit --detectOpenHandles",
+        "test:emu": "npm run build && npx firebase-tools emulators:exec --only firestore,functions --project demo-chingu --config ../firebase.json \"jest --forceExit --detectOpenHandles\"",
         "serve": "npm run build && firebase emulators:start --only functions",
         "shell": "npm run build && firebase functions:shell",
         "start": "npm run shell",
