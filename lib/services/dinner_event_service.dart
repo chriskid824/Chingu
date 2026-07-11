@@ -158,27 +158,26 @@ class DinnerEventService {
 
         final data = snapshot.data() as Map<String, dynamic>;
         final signedUpUsers = List<String>.from(data['signedUpUsers'] ?? []);
-        
+
+        // 分桌後(closed/matching 截止後)不可退出,否則桌上出現幽靈成員
+        if (data['status'] != 'open') {
+          throw Exception('報名已截止，無法取消。如有問題請聯繫客服');
+        }
+        final deadline = (data['signupDeadline'] as Timestamp?)?.toDate();
+        if (deadline != null && DateTime.now().isAfter(deadline)) {
+          throw Exception('已過報名截止時間，無法取消');
+        }
+
         if (!signedUpUsers.contains(userId)) {
           throw Exception('您未加入此活動');
         }
 
-        // 移除參與者
+        // 移除參與者。活動狀態(取消/成桌)一律由排程管理,client 不改 status
         signedUpUsers.remove(userId);
 
-        final updates = <String, dynamic>{
+        transaction.update(docRef, {
           'signedUpUsers': signedUpUsers,
-        };
-
-        if (data['status'] == 'matching' && signedUpUsers.length < 6) {
-          updates['status'] = 'open';
-        }
-
-        if (signedUpUsers.isEmpty) {
-          updates['status'] = 'cancelled';
-        }
-
-        transaction.update(docRef, updates);
+        });
       });
     } catch (e) {
       throw Exception('退出活動失敗: $e');

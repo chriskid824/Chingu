@@ -1,5 +1,9 @@
 # Chingu — 盲盒式 6 人晚餐社交 App
 
+## AI 知識庫(必讀入口)
+
+**回答任何 Chingu 業務/架構問題前,先讀 `docs/知識庫/INDEX.md`**——那裡有「問題 → 頁面」路由表,卡內含可 grep 的程式錨點。找不到時用本地 RAG:`python3 tools/rag/rag.py search "關鍵字"`(改完文件/程式後 `python3 tools/rag/rag.py index` 重建)。
+
 ## 專案定位
 對標 Timeleft，核心體驗是「每週一場官方晚餐，5~7 個陌生人一桌，見面前零資訊」。
 這不是交友軟體，是「信任演算法、擁抱未知」的真實社交工具。

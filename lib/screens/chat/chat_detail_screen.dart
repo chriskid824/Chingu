@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
@@ -28,6 +30,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String _groupName = '';
   bool _isInit = false;
 
+  // stream 存欄位:build 內重建 stream 會在 AuthProvider notify 時
+  // 重開 Firestore listener(閃 loading + 全量重拉)
+  Stream<List<Map<String, dynamic>>>? _messagesStream;
+  ChatProvider? _chatProvider;
+  String? _currentUserId;
+
+  // 群聊照片解鎖狀態(週四 19:00 由 Cloud Function 寫入 chat_rooms)
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _roomSub;
+  Map<String, dynamic> _participantAvatars = {};
+  bool _photosUnlocked = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -39,12 +52,41 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _isGroup = args['isGroup'] == true;
         _groupName = args['groupName'] as String? ?? '群組聊天';
       }
+      _chatProvider = context.read<ChatProvider>();
+      _currentUserId = context.read<AuthProvider>().uid;
+
+      if (_chatRoomId != null) {
+        _messagesStream = _chatProvider!.getMessages(_chatRoomId!);
+        if (_currentUserId != null) {
+          _chatProvider!.markRoomRead(_chatRoomId!, _currentUserId!);
+        }
+        if (_isGroup) {
+          _roomSub = FirebaseFirestore.instance
+              .collection('chat_rooms')
+              .doc(_chatRoomId!)
+              .snapshots()
+              .listen((doc) {
+            final data = doc.data();
+            if (data == null || !mounted) return;
+            setState(() {
+              _photosUnlocked = data['photosUnlocked'] == true;
+              _participantAvatars = Map<String, dynamic>.from(
+                  data['participantAvatars'] ?? {});
+            });
+          });
+        }
+      }
       _isInit = true;
     }
   }
 
   @override
   void dispose() {
+    // 離開時再歸零一次:停留期間收到的新訊息也算已讀
+    if (_chatRoomId != null && _currentUserId != null) {
+      _chatProvider?.markRoomRead(_chatRoomId!, _currentUserId!);
+    }
+    _roomSub?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -77,8 +119,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // 失敗時還原輸入內容,避免用戶打的字直接消失
+        _messageController.text = text;
+        _messageController.selection = TextSelection.fromPosition(
+          TextPosition(offset: text.length),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('訊息發送失敗，請稍後再試')),
+          const SnackBar(content: Text('訊息發送失敗，請稍後再試')),
         );
       }
     }
@@ -191,6 +238,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          // 群聊沒有單一「對方」,舉報/封鎖選單只在一對一顯示
+          if (!_isGroup)
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: AppColorsMinimal.textSecondary),
             onSelected: (value) async {
@@ -246,7 +295,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         children: [
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: context.read<ChatProvider>().getMessages(_chatRoomId!),
+              stream: _messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -303,7 +352,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ? DateFormat('HH:mm').format(timestamp.toDate())
         : '';
 
-    final text = message['text'] ?? '';
+    // 舊版系統訊息用 message 欄位,fallback 避免顯示空白氣泡
+    final text = message['text'] ?? message['message'] ?? '';
     final type = message['type'] as String?;
     final isImage = (type == 'image' || type == 'gif') || (type == null && (text as String).endsWith('.gif'));
     final senderId = message['senderId'] as String? ?? '';
@@ -387,8 +437,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           children: [
             GeometricAvatar(
               seed: senderId,
-              photoUrl: _isGroup ? null : _otherUser?.avatarUrl,
-              showPhoto: !_isGroup && PhotoVisibility.isDirectChatPhotoVisible(),
+              // 群聊照片在週四 19:00 由 Cloud Function 解鎖(photosUnlocked +
+              // participantAvatars),解鎖前一律幾何頭像
+              photoUrl: _isGroup
+                  ? (_participantAvatars[senderId] as String?)
+                  : _otherUser?.avatarUrl,
+              showPhoto: _isGroup
+                  ? (_photosUnlocked && _participantAvatars[senderId] != null)
+                  : PhotoVisibility.isDirectChatPhotoVisible(),
               size: 32,
             ),
             const SizedBox(width: 8),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/auth_provider.dart';
@@ -372,7 +373,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       elevation: 0,
-                      side: BorderSide(color: Colors.grey.shade300),
+                      side: BorderSide(color: AppColorsMinimal.divider),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -402,7 +403,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: OutlinedButton(
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey.shade300),
+                      side: BorderSide(color: AppColorsMinimal.divider),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

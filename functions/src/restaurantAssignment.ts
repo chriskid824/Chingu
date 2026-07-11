@@ -113,6 +113,7 @@ export async function assignRestaurant(
     }
 
     // 5. 過濾飲食限制
+    const budgetCandidates = candidates; // 預算已匹配(精確或 ±1)的名單
     if (allDietaryTags.size > 0) {
         candidates = candidates.filter((doc) => {
             const restaurantTags: string[] = doc.data().dietaryTags ?? [];
@@ -123,12 +124,19 @@ export async function assignRestaurant(
         });
     }
 
-    // 如果飲食限制篩選後沒有結果，放寬到只要沒有衝突
+    // 如果飲食限制篩選後沒有結果，退回預算匹配名單並優先「部分支援」的餐廳
+    // (不可退回 snapshot.docs:走過 ±1 擴大路徑時 snapshot 是空的)
     if (candidates.length === 0 && allDietaryTags.size > 0) {
         console.log(
-            `[assignRestaurant] Relaxing dietary filter, using all budget-matched restaurants`
+            `[assignRestaurant] Relaxing dietary filter, using budget-matched restaurants`
         );
-        candidates = snapshot.docs;
+        const partialSupport = budgetCandidates.filter((doc) => {
+            const restaurantTags: string[] = doc.data().dietaryTags ?? [];
+            return Array.from(allDietaryTags).some((tag) =>
+                restaurantTags.includes(tag)
+            );
+        });
+        candidates = partialSupport.length > 0 ? partialSupport : budgetCandidates;
     }
 
     // 6. 排除近 2 週已指派的餐廳

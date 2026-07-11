@@ -24,6 +24,9 @@ class AppAnimations {
   /// 解鎖翻牌 600ms
   static const Duration cardFlip = Duration(milliseconds: 600);
 
+  /// 列表卡片 stagger 間隔 60ms
+  static const Duration staggerInterval = Duration(milliseconds: 60);
+
   // ==================== 曲線 ====================
 
   /// 頁面轉場曲線

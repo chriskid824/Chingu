@@ -33,18 +33,9 @@ class HomeStateResolver {
   }) {
     final now = DateTime.now();
 
-    // 找待評價群組（已完成但評價未完成）
-    final pendingReviewGroup = myGroups.cast<DinnerGroupModel?>().firstWhere(
-      (g) => g!.status == 'completed' && g.reviewStatus != 'completed',
-      orElse: () => null,
-    );
-
-    if (pendingReviewGroup != null) {
-      return HomeStateResult(
-        state: HomeState.pendingReview,
-        group: pendingReviewGroup,
-      );
-    }
+    // 優先權:活躍群組 / 未來活動 > 待評價。
+    // 待評價若排最前,已報名下週的用戶會在評價完成前一直看不到
+    // 配對中/解鎖狀態(da193ec 雙按鈕問題的同型回歸源)。
 
     // 找當前活躍的群組（非 completed）
     final activeGroup = myGroups.cast<DinnerGroupModel?>().firstWhere(
@@ -83,6 +74,19 @@ class HomeStateResolver {
       );
     }
 
+    // 找待評價群組（已完成但評價未完成）
+    final pendingReviewGroup = myGroups.cast<DinnerGroupModel?>().firstWhere(
+      (g) => g!.status == 'completed' && g.reviewStatus != 'completed',
+      orElse: () => null,
+    );
+
+    if (pendingReviewGroup != null) {
+      return HomeStateResult(
+        state: HomeState.pendingReview,
+        group: pendingReviewGroup,
+      );
+    }
+
     // 什麼都沒有 → 未報名
     return HomeStateResult(state: HomeState.notSignedUp);
   }
@@ -91,11 +95,19 @@ class HomeStateResolver {
     List<DinnerEventModel> events,
     DateTime now,
   ) {
-    try {
-      return events.firstWhere((e) => e.eventDate.isAfter(now));
-    } catch (_) {
-      return null;
+    // 只認可報名/配對中的活動(cancelled 不能顯示成「配對中」),
+    // 且取「最近」的未來活動(myEvents 依日期降序,firstWhere 會拿到最遠的)
+    DinnerEventModel? nearest;
+    for (final e in events) {
+      if (!e.eventDate.isAfter(now)) continue;
+      if (e.status != 'open' && e.status != 'closed' && e.status != 'matching') {
+        continue;
+      }
+      if (nearest == null || e.eventDate.isBefore(nearest.eventDate)) {
+        nearest = e;
+      }
     }
+    return nearest;
   }
 }
 

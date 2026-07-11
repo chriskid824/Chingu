@@ -40,6 +40,9 @@ class DinnerGroupProvider extends ChangeNotifier {
   }
 
   /// 監聽特定群組的即時更新
+  ///
+  /// map 內不可 notifyListeners():snapshot 可能在 build 週期內到達,
+  /// 會炸 "setState() called during build";副作用延到 frame 結束後執行
   Stream<DinnerGroupModel?> watchGroup(String groupId) {
     return _firestore
         .collection('dinner_groups')
@@ -48,8 +51,10 @@ class DinnerGroupProvider extends ChangeNotifier {
         .map((doc) {
       if (!doc.exists) return null;
       final group = DinnerGroupModel.fromFirestore(doc);
-      _currentGroup = group;
-      notifyListeners();
+      if (_currentGroup != group) {
+        _currentGroup = group;
+        Future.microtask(notifyListeners);
+      }
       return group;
     });
   }

@@ -1,140 +1,67 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:chingu/models/dinner_review_model.dart';
-import 'package:uuid/uuid.dart';
 
-/// 評價服務 — 處理晚餐後雙盲互評與 Mutual Match 偵測
+/// 評價已逾期(72 小時視窗結束,系統已自動填入 skipped)
+class ReviewExpiredException implements Exception {
+  @override
+  String toString() => '評價時間已截止';
+}
+
+/// 評價服務 — 處理晚餐後雙盲互評
 ///
-/// 流程：
-/// 1. 晚餐結束後，每位參與者對同桌者做 👍/👎 評價
-/// 2. 系統即時偵測雙向 Match（A 給 B 👍，且 B 也給 A 👍）
-/// 3. Match 成功時立刻建立一對一聊天室
-/// 4. 72 小時未評價自動視為「跳過」
+/// 流程:
+/// 1. 晚餐結束後,每位參與者對同桌者做 👍/👎 評價
+/// 2. 雙向 Match 的結算在 Cloud Function `onMutualMatch`(dinner_reviews
+///    onCreate trigger)完成 — firestore.rules 的雙盲限制讓 client 讀不到
+///    對方的評價,結算與聊天室建立一律交給 server 端
+/// 3. 72 小時未評價由排程自動視為「跳過」(skipped)
 class ReviewService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Uuid _uuid = const Uuid();
 
   CollectionReference get _reviewsCollection =>
       _firestore.collection('dinner_reviews');
 
-  CollectionReference get _chatRoomsCollection =>
-      _firestore.collection('chat_rooms');
-
   /// 提交評價
   ///
-  /// [result] 為 'like'（👍）或 'dislike'（👎）
-  /// 回傳：如果偵測到 Mutual Match，回傳新建的 chatRoomId；否則回傳 null
-  Future<String?> submitReview({
+  /// [result] 為 'like'(👍)或 'dislike'(👎)
+  /// doc id 用確定性規則(reviewer_reviewee_group),重複提交天然冪等;
+  /// 若系統已自動填入 skipped(逾期),丟出 [ReviewExpiredException]。
+  Future<void> submitReview({
     required String reviewerId,
     required String revieweeId,
     required String groupId,
     required String eventId,
     required String result,
   }) async {
-    try {
-      // 1. 檢查是否已評價過
-      final existing = await _reviewsCollection
-          .where('reviewerId', isEqualTo: reviewerId)
-          .where('revieweeId', isEqualTo: revieweeId)
-          .where('groupId', isEqualTo: groupId)
-          .get();
+    final reviewId = '${reviewerId}_${revieweeId}_$groupId';
+    final docRef = _reviewsCollection.doc(reviewId);
 
-      if (existing.docs.isNotEmpty) {
-        debugPrint('已評價過此人，跳過');
-        return null;
+    // 1. 檢查是否已評價過(只讀自己寫的,符合雙盲 rules)
+    final existing = await docRef.get();
+    if (existing.exists) {
+      final existingResult =
+          (existing.data() as Map<String, dynamic>?)?['result'];
+      if (existingResult == 'skipped') {
+        // 逾期已被系統結算,這次的選擇不能靜默吞掉
+        throw ReviewExpiredException();
       }
-
-      // 2. 建立評價
-      final reviewId = _uuid.v4();
-      final review = DinnerReviewModel(
-        id: reviewId,
-        reviewerId: reviewerId,
-        revieweeId: revieweeId,
-        groupId: groupId,
-        eventId: eventId,
-        result: result,
-        createdAt: DateTime.now(),
-      );
-
-      await _reviewsCollection.doc(reviewId).set(review.toMap());
-
-      // 3. 如果給了 👍，即時檢查對方是否也給了 👍
-      if (result == 'like') {
-        return await _checkAndCreateMutualMatch(
-          userA: reviewerId,
-          userB: revieweeId,
-          groupId: groupId,
-          eventId: eventId,
-        );
-      }
-
-      return null;
-    } catch (e) {
-      throw Exception('提交評價失敗: $e');
-    }
-  }
-
-  /// 檢查雙向 Match 並建立一對一聊天室
-  Future<String?> _checkAndCreateMutualMatch({
-    required String userA,
-    required String userB,
-    required String groupId,
-    required String eventId,
-  }) async {
-    // 查詢對方是否也給了 👍
-    final reverseReview = await _reviewsCollection
-        .where('reviewerId', isEqualTo: userB)
-        .where('revieweeId', isEqualTo: userA)
-        .where('groupId', isEqualTo: groupId)
-        .where('result', isEqualTo: 'like')
-        .get();
-
-    if (reverseReview.docs.isEmpty) {
-      return null; // 對方尚未評價或給了 👎
+      debugPrint('已評價過此人，跳過');
+      return;
     }
 
-    // Mutual Match! 建立一對一聊天室
-    return await _createDirectChatRoom(
-      userA: userA,
-      userB: userB,
+    // 2. 建立評價(評價不可修改,rules 擋 update)
+    final review = DinnerReviewModel(
+      id: reviewId,
+      reviewerId: reviewerId,
+      revieweeId: revieweeId,
       groupId: groupId,
       eventId: eventId,
+      result: result,
+      createdAt: DateTime.now(),
     );
-  }
 
-  /// 建立 Mutual Match 一對一聊天室
-  Future<String> _createDirectChatRoom({
-    required String userA,
-    required String userB,
-    required String groupId,
-    required String eventId,
-  }) async {
-    // 用排序後的 UID 組合作為 ID，確保不重複
-    final sortedIds = [userA, userB]..sort();
-    final chatRoomId = '${sortedIds[0]}_${sortedIds[1]}_$groupId';
-
-    final existingRoom = await _chatRoomsCollection.doc(chatRoomId).get();
-    if (existingRoom.exists) {
-      return chatRoomId;
-    }
-
-    await _chatRoomsCollection.doc(chatRoomId).set({
-      'id': chatRoomId,
-      'type': 'direct',
-      'participantIds': sortedIds,
-      'groupId': groupId,
-      'dinnerEventId': eventId,
-      'participantNames': {},
-      'participantAvatars': {},
-      'createdAt': FieldValue.serverTimestamp(),
-      'lastMessage': null,
-      'lastMessageTime': null,
-      'lastMessageSenderId': null,
-      'unreadCount': {sortedIds[0]: 0, sortedIds[1]: 0},
-    });
-
-    debugPrint('Mutual Match! 一對一聊天室已建立: $chatRoomId');
-    return chatRoomId;
+    await docRef.set(review.toMap());
   }
 
   /// 取得某用戶在某群組的所有評價
@@ -180,35 +107,31 @@ class ReviewService {
 
       for (final doc in groupsSnapshot.docs) {
         final data = doc.data();
+        // 評價已整組結算(逾期 autoSkip)的略過;client 端過濾避免新複合索引
+        if (data['reviewStatus'] == 'completed') continue;
         final memberIds = List<String>.from(data['participantIds'] ?? []);
         final totalMembers = memberIds.length;
 
-        final hasCompleted = await hasCompletedReviews(
+        final existingReviews = await getReviewsByUser(
           userId: userId,
           groupId: doc.id,
-          totalMembers: totalMembers,
         );
 
-        if (!hasCompleted) {
-          final existingReviews = await getReviewsByUser(
-            userId: userId,
-            groupId: doc.id,
-          );
-          final reviewedIds = existingReviews.map((r) => r.revieweeId).toSet();
+        if (existingReviews.length >= totalMembers - 1) continue;
 
-          final pendingReviewees = memberIds
-              .where((id) => id != userId && !reviewedIds.contains(id))
-              .toList();
+        final reviewedIds = existingReviews.map((r) => r.revieweeId).toSet();
+        final pendingReviewees = memberIds
+            .where((id) => id != userId && !reviewedIds.contains(id))
+            .toList();
 
-          pendingGroups.add({
-            'groupId': doc.id,
-            'eventId': data['eventId'] ?? '',
-            'memberIds': memberIds,
-            'pendingReviewees': pendingReviewees,
-            'completedCount': existingReviews.length,
-            'totalToReview': totalMembers - 1,
-          });
-        }
+        pendingGroups.add({
+          'groupId': doc.id,
+          'eventId': data['eventId'] ?? '',
+          'memberIds': memberIds,
+          'pendingReviewees': pendingReviewees,
+          'completedCount': existingReviews.length,
+          'totalToReview': totalMembers - 1,
+        });
       }
 
       return pendingGroups;

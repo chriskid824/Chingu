@@ -43,9 +43,25 @@ service cloud.firestore {
 
     // ===== 晚餐活動 =====
     match /dinner_events/{eventId} {
+      // signedUpUsers 的變動只能是「增或減自己一個人」
+      function onlySelfSignupChange() {
+        let before = resource.data.signedUpUsers.toSet();
+        let after = request.resource.data.signedUpUsers.toSet();
+        return (after.difference(before) == [request.auth.uid].toSet()
+                && before.difference(after).size() == 0)
+            || (before.difference(after) == [request.auth.uid].toSet()
+                && after.difference(before).size() == 0);
+      }
+
       allow read: if isAuthenticated();
-      // 用戶只能修改 signedUpUsers（報名/取消）
-      allow update: if isAuthenticated();
+      // 用戶只能改 signedUpUsers(報名/取消,且只能動自己);
+      // status 只允許 open/matching(closed/revealed/completed/cancelled 由 Cloud Functions 寫)
+      allow update: if isDeveloper() ||
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['signedUpUsers', 'status']) &&
+         onlySelfSignupChange() &&
+         request.resource.data.status in ['open', 'matching']);
       // 只有 Cloud Functions 和開發者可建立/刪除
       allow create: if isDeveloper();
       allow delete: if isDeveloper();
@@ -56,9 +72,14 @@ service cloud.firestore {
       // 只有參與者可讀
       allow read: if isAuthenticated() &&
                      request.auth.uid in resource.data.participantIds;
-      // 只有 Cloud Functions 和開發者可寫
+      // 只有 Cloud Functions 和開發者可寫;
+      // 參與者只能更新出席確認(attendanceConfirmed)
       allow create: if isDeveloper();
-      allow update: if isAuthenticated();
+      allow update: if isDeveloper() ||
+        (isAuthenticated() &&
+         request.auth.uid in resource.data.participantIds &&
+         request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['attendanceConfirmed']));
       allow delete: if isDeveloper();
     }
 
@@ -66,8 +87,10 @@ service cloud.firestore {
     match /chat_rooms/{chatRoomId} {
       // 參與者或開發者可讀
       allow read: if isChatParticipant() || isDeveloper();
-      // 已登入用戶可建立（雙向 Match 時由 App 建立）
-      allow create: if isAuthenticated();
+      // 聊天室一律由 Cloud Functions(Admin SDK,不受 rules 限制)建立:
+      // 群聊=週三揭曉、一對一=雙向 Match。client 端已無建立路徑,
+      // 開放 create 會讓人偽造任意 participantIds 的房間
+      allow create: if isDeveloper();
       // 參與者可更新（發訊息時更新 lastMessage / unreadCount）
       allow update: if isChatParticipant() || isDeveloper();
       allow delete: if isDeveloper();
@@ -89,7 +112,12 @@ service cloud.firestore {
     match /dinner_reviews/{reviewId} {
       allow read: if isAuthenticated() &&
                      resource.data.reviewerId == request.auth.uid;
-      allow create: if isAuthenticated();
+      // 只能以自己的身分評價(偽造 reviewerId 可騙過 onMutualMatch 強制配對);
+      // skipped 由 Cloud Functions 寫入,client 只能 like/dislike
+      allow create: if isDeveloper() ||
+        (isAuthenticated() &&
+         request.resource.data.reviewerId == request.auth.uid &&
+         request.resource.data.result in ['like', 'dislike']);
       allow update: if false;  // 評價不可修改
       allow delete: if isDeveloper();
     }

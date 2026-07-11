@@ -104,7 +104,7 @@ void main() {
       expect(result.group!.id, 'g1');
     });
 
-    test('pendingReview 優先於 activeGroup', () {
+    test('activeGroup 優先於 pendingReview（評價不可蓋掉新一週的解鎖狀態）', () {
       final result = HomeStateResolver.resolve(
         myEvents: [],
         myGroups: [
@@ -113,8 +113,55 @@ void main() {
         ],
         userId: userId,
       );
-      expect(result.state, HomeState.pendingReview);
-      expect(result.group!.id, 'g1');
+      expect(result.state, HomeState.partialReveal);
+      expect(result.group!.id, 'g2');
+    });
+
+    test('已報名下週(futureEvent)優先於 pendingReview', () {
+      final result = HomeStateResolver.resolve(
+        myEvents: [
+          _makeEvent(
+            id: 'e-next',
+            eventDate: DateTime.now().add(const Duration(days: 6)),
+          ),
+        ],
+        myGroups: [
+          _makeGroup(id: 'g1', status: 'completed', reviewStatus: 'none'),
+        ],
+        userId: userId,
+      );
+      expect(result.state, HomeState.matching);
+    });
+
+    test('cancelled 活動不顯示為配對中', () {
+      final result = HomeStateResolver.resolve(
+        myEvents: [
+          _makeEvent(
+            id: 'e1',
+            eventDate: DateTime.now().add(const Duration(days: 2)),
+            status: 'cancelled',
+          ),
+        ],
+        myGroups: [],
+        userId: userId,
+      );
+      expect(result.state, HomeState.notSignedUp);
+    });
+
+    test('同時報名本週與下週時,倒數對準最近的活動', () {
+      final near = DateTime.now().add(const Duration(days: 2));
+      final far = DateTime.now().add(const Duration(days: 9));
+      final result = HomeStateResolver.resolve(
+        // myEvents 依日期降序(與 provider 排序一致),舊實作會取到最遠的
+        myEvents: [
+          _makeEvent(id: 'e-far', eventDate: far),
+          _makeEvent(id: 'e-near', eventDate: near),
+        ],
+        myGroups: [],
+        userId: userId,
+      );
+      expect(result.state, HomeState.matching);
+      expect(result.event!.id, 'e-near');
     });
 
     test('reviewStatus completed 不觸發 pendingReview', () {

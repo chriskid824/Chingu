@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_animations.dart';
-import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/review_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/models/user_model.dart';
@@ -348,8 +347,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final userId = authProvider.uid;
     if (userId == null) return;
 
-    // Step 1: 提交互評
-    await provider.submitAllReviews(
+    // 提交互評(雙向 Match 結算與聊天室建立由 Cloud Function 處理,
+    // 配對成功會收到推播,不在這裡即時顯示)
+    final allSucceeded = await provider.submitAllReviews(
       reviewerId: userId,
       groupId: group['groupId'],
       eventId: group['eventId'],
@@ -357,90 +357,17 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     if (!mounted) return;
 
-    // 顯示結果
-    if (provider.newChatRoomIds.isNotEmpty) {
-      _showMutualMatchDialog(provider.newChatRoomIds.length);
-    } else {
+    if (allSucceeded) {
       _showCompletionDialog();
+    } else {
+      // 失敗:選擇已保留,提示重試,不彈「評價完成」
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? '提交評價失敗，請稍後再試'),
+          backgroundColor: AppColorsMinimal.error,
+        ),
+      );
     }
-  }
-
-  void _showMutualMatchDialog(int matchCount) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                gradient: AppColorsMinimal.primaryGradient,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.celebration_rounded,
-                size: 40,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '🎉 配對成功！',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColorsMinimal.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '有 $matchCount 位也想再見面！\n聊天室已解鎖',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColorsMinimal.textSecondary,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.mainNavigation,
-                  (route) => false,
-                  arguments: {'initialIndex': 1}, // 跳到聊天 Tab
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorsMinimal.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppColorsMinimal.radiusMD),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: 0,
-              ),
-              child: const Text(
-                '去聊天 💬',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showCompletionDialog() {

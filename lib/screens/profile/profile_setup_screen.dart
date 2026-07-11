@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
@@ -365,7 +366,7 @@ class _IndustryPickerSheetState extends State<_IndustryPickerSheet> {
           Container(
             width: 40, height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: AppColorsMinimal.divider,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

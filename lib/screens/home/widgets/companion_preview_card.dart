@@ -16,8 +16,13 @@ class CompanionPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final companions = group.companionPreviews;
-    final otherCount = group.participantIds.length - 1;
+    // server 端 preview 含全桌所有人(含自己);有 uid 欄位就過濾掉自己,
+    // 舊資料沒有 uid 則原樣顯示
+    final companions = group.companionPreviews
+        .where((p) => p['uid'] == null || p['uid'] != currentUserId)
+        .toList();
+    final otherCount =
+        companions.isNotEmpty ? companions.length : group.participantIds.length - 1;
 
     return Container(
       padding: const EdgeInsets.all(AppColorsMinimal.spaceXL),

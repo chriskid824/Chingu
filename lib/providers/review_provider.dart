@@ -14,7 +14,6 @@ class ReviewProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _pendingGroups = [];
   List<UserModel> _pendingReviewees = [];
   Map<String, String> _reviewChoices = {}; // revieweeId -> 'like' | 'dislike'
-  List<String> _newChatRoomIds = []; // mutual match 產生的聊天室
 
   // Getters
   bool get isLoading => _isLoading;
@@ -22,7 +21,6 @@ class ReviewProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get pendingGroups => _pendingGroups;
   List<UserModel> get pendingReviewees => _pendingReviewees;
   Map<String, String> get reviewChoices => _reviewChoices;
-  List<String> get newChatRoomIds => _newChatRoomIds;
   bool get hasPendingReviews => _pendingGroups.isNotEmpty;
   bool get allReviewsCompleted =>
       _pendingReviewees.isNotEmpty &&
@@ -53,7 +51,6 @@ class ReviewProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     _reviewChoices = {};
-    _newChatRoomIds = [];
     _pendingReviewees = [];
     notifyListeners();
 
@@ -97,54 +94,69 @@ class ReviewProvider extends ChangeNotifier {
   }
 
   /// 提交所有評價（每筆獨立 try-catch，一筆失敗不影響其他）
-  Future<void> submitAllReviews({
+  ///
+  /// 回傳是否全部成功。失敗時保留 _reviewChoices 讓用戶可以重試,
+  /// 只有全部成功才清空(Match 結算與聊天室建立由 Cloud Function 處理)。
+  Future<bool> submitAllReviews({
     required String reviewerId,
     required String groupId,
     required String eventId,
   }) async {
     _isLoading = true;
     _error = null;
-    _newChatRoomIds = [];
     notifyListeners();
 
     int successCount = 0;
     int failCount = 0;
+    bool expired = false;
 
     // 複製一份避免遍歷時修改
     final choices = Map<String, String>.from(_reviewChoices);
+    final succeeded = <String>[];
 
     for (final entry in choices.entries) {
       try {
-        final chatRoomId = await _reviewService.submitReview(
+        await _reviewService.submitReview(
           reviewerId: reviewerId,
           revieweeId: entry.key,
           groupId: groupId,
           eventId: eventId,
           result: entry.value,
         );
-
-        if (chatRoomId != null) {
-          _newChatRoomIds.add(chatRoomId);
-        }
+        succeeded.add(entry.key);
         successCount++;
+      } on ReviewExpiredException {
+        expired = true;
+        failCount++;
       } catch (e) {
         debugPrint('評價 ${entry.key} 失敗: $e');
         failCount++;
       }
     }
 
-    // 提交完成後清除待評價列表（防止重複進入）
-    _pendingReviewees = [];
-    _reviewChoices = {};
-
-    if (failCount > 0 && successCount == 0) {
-      _error = '提交評價失敗，請稍後再試';
-    } else if (failCount > 0) {
-      _error = '部分評價提交失敗（$successCount 成功，$failCount 失敗）';
+    if (failCount == 0) {
+      // 全部成功才清空(防止重複進入)
+      _pendingReviewees = [];
+      _reviewChoices = {};
+    } else {
+      // 已成功的從選擇中移除,保留失敗的供重試
+      for (final id in succeeded) {
+        _reviewChoices.remove(id);
+      }
+      if (expired) {
+        _error = '評價時間已截止，無法再提交';
+        _pendingReviewees = [];
+        _reviewChoices = {};
+      } else if (successCount == 0) {
+        _error = '提交評價失敗，請檢查網路後重試';
+      } else {
+        _error = '部分評價提交失敗（$successCount 成功，$failCount 失敗），請重試';
+      }
     }
 
     _isLoading = false;
     notifyListeners();
+    return failCount == 0;
   }
 
   /// 重設狀態
@@ -152,7 +164,6 @@ class ReviewProvider extends ChangeNotifier {
     _pendingGroups = [];
     _pendingReviewees = [];
     _reviewChoices = {};
-    _newChatRoomIds = [];
     _error = null;
     _isLoading = false;
     notifyListeners();

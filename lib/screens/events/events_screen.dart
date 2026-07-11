@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:chingu/core/theme/app_animations.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
+import 'package:chingu/widgets/appear_animation.dart';
+import 'package:chingu/widgets/bounce_button.dart';
+import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
 import 'package:chingu/providers/dinner_group_provider.dart';
 import 'package:chingu/providers/review_provider.dart';
@@ -60,7 +64,7 @@ class _EventsScreenState extends State<EventsScreen> {
                   child: Text(
                     'Events',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 28,
                       fontWeight: FontWeight.w900,
                       color: AppColorsMinimal.textPrimary,
                       letterSpacing: -0.5,
@@ -126,84 +130,89 @@ class _EventsScreenState extends State<EventsScreen> {
                   ),
                 ),
               ),
-              ...upcomingEvents.map((event) {
+              ...upcomingEvents.asMap().entries.map((entry) {
+                final index = entry.key;
+                final event = entry.value;
                 final dayOfWeek = DateFormat('EEEE', 'zh_TW').format(event.eventDate);
                 final dateStr = DateFormat('MM/dd').format(event.eventDate);
                 final daysLeft = event.eventDate.difference(DateTime.now()).inDays;
                 final daysText = daysLeft == 0 ? '今天' : '$daysLeft 天後';
 
-                return GestureDetector(
-                  onTap: () => _navigateToDetail(event),
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-                    padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColorsMinimal.primary.withValues(alpha: 0.08),
-                          AppColorsMinimal.surface,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-                      border: Border.all(
-                        color: AppColorsMinimal.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColorsMinimal.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
-                          ),
-                          child: Icon(
-                            Icons.calendar_today_rounded,
-                            color: AppColorsMinimal.primary,
-                            size: 22,
-                          ),
+                return AppearAnimation(
+                  delay: AppAnimations.staggerInterval * index.clamp(0, 6),
+                  child: BounceButton(
+                    onPressed: () => _navigateToDetail(event),
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                      padding: const EdgeInsets.all(AppColorsMinimal.spaceLG),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColorsMinimal.primary.withValues(alpha: 0.08),
+                            AppColorsMinimal.surface,
+                          ],
                         ),
-                        const SizedBox(width: AppColorsMinimal.spaceLG),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$dayOfWeek · $dateStr',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColorsMinimal.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                event.city,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColorsMinimal.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
+                        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+                        border: Border.all(
+                          color: AppColorsMinimal.primary.withValues(alpha: 0.2),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColorsMinimal.primary,
-                            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusFull),
-                          ),
-                          child: Text(
-                            daysText,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColorsMinimal.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusSM),
+                            ),
+                            child: Icon(
+                              Icons.calendar_today_rounded,
+                              color: AppColorsMinimal.primary,
+                              size: 22,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: AppColorsMinimal.spaceLG),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$dayOfWeek · $dateStr',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColorsMinimal.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  event.city,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColorsMinimal.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColorsMinimal.primary,
+                              borderRadius: BorderRadius.circular(AppColorsMinimal.radiusFull),
+                            ),
+                            child: Text(
+                              daysText,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -368,9 +377,7 @@ class _EventsScreenState extends State<EventsScreen> {
     return Consumer<DinnerEventProvider>(
       builder: (context, eventProvider, _) {
         if (eventProvider.isLoading) {
-          return const SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator()),
-          );
+          return const SliverToBoxAdapter(child: EventsListSkeleton());
         }
 
         final now = DateTime.now().toUtc();
@@ -438,7 +445,10 @@ class _EventsScreenState extends State<EventsScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final event = pastEvents[index];
-                return _buildEventCard(event);
+                return AppearAnimation(
+                  delay: AppAnimations.staggerInterval * index.clamp(0, 6),
+                  child: _buildEventCard(event),
+                );
               },
               childCount: pastEvents.length,
             ),
@@ -458,8 +468,8 @@ class _EventsScreenState extends State<EventsScreen> {
         ? '$dayOfWeek · $city'
         : dayOfWeek;
 
-    return GestureDetector(
-      onTap: () => _navigateToDetail(event),
+    return BounceButton(
+      onPressed: () => _navigateToDetail(event),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

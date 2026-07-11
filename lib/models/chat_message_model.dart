@@ -40,7 +40,11 @@ class ChatMessageModel {
       senderAvatarUrl: map['senderAvatarUrl'],
       message: map['message'] ?? map['text'] ?? '', // Support both for compatibility
       type: map['type'] ?? 'text',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      // timestamp 可能為 null:本地樂觀寫入的 serverTimestamp 未回填、
+      // 或舊系統訊息只有 createdAt
+      timestamp: ((map['timestamp'] ?? map['createdAt']) as Timestamp?)
+              ?.toDate() ??
+          DateTime.now(),
       readBy: List<String>.from(map['readBy'] ?? []),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 
 class EmailVerificationScreen extends StatelessWidget {
@@ -59,7 +60,7 @@ class EmailVerificationScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: chinguTheme?.success.withValues(alpha: 0.3) ?? Colors.green.withValues(alpha: 0.3),
+                          color: chinguTheme?.success.withValues(alpha: 0.3) ?? AppColorsMinimal.success.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),

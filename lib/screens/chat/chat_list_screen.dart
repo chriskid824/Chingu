@@ -95,7 +95,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       actions: [
         IconButton(
           icon: Icon(Icons.notifications, color: AppColorsMinimal.primary),
-          onPressed: () {},
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
         ),
       ],
     );
@@ -135,7 +135,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: isSelected ? AppColorsMinimal.surfaceVariant : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -300,31 +300,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             child: Row(
               children: [
-                // Avatar with online status
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    GeometricAvatar(
-                      seed: otherUser.uid,
-                      photoUrl: otherUser.avatarUrl,
-                      showPhoto: PhotoVisibility.isDirectChatPhotoVisible(),
-                      size: 52,
-                      name: otherUser.name,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: AppColorsMinimal.success,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColorsMinimal.surface, width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
+                // Avatar
+                GeometricAvatar(
+                  seed: otherUser.uid,
+                  photoUrl: otherUser.avatarUrl,
+                  showPhoto: PhotoVisibility.isDirectChatPhotoVisible(),
+                  size: 52,
+                  name: otherUser.name,
                 ),
                 const SizedBox(width: AppColorsMinimal.spaceLG),
 

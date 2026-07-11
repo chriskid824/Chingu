@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -139,7 +140,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('個人資料已更新 ✅'),
-          backgroundColor: Theme.of(context).extension<ChinguTheme>()?.success ?? Colors.green,
+          backgroundColor: Theme.of(context).extension<ChinguTheme>()?.success ?? AppColorsMinimal.success,
         ),
       );
       Navigator.pop(context);
@@ -253,7 +254,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: chinguTheme?.success ?? Colors.green,
+                                  color: chinguTheme?.success ?? AppColorsMinimal.success,
                                   shape: BoxShape.circle,
                                   border: Border.all(color: Colors.white, width: 3),
                                 ),
@@ -525,7 +526,7 @@ class _IndustryPickerSheetState extends State<_IndustryPickerSheet> {
         children: [
           const SizedBox(height: 12),
           Container(width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            decoration: BoxDecoration(color: AppColorsMinimal.divider, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
           Text('選擇產業別',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),

@@ -118,9 +118,9 @@ class _SplashScreenState extends State<SplashScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF2E5364), // primary
+                AppColorsMinimal.primary,
                 Color(0xFF3A6B7E),
-                Color(0xFF6B93B8), // info
+                AppColorsMinimal.info,
               ],
             ),
           ),
@@ -233,14 +233,14 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// 6 人圓桌動畫 — 6 個圓點繞圓排列，依序出現
   Widget _buildDinnerDots() {
-    // 6 個莫蘭迪色圓點
-    const dotColors = [
-      Color(0xFFD67756), // 磚橘
-      Color(0xFFE9967A), // 蜜桃
-      Color(0xFF8DB6C9), // 淺藍
-      Color(0xFFB88A6B), // 駝色
-      Color(0xFF7CAF7C), // 莫蘭迪綠
-      Color(0xFFA64A25), // 深磚橘
+    // 6 個莫蘭迪色圓點（收斂至 Design Token 色盤）
+    final dotColors = [
+      AppColorsMinimal.fabStart,          // 磚橘
+      AppColorsMinimal.fabEnd,            // 蜜桃
+      AppColorsMinimal.morandiPalette[2], // 淺藍
+      AppColorsMinimal.morandiPalette[6], // 駝色
+      AppColorsMinimal.morandiPalette[4], // 莫蘭迪綠
+      AppColorsMinimal.secondary,         // 深磚橘
     ];
 
     return AnimatedBuilder(

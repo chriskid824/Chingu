@@ -75,11 +75,16 @@ class _CountdownRingState extends State<CountdownRing>
 
   @override
   Widget build(BuildContext context) {
-    final difference = widget.targetDate.difference(DateTime.now());
+    final now = DateTime.now();
+    final difference = widget.targetDate.difference(now);
     final days = difference.inDays;
     final hours = difference.inHours % 24;
     final minutes = difference.inMinutes % 60;
-    final bool isToday = days == 0 && !difference.isNegative;
+    // 「今天」= 同一個日曆日;inDays==0 會把「跨午夜但不足 24 小時」誤判成今天
+    final bool isToday = !difference.isNegative &&
+        widget.targetDate.year == now.year &&
+        widget.targetDate.month == now.month &&
+        widget.targetDate.day == now.day;
     final bool isPast = difference.isNegative;
 
     return SizedBox(

@@ -69,17 +69,21 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
       final authProvider = context.read<AuthProvider>();
       if (authProvider.uid == null) throw Exception('請先登入');
 
+      // await 前先取好 provider 參考:報名期間用戶下滑關閉 bottom sheet,
+      // await 後的 context.read 會對已卸載的 element 拋例外
+      final subscriptionProv = context.read<SubscriptionProvider>();
+      final eventProvider = context.read<DinnerEventProvider>();
+
       final funcs = widget.functions ?? FirebaseFunctions.instance;
       final callable = funcs.httpsCallable('bookWithValidation');
+      // server 端只取 date 的 YYYY-MM-DD 並視為台北日曆日
       final result = await callable.call<Map<String, dynamic>>({
         'date': _selectedDate!.toIso8601String(),
         'city': _selectedCity,
         'district': _selectedDistrict,
       });
 
-      final subscriptionProv = context.read<SubscriptionProvider>();
       await subscriptionProv.loadSubscription(authProvider.uid!);
-      final eventProvider = context.read<DinnerEventProvider>();
       await eventProvider.fetchMyEvents(authProvider.uid!);
 
       if (mounted) {

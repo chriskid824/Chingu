@@ -1,11 +1,18 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {
+    nextThursdayDinnerUtc,
+    signupDeadlineUtcFor,
+    taipeiDayWindowUtc,
+    taipeiDateString,
+} from "./taipeiTime";
 
 const db = admin.firestore();
 
 // ────────────────────────────────────────────────────────
-// createWeeklyEvent: 每週二 00:00
-// 自動建立當週四的 DinnerEvent（MVP 僅信義區）
+// createWeeklyEvent: 每週二 00:00(台北)
+// 自動建立當週四的 DinnerEvent(MVP 僅信義區)
+// 注意:容器時區是 UTC,牆鐘計算一律走 taipeiTime
 // ────────────────────────────────────────────────────────
 
 export const createWeeklyEvent = functions.pubsub
@@ -14,23 +21,10 @@ export const createWeeklyEvent = functions.pubsub
     .onRun(async () => {
         console.log("[createWeeklyEvent] Creating weekly dinner event...");
 
-        // 計算本週四日期
-        const now = new Date();
-        const day = now.getDay(); // 2 = Tuesday
-        const daysUntilThursday = (4 - day + 7) % 7;
-        const thursday = new Date(now);
-        thursday.setDate(now.getDate() + daysUntilThursday);
-        thursday.setHours(19, 0, 0, 0); // 19:00 晚餐
-
-        // 報名截止時間：週二中午 12:00
-        const signupDeadline = new Date(now);
-        signupDeadline.setHours(12, 0, 0, 0);
-
-        // 檢查是否已經建立過本週的活動
-        const thursdayStart = new Date(thursday);
-        thursdayStart.setHours(0, 0, 0, 0);
-        const thursdayEnd = new Date(thursday);
-        thursdayEnd.setHours(23, 59, 59, 999);
+        const thursday = nextThursdayDinnerUtc(new Date());
+        const signupDeadline = signupDeadlineUtcFor(thursday);
+        const { start: thursdayStart, end: thursdayEnd } =
+            taipeiDayWindowUtc(thursday);
 
         const existing = await db
             .collection("dinner_events")
@@ -53,8 +47,10 @@ export const createWeeklyEvent = functions.pubsub
             return;
         }
 
-        // MVP：只建一個台北市信義區的晚餐活動
-        await db.collection("dinner_events").add({
+        // 確定性 doc id:同日重跑不會重複建立
+        const eventId = `dinner_${taipeiDateString(thursday)}_台北市`;
+        await db.collection("dinner_events").doc(eventId).set({
+            id: eventId,
             eventDate: admin.firestore.Timestamp.fromDate(thursday),
             signupDeadline: admin.firestore.Timestamp.fromDate(signupDeadline),
             city: "台北市",
@@ -64,6 +60,6 @@ export const createWeeklyEvent = functions.pubsub
         });
 
         console.log(
-            `[createWeeklyEvent] Created event for ${thursday.toISOString()}`
+            `[createWeeklyEvent] Created event ${eventId} for ${thursday.toISOString()}`
         );
     });

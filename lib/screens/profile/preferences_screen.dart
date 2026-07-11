@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/onboarding_progress_bar.dart';
 
@@ -46,7 +47,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('個人資料設定完成！🎉'),
-          backgroundColor: chinguTheme?.success ?? Colors.green,
+          backgroundColor: chinguTheme?.success ?? AppColorsMinimal.success,
         ),
       );
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -151,7 +152,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: (chinguTheme?.success ?? Colors.green).withValues(alpha: 0.3),
+                    color: (chinguTheme?.success ?? AppColorsMinimal.success).withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),

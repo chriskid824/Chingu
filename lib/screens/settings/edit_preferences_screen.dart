@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/providers/auth_provider.dart';
 
@@ -43,7 +44,7 @@ class _EditPreferencesScreenState extends State<EditPreferencesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('偏好已更新 ✅'),
-          backgroundColor: chinguTheme?.success ?? Colors.green,
+          backgroundColor: chinguTheme?.success ?? AppColorsMinimal.success,
         ),
       );
       Navigator.pop(context);

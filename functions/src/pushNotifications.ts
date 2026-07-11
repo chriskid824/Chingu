@@ -23,6 +23,9 @@ export const onNewChatMessage = functions.firestore
         const messageText: string = messageData.text || "";
         const messageType: string = messageData.type || "text";
 
+        // 系統訊息不推播、不加未讀(建室時已設定初始未讀)
+        if (senderId === "system" || messageType === "system") return;
+
         // 1. 取得聊天室資訊
         const chatRoomDoc = await db
             .collection("chat_rooms")
@@ -37,8 +40,12 @@ export const onNewChatMessage = functions.firestore
         const participants: string[] = chatRoomData.participants || chatRoomData.participantIds || [];
 
         // 2. 取得發送者名稱
+        // 群聊在照片解鎖(週四 19:00)前全程匿名,推播不可洩漏真名
         const senderDoc = await db.collection("users").doc(senderId).get();
-        const senderName: string = senderDoc.data()?.name || "某人";
+        const realName: string = senderDoc.data()?.name || "某人";
+        const isAnonymousGroup =
+            chatRoomData.type === "group" && chatRoomData.photosUnlocked !== true;
+        const senderName: string = isAnonymousGroup ? "同桌飯友" : realName;
 
         // 3. 向其他參與者推播
         const recipientIds = participants.filter(
@@ -180,47 +187,56 @@ export const onMutualMatch = functions.firestore
             `[onMutualMatch] Mutual match found: ${reviewerId} <-> ${revieweeId}`
         );
 
-        // 2. 用確定性 ID 防止 race condition（兩人同時提交評價）
+        // 2. 用確定性 ID + create() 防止 race condition:
+        //    兩人幾乎同時提交評價時,兩個 trigger 都會查到反向 like,
+        //    get+set 會讓推播/系統訊息/totalMatches 全部重複;
+        //    create() 只有一邊會成功,另一邊拿 ALREADY_EXISTS 直接退出。
         const sortedUids = [reviewerId, revieweeId].sort();
         const deterministicId = `match_${sortedUids[0]}_${sortedUids[1]}_${eventId}`;
 
-        // 檢查是否已存在
-        const existingDoc = await db.collection("chat_rooms").doc(deterministicId).get();
-        if (existingDoc.exists) {
-            console.log(
-                `[onMutualMatch] Chat room already exists: ${deterministicId}`
-            );
-            return;
-        }
-
-        // 3. 建立新聊天室（使用確定性 ID 防止重複）
         const chatRoomRef = db.collection("chat_rooms").doc(deterministicId);
-        await chatRoomRef.set({
-            type: "direct",
-            participantIds: [reviewerId, revieweeId],
-            participantNames: {},
-            participantAvatars: {},
-            dinnerEventId: eventId,
-            groupId: groupId,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            lastMessage: "你們互相想再見面！開始聊天吧",
-            lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
-            lastMessageSenderId: "system",
-            unreadCount: {
-                [reviewerId]: 1,
-                [revieweeId]: 1,
-            },
-        });
+        try {
+            await chatRoomRef.create({
+                type: "direct",
+                participantIds: [reviewerId, revieweeId],
+                participantNames: {},
+                participantAvatars: {},
+                dinnerEventId: eventId,
+                groupId: groupId,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                lastMessage: "你們互相想再見面！開始聊天吧",
+                lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+                lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
+                lastMessageSenderId: "system",
+                unreadCount: {
+                    [reviewerId]: 1,
+                    [revieweeId]: 1,
+                },
+            });
+        } catch (error: unknown) {
+            const code = (error as { code?: number | string }).code;
+            // ALREADY_EXISTS: gRPC 6 / "already-exists"
+            if (code === 6 || code === "already-exists") {
+                console.log(
+                    `[onMutualMatch] Chat room already exists: ${deterministicId}`
+                );
+                return;
+            }
+            throw error;
+        }
 
         console.log(
             `[onMutualMatch] Chat room created: ${chatRoomRef.id}`
         );
 
-        // 4. 寫入系統訊息
+        // 4. 寫入系統訊息(timestamp 為 client 排序欄位,必須有)
         await chatRoomRef.collection("messages").add({
             text: "🎉 恭喜！你們互相想再見面，聊天室已解鎖！",
             senderId: "system",
+            senderName: "Chingu",
             type: "system",
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            isRead: false,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 

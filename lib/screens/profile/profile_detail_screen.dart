@@ -41,7 +41,7 @@ class ProfileDetailScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       authProvider.errorMessage ?? '未知錯誤',
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: AppColorsMinimal.error),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),

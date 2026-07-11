@@ -158,8 +158,10 @@ class DinnerEventProvider with ChangeNotifier {
   }
 
   /// 檢查某日期是否已報名
+  /// 已取消的活動不算(否則被系統取消的那天永遠不能重新報名)
   bool isDateBooked(DateTime date) {
     return _myEvents.any((event) {
+      if (event.status == 'cancelled') return false;
       final eventDate = event.eventDate;
       return eventDate.year == date.year &&
              eventDate.month == date.month &&

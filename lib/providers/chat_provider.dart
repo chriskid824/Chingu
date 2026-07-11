@@ -109,6 +109,19 @@ class ChatProvider with ChangeNotifier {
         });
       }
 
+      // 依最後訊息時間排序(新的在前);lastMessageAt 缺漏時退回 lastMessageTime
+      int compareRooms(Map<String, dynamic> a, Map<String, dynamic> b) {
+        final t1 = (a['lastMessageAt'] ?? a['lastMessageTime']) as Timestamp?;
+        final t2 = (b['lastMessageAt'] ?? b['lastMessageTime']) as Timestamp?;
+        if (t1 == null && t2 == null) return 0;
+        if (t1 == null) return 1;
+        if (t2 == null) return -1;
+        return t2.compareTo(t1);
+      }
+
+      _chatRooms.sort(compareRooms);
+      _groupChatRooms.sort(compareRooms);
+
       // 更新 App Badge
       _totalUnreadCount = totalUnreadCount;
       await BadgeCountService().updateCount(totalUnreadCount);
@@ -143,17 +156,32 @@ class ChatProvider with ChangeNotifier {
       }).toList();
 
       // Dart 端排序（避免需要 Firestore composite index）
+      // timestamp 為 null = 本地樂觀寫入的 serverTimestamp 尚未回填,
+      // 視為「最新」排最前,否則剛送出的訊息會閃現在最舊的位置
       messages.sort((a, b) {
         final t1 = a['timestamp'] as Timestamp?;
         final t2 = b['timestamp'] as Timestamp?;
         if (t1 == null && t2 == null) return 0;
-        if (t1 == null) return 1;
-        if (t2 == null) return -1;
+        if (t1 == null) return -1;
+        if (t2 == null) return 1;
         return t2.compareTo(t1); // 降序：最新的在前
       });
 
       return messages;
     });
+  }
+
+  /// 進入聊天室時清除自己的未讀數
+  Future<void> markRoomRead(String chatRoomId, String userId) async {
+    try {
+      await _firestore.collection('chat_rooms').doc(chatRoomId).update({
+        'unreadCount.$userId': 0,
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('清除未讀失敗: $e');
+      }
+    }
   }
 
   /// 發送訊息（寫入子集合 chat_rooms/{id}/messages）
@@ -165,40 +193,25 @@ class ChatProvider with ChangeNotifier {
   }) async {
     try {
       final timestamp = FieldValue.serverTimestamp();
+      final roomRef = _firestore.collection('chat_rooms').doc(chatRoomId);
 
-      // 1. 新增訊息到子集合
-      await _firestore
-          .collection('chat_rooms')
-          .doc(chatRoomId)
-          .collection('messages')
-          .add({
+      // 訊息 + 最後訊息用 batch 原子寫入,避免斷網時列表與內容不一致。
+      // 其他參與者的 unreadCount 由 Cloud Function onNewChatMessage 遞增
+      // (單一寫入來源,client 不再遞增以免每則 +2)
+      final batch = _firestore.batch();
+      batch.set(roomRef.collection('messages').doc(), {
         'senderId': senderId,
         'text': text,
         'type': type,
         'timestamp': timestamp,
         'isRead': false,
       });
-
-      // 2. 更新聊天室最後訊息
-      await _firestore.collection('chat_rooms').doc(chatRoomId).update({
+      batch.update(roomRef, {
         'lastMessage': text,
         'lastMessageAt': timestamp,
+        'lastMessageSenderId': senderId,
       });
-
-      // 3. 遞增其他參與者的 unreadCount
-      final chatRoomDoc = await _firestore.collection('chat_rooms').doc(chatRoomId).get();
-      if (chatRoomDoc.exists) {
-        final participantIds = List<String>.from(chatRoomDoc.data()?['participantIds'] ?? []);
-        final updates = <String, dynamic>{};
-        for (final id in participantIds) {
-          if (id != senderId) {
-            updates['unreadCount.$id'] = FieldValue.increment(1);
-          }
-        }
-        if (updates.isNotEmpty) {
-          await _firestore.collection('chat_rooms').doc(chatRoomId).update(updates);
-        }
-      }
+      await batch.commit();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('發送訊息失敗: $e');

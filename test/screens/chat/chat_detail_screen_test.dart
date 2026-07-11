@@ -69,6 +69,9 @@ void main() {
         {'text': 'Hello', 'senderId': 'other456'},
       ]),
     );
+    // 進入/離開聊天室會清除未讀
+    when(() => mockChatProvider.markRoomRead(any(), any()))
+        .thenAnswer((_) async {});
 
     return MultiProvider(
       providers: [

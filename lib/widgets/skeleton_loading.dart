@@ -82,6 +82,72 @@ class HomeCardSkeleton extends StatelessWidget {
   }
 }
 
+/// Events 歷史活動列表的 Skeleton
+class EventsListSkeleton extends StatelessWidget {
+  const EventsListSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: List.generate(4, (_) => _buildCard()),
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColorsMinimal.surface,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+      ),
+      child: Row(
+        children: [
+          // 圖示佔位
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColorsMinimal.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 140,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColorsMinimal.surfaceVariant,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 90,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: AppColorsMinimal.surfaceVariant,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 聊天列表的 Skeleton
 class ChatListSkeleton extends StatelessWidget {
   const ChatListSkeleton({super.key});

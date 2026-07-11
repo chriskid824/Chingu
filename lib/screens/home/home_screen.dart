@@ -10,6 +10,9 @@ import 'package:chingu/screens/home/widgets/restaurant_reveal_card.dart';
 import 'package:chingu/screens/home/widgets/booking_bottom_sheet.dart';
 import 'package:chingu/widgets/skeleton_loading.dart';
 import 'package:chingu/widgets/appear_animation.dart';
+import 'package:chingu/widgets/animated_counter.dart';
+import 'package:chingu/widgets/bounce_button.dart';
+import 'package:chingu/widgets/flip_card.dart';
 import 'package:provider/provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
 import 'package:chingu/providers/dinner_event_provider.dart';
@@ -25,6 +28,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /// 餐廳揭曉卡翻轉狀態（fullReveal 首次進入自動翻轉一次）
+  bool _revealFlipped = false;
+  bool _revealFlipScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,8 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppColorsMinimal.primary,
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, AppRoutes.notifications),
+                      BounceButton(
+                        onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
                         child: Container(
                           width: 40,
                           height: 40,
@@ -310,15 +317,99 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
       case HomeState.fullReveal:
-        return RestaurantRevealCard(
-          key: const ValueKey('fullReveal'),
-          group: result.group!,
-        );
+        return _buildRevealFlipCard(result.group!);
 
       case HomeState.pendingReview:
         // 評價功能移至 Events Tab，首頁回到未報名狀態
         return const InviteCard(key: ValueKey('invite_after_review'));
     }
+  }
+
+  // ============ fullReveal: 神秘封面 → 翻牌揭曉 ============
+
+  Widget _buildRevealFlipCard(DinnerGroupModel group) {
+    // 首次進入 fullReveal 狀態，進場後 600ms 自動翻轉
+    if (!_revealFlipScheduled) {
+      _revealFlipScheduled = true;
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted && !_revealFlipped) {
+          setState(() => _revealFlipped = true);
+        }
+      });
+    }
+
+    return FlipCard(
+      key: const ValueKey('fullReveal'),
+      isFlipped: _revealFlipped,
+      onFlip: () => setState(() => _revealFlipped = !_revealFlipped),
+      front: _buildRevealFrontCover(),
+      back: RestaurantRevealCard(group: group),
+    );
+  }
+
+  /// 神秘封面 — 翻牌前的正面
+  Widget _buildRevealFrontCover() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColorsMinimal.spaceXL,
+        vertical: AppColorsMinimal.space3XL,
+      ),
+      decoration: BoxDecoration(
+        gradient: AppColorsMinimal.primaryGradient,
+        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: AppColorsMinimal.shadowMedium,
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: const Center(
+              child: Text(
+                '?',
+                style: TextStyle(
+                  fontSize: 44,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppColorsMinimal.spaceXL),
+          const Text(
+            '今晚的餐廳',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: AppColorsMinimal.spaceSM),
+          Text(
+            '即將揭曉，敬請期待',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ============ Zone 2.5: 我的群組 ============
@@ -351,8 +442,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildGroupCard(DinnerGroupModel group) {
     final statusConfig = _groupStatusConfig(group.status);
 
-    return GestureDetector(
-      onTap: () {
+    return BounceButton(
+      onPressed: () {
         Navigator.pushNamed(
           context,
           AppRoutes.groupDetail,
@@ -477,7 +568,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: _buildStatCard(
                 icon: Icons.dinner_dining_rounded,
-                value: '$completedEvents',
+                value: completedEvents,
                 label: '已參加場次',
                 color: AppColorsMinimal.primary,
               ),
@@ -486,7 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: _buildStatCard(
                 icon: Icons.people_rounded,
-                value: '${friendIds.length}',
+                value: friendIds.length,
                 label: '認識的朋友',
                 color: AppColorsMinimal.secondary,
               ),
@@ -499,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStatCard({
     required IconData icon,
-    required String value,
+    required int value,
     required String label,
     required Color color,
   }) {
@@ -530,8 +621,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(height: AppColorsMinimal.spaceMD),
-          Text(
-            value,
+          AnimatedCounter(
+            value: value,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,

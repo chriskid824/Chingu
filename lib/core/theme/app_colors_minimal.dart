@@ -77,6 +77,19 @@ class AppColorsMinimal {
     ],
   );
   
+  // ==================== 莫蘭迪色盤 Token ====================
+
+  /// 7 種莫蘭迪色調（幾何頭像、Splash 圓點、話題卡片共用）
+  static const List<Color> morandiPalette = [
+    Color(0xFF6B93B8), // 藍灰
+    Color(0xFFD67756), // 磚橘
+    Color(0xFF8DB6C9), // 淺藍
+    Color(0xFFA64A25), // 深磚橘
+    Color(0xFF7CAF7C), // 莫蘭迪綠
+    Color(0xFF885520), // 棕色
+    Color(0xFFB88A6B), // 駝色
+  ];
+
   /// 原有的玻璃效應
   static const LinearGradient glassGradient = LinearGradient(
     begin: Alignment.topLeft,

@@ -126,7 +126,9 @@ export const revealCompanions = functions.pubsub
 
                 const interests: string[] = data.interests ?? [];
                 const preview = {
-                    index: companionPreviews.length, // 用序號而非 uid，保護隱私
+                    index: companionPreviews.length,
+                    // uid 僅供 client 過濾「自己」用;participantIds 本就對組員可讀,不額外洩漏
+                    uid: userDoc.id,
                     zodiac: getZodiac(birthday, age),
                     industryCategory: getIndustryCategory(data.job ?? ""),
                     ageGroup: getAgeGroup(age),

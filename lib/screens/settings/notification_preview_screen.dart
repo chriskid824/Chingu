@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 
 class NotificationPreviewScreen extends StatefulWidget {
@@ -39,7 +40,7 @@ class _NotificationPreviewScreenState extends State<NotificationPreviewScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-      color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),
+      color: AppColorsMinimal.surfaceVariant.withValues(alpha: 0.3),
       child: Column(
         children: [
           Text(

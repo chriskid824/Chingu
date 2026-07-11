@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:chingu/core/theme/app_colors_minimal.dart';
 
 /// 破冰話題包 — 卡片式 PageView，一次一題，左右滑動，字大
@@ -20,11 +21,11 @@ class _IcebreakerScreenState extends State<IcebreakerScreen> {
     _TopicLevel('靈魂拷問', AppColorsMinimal.primary, Icons.psychology_rounded),
   ];
 
-  // 莫蘭迪色卡片背景
+  // 莫蘭迪色卡片背景（收斂至 Design Token）
   static const _cardColors = [
-    Color(0xFF6B93B8), Color(0xFF8B6F5E), Color(0xFF7A9E7E), // 暖場
-    Color(0xFFA64A25), Color(0xFF8E7A6D), Color(0xFF6E8898), Color(0xFF9B7A6A), // 深入
-    Color(0xFF2E5364), Color(0xFF885520), Color(0xFF6B93B8), // 靈魂拷問
+    AppColorsMinimal.info, Color(0xFF8B6F5E), Color(0xFF7A9E7E), // 暖場
+    AppColorsMinimal.secondary, Color(0xFF8E7A6D), Color(0xFF6E8898), Color(0xFF9B7A6A), // 深入
+    AppColorsMinimal.primary, AppColorsMinimal.warning, AppColorsMinimal.info, // 靈魂拷問
   ];
 
   final List<Map<String, dynamic>> _questions = [
@@ -125,85 +126,104 @@ class _IcebreakerScreenState extends State<IcebreakerScreen> {
             child: PageView.builder(
               controller: _pageController,
               itemCount: _questions.length,
-              onPageChanged: (index) => setState(() => _currentPage = index),
+              onPageChanged: (index) {
+                HapticFeedback.selectionClick();
+                setState(() => _currentPage = index);
+              },
               itemBuilder: (context, index) {
                 final question = _questions[index];
                 final cardColor = _cardColors[index % _cardColors.length];
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppColorsMinimal.spaceSM,
-                    vertical: AppColorsMinimal.spaceLG,
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          cardColor,
-                          cardColor.withValues(alpha: 0.85),
+                return AnimatedBuilder(
+                  animation: _pageController,
+                  builder: (context, child) {
+                    // 非當前卡縮放至 0.92
+                    double scale = 1.0;
+                    if (_pageController.position.haveDimensions) {
+                      final page =
+                          _pageController.page ?? _currentPage.toDouble();
+                      scale = (1.0 - (page - index).abs() * 0.08)
+                          .clamp(0.92, 1.0);
+                    } else if (index != _currentPage) {
+                      scale = 0.92;
+                    }
+                    return Transform.scale(scale: scale, child: child);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppColorsMinimal.spaceSM,
+                      vertical: AppColorsMinimal.spaceLG,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            cardColor,
+                            cardColor.withValues(alpha: 0.85),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
+                        boxShadow: [
+                          BoxShadow(
+                            color: cardColor.withValues(alpha: 0.3),
+                            blurRadius: 24,
+                            offset: const Offset(0, 12),
+                          ),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-                      boxShadow: [
-                        BoxShadow(
-                          color: cardColor.withValues(alpha: 0.3),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppColorsMinimal.space2XL),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // 題號
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppColorsMinimal.space2XL),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // 題號
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-
-                          const SizedBox(height: AppColorsMinimal.space2XL),
-
-                          // 問題文字 — 大字體，方便餐桌上大家看
-                          Text(
-                            question['q'] as String,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              height: 1.4,
+  
+                            const SizedBox(height: AppColorsMinimal.space2XL),
+  
+                            // 問題文字 — 大字體，方便餐桌上大家看
+                            Text(
+                              question['q'] as String,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                height: 1.4,
+                              ),
                             ),
-                          ),
-
-                          const Spacer(),
-
-                          // 左右滑動提示
-                          Text(
-                            '← 左右滑動切換 →',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.5),
+  
+                            const Spacer(),
+  
+                            // 左右滑動提示
+                            Text(
+                              '← 左右滑動切換 →',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.5),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),

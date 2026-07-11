@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 
 /// 抽象幾何頭像系統
 ///
@@ -33,16 +34,8 @@ class GeometricAvatar extends StatelessWidget {
     this.name,
   });
 
-  // 7 種莫蘭迪色調（公開供其他元件引用）
-  static const colors = [
-    Color(0xFF6B93B8), // 藍灰
-    Color(0xFFD67756), // 磚橘
-    Color(0xFF8DB6C9), // 淺藍
-    Color(0xFFA64A25), // 深磚橘
-    Color(0xFF7CAF7C), // 莫蘭迪綠
-    Color(0xFF885520), // 棕色
-    Color(0xFFB88A6B), // 駝色
-  ];
+  // 7 種莫蘭迪色調（公開供其他元件引用，統一收斂至 Design Token）
+  static const colors = AppColorsMinimal.morandiPalette;
 
   // 7 種幾何圖形（公開供其他元件引用）
   static const icons = [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/models/report_model.dart';
 import 'package:chingu/services/report_block_service.dart';
 
@@ -88,7 +89,7 @@ class _ReportDialogState extends State<ReportDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_alsoBlock ? '已舉報並封鎖此用戶' : '舉報已提交'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorsMinimal.success,
           ),
         );
       }
@@ -97,7 +98,7 @@ class _ReportDialogState extends State<ReportDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('舉報失敗: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColorsMinimal.error,
           ),
         );
         setState(() => _isSubmitting = false);
@@ -114,7 +115,7 @@ class _ReportDialogState extends State<ReportDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          Icon(Icons.flag, color: Colors.orange[700]),
+          Icon(Icons.flag, color: AppColorsMinimal.secondary),
           const SizedBox(width: 8),
           const Expanded(
             child: Text(
@@ -196,7 +197,7 @@ class _ReportDialogState extends State<ReportDialog> {
         ElevatedButton(
           onPressed: _isSubmitting ? null : _submitReport,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange[700],
+            backgroundColor: AppColorsMinimal.secondary,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -257,7 +258,7 @@ class BlockConfirmDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          Icon(Icons.block, color: Colors.red[700]),
+          Icon(Icons.block, color: AppColorsMinimal.error),
           const SizedBox(width: 8),
           const Text(
             '封鎖用戶',
@@ -274,7 +275,7 @@ class BlockConfirmDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
+              color: AppColorsMinimal.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Column(
@@ -313,7 +314,7 @@ class BlockConfirmDialog extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('已封鎖 $blockedUserName'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColorsMinimal.success,
                   ),
                 );
               }
@@ -322,14 +323,14 @@ class BlockConfirmDialog extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('封鎖失敗: $e'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: AppColorsMinimal.error,
                   ),
                 );
               }
             }
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red[700],
+            backgroundColor: AppColorsMinimal.error,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),

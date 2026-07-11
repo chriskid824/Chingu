@@ -84,14 +84,19 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             return { success: true, messageId: response, recipients: "all" };
         } else if (targetUserIds && targetUserIds.length > 0) {
             // Send to specific users
-            const usersSnapshot = await admin.firestore()
-                .collection("users")
-                .where(admin.firestore.FieldPath.documentId(), "in", targetUserIds)
-                .get();
-
-            targetTokens = usersSnapshot.docs
-                .map((doc) => doc.data().fcmToken)
-                .filter((token) => token); // Remove null/undefined tokens
+            // Firestore 的 "in" 上限 30 個,超過必須分批查
+            for (let i = 0; i < targetUserIds.length; i += 30) {
+                const idChunk = targetUserIds.slice(i, i + 30);
+                const usersSnapshot = await admin.firestore()
+                    .collection("users")
+                    .where(admin.firestore.FieldPath.documentId(), "in", idChunk)
+                    .get();
+                targetTokens.push(
+                    ...usersSnapshot.docs
+                        .map((doc) => doc.data().fcmToken)
+                        .filter((token) => token)
+                );
+            }
         } else if (targetCities && targetCities.length > 0) {
             // Send to users in specific cities
             const citiesLower = targetCities.map((city: string) => city.toLowerCase());
@@ -117,28 +122,34 @@ export const sendBroadcast = functions.https.onCall(async (data, context) => {
             );
         }
 
-        // Send multicast message
-        const message = {
-            notification: {
-                title: title,
-                body: body,
-                ...(imageUrl && { imageUrl }),
-            },
-            data: customData || {},
-            tokens: targetTokens,
-        };
-
-        const response = await admin.messaging().sendEachForMulticast(message);
-
-        console.log(`Successfully sent ${response.successCount} messages`);
-        if (response.failureCount > 0) {
-            console.log(`Failed to send ${response.failureCount} messages`);
+        // Send multicast message (FCM 上限 500 token/次,分批送)
+        let successCount = 0;
+        let failureCount = 0;
+        for (let i = 0; i < targetTokens.length; i += 500) {
+            const tokenChunk = targetTokens.slice(i, i + 500);
+            const response = await admin.messaging().sendEachForMulticast({
+                notification: {
+                    title: title,
+                    body: body,
+                    ...(imageUrl && { imageUrl }),
+                },
+                data: customData || {},
+                tokens: tokenChunk,
+            });
+            successCount += response.successCount;
+            failureCount += response.failureCount;
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {
-                    console.error(`Error sending to token ${targetTokens[idx]}:`, resp.error);
+                    console.error(`Error sending to token ${tokenChunk[idx]}:`, resp.error);
                 }
             });
         }
+
+        console.log(`Successfully sent ${successCount} messages`);
+        if (failureCount > 0) {
+            console.log(`Failed to send ${failureCount} messages`);
+        }
+        const response = { successCount, failureCount };
 
         // Log the broadcast
         await admin.firestore().collection("broadcast_logs").add({

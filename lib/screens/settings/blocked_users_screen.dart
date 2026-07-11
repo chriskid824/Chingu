@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chingu/services/report_block_service.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 
 /// 已封鎖用戶管理頁面
@@ -104,7 +105,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('已解除封鎖 $name'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorsMinimal.success,
           ),
         );
       }
@@ -113,7 +114,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('解除封鎖失敗: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColorsMinimal.error,
           ),
         );
       }

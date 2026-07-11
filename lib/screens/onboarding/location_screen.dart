@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:chingu/core/routes/app_router.dart';
 import 'package:chingu/providers/onboarding_provider.dart';
 import 'package:chingu/providers/auth_provider.dart';
+import 'package:chingu/core/theme/app_colors_minimal.dart';
 import 'package:chingu/core/theme/app_theme.dart';
 import 'package:chingu/widgets/onboarding_progress_bar.dart';
 
@@ -69,7 +70,7 @@ class _LocationScreenState extends State<LocationScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('已定位至：台北市中正區'),
-        backgroundColor: Theme.of(context).extension<ChinguTheme>()?.success ?? Colors.green,
+        backgroundColor: Theme.of(context).extension<ChinguTheme>()?.success ?? AppColorsMinimal.success,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -165,7 +166,7 @@ class _LocationScreenState extends State<LocationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('個人資料設定完成！🎉'),
-          backgroundColor: chinguTheme?.success ?? Colors.green,
+          backgroundColor: chinguTheme?.success ?? AppColorsMinimal.success,
         ),
       );
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -322,7 +323,7 @@ class _LocationScreenState extends State<LocationScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: (chinguTheme?.success ?? Colors.green).withValues(alpha: 0.3),
+                      color: (chinguTheme?.success ?? AppColorsMinimal.success).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -470,7 +471,7 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
           Container(
             width: 40, height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: AppColorsMinimal.divider,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -542,14 +543,14 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.15),
+                            color: AppColorsMinimal.secondary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
                             '即將開放',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.orange,
+                              color: AppColorsMinimal.secondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
