@@ -295,6 +295,13 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
     } catch (e) {
       _errorMessage = e.toString();
+      // Firebase 端若實際已登出,本地狀態必須跟著重設,
+      // 否則卡在 authenticated + userModel==null 的殭屍狀態無法再登入
+      if (_authService.currentUser == null) {
+        _userModel = null;
+        _firebaseUser = null;
+        _status = AuthStatus.unauthenticated;
+      }
       _setLoading(false);
       notifyListeners();
     }

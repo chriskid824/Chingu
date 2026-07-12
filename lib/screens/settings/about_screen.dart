@@ -11,18 +11,20 @@ class AboutScreen extends StatelessWidget {
   static const String _websiteUrl = 'https://chingu.app';
   static const String _supportEmail = 'support@chingu.app';
 
+  // 不用 canLaunchUrl 當 gate(Android 11+ 缺 queries 宣告會誤回 false);
+  // 直接 launch,失敗靜默即可(非關鍵路徑)
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    } catch (_) {}
   }
 
   Future<void> _launchEmail() async {
     final uri = Uri(scheme: 'mailto', path: _supportEmail);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri);
-    }
+    } catch (_) {}
   }
 
   @override

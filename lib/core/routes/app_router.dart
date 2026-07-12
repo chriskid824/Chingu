@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_animations.dart';
 // 認證模組
+import '../../screens/auth/auth_gate.dart';
 import '../../screens/auth/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
@@ -47,6 +48,10 @@ import '../../models/dinner_event_model.dart';
 class AppRoutes {
   // 認證路由
   static const String splash = '/';
+  // AuthGate:依登入狀態自動分流的守門頁。登入成功/登出後一律導回這裡,
+  // 讓它決定去 main / onboarding / login,避免 AuthGate 被 removeUntil
+  // 拆出 stack 後「登入成功卻停在登入頁」的殭屍狀態
+  static const String authGate = '/auth-gate';
   static const String debug = '/debug';
   static const String login = '/login';
   static const String register = '/register';
@@ -100,6 +105,9 @@ class AppRouter {
       // ==================== 認證路由 ====================
       case AppRoutes.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
+
+      case AppRoutes.authGate:
+        return fadeRoute(const AuthGate());
 
       case AppRoutes.debug:
         return _chinguRoute(const DebugScreen());

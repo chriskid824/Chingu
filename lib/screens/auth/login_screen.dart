@@ -56,7 +56,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (!success) {
+      if (success) {
+        // 主動導回 AuthGate:LoginScreen 可能是被 removeUntil 推上來的
+        // 裸 route(AuthGate 已不在 stack),不導頁會停在登入頁
+        _goToAuthGate();
+      } else {
         setState(() {
           _loginError = authProvider.errorMessage ?? '登入失敗，請檢查帳號密碼';
         });
@@ -68,6 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _loginError = '登入發生錯誤，請稍後再試';
       });
     }
+  }
+
+  void _goToAuthGate() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      AppRoutes.authGate,
+      (route) => false,
+    );
   }
 
   Future<void> _handleGoogleLogin() async {
@@ -85,7 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (!success) {
+      if (success) {
+        _goToAuthGate();
+      } else {
         final errorMsg = authProvider.errorMessage ?? 'Google 登入失敗';
         debugPrint('🔴 Google 登入失敗: $errorMsg');
         setState(() {
@@ -113,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (!success) {
+      if (success) {
+        _goToAuthGate();
+      } else {
         setState(() {
           _loginError = authProvider.errorMessage ?? 'Apple 登入失敗，請稍後再試';
         });

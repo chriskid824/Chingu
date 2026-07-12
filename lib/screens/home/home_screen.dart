@@ -341,7 +341,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return FlipCard(
       key: const ValueKey('fullReveal'),
       isFlipped: _revealFlipped,
-      onFlip: () => setState(() => _revealFlipped = !_revealFlipped),
+      // 只允許封面→餐廳卡的單向翻轉:翻開後點到按鈕邊緣不可把卡翻回去
+      onFlip: () {
+        if (!_revealFlipped) {
+          setState(() => _revealFlipped = true);
+        }
+      },
       front: _buildRevealFrontCover(),
       back: RestaurantRevealCard(group: group),
     );

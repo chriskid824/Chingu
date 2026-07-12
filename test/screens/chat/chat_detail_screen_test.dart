@@ -69,9 +69,11 @@ void main() {
         {'text': 'Hello', 'senderId': 'other456'},
       ]),
     );
-    // 進入/離開聊天室會清除未讀
+    // 進入/離開聊天室會清除未讀 + 監聽房間文件
     when(() => mockChatProvider.markRoomRead(any(), any()))
         .thenAnswer((_) async {});
+    when(() => mockChatProvider.watchRoom(any()))
+        .thenAnswer((_) => const Stream.empty());
 
     return MultiProvider(
       providers: [

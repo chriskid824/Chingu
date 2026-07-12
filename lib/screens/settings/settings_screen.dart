@@ -148,15 +148,16 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () async {
+                        // 先抓 provider,dialog pop 後 context 會死,
+                        // 導頁用 root navigatorKey 避開 context.mounted 競態
+                        final auth = context.read<AuthProvider>();
                         Navigator.of(context).pop();
-                        await context.read<AuthProvider>().signOut();
-                        // 執行登出邏輯，導向登入頁面
-                        if (context.mounted) {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                            AppRoutes.login,
-                            (route) => false,
-                          );
-                        }
+                        await auth.signOut();
+                        AppRouter.navigatorKey.currentState
+                            ?.pushNamedAndRemoveUntil(
+                          AppRoutes.authGate,
+                          (route) => false,
+                        );
                       },
                       child: Text('確定', style: TextStyle(color: theme.colorScheme.error)),
                     ),

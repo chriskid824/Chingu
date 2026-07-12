@@ -64,12 +64,12 @@ class RestaurantRevealCard extends StatelessWidget {
 
           const SizedBox(height: AppColorsMinimal.spaceLG),
 
-          // 導航按鈕
-          if (group.restaurantAddress != null)
+          // 導航按鈕(空字串地址視同沒有,避免按了永遠沒反應)
+          if (group.restaurantAddress?.isNotEmpty == true)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _openMapNavigation(),
+                onPressed: () => _openMapNavigation(context),
                 icon: const Icon(Icons.navigation_rounded, size: 18),
                 label: const Text('導航前往'),
                 style: ElevatedButton.styleFrom(
@@ -240,7 +240,7 @@ class RestaurantRevealCard extends StatelessWidget {
     );
   }
 
-  Future<void> _openMapNavigation() async {
+  Future<void> _openMapNavigation(BuildContext context) async {
     final address = group.restaurantAddress ?? '';
     if (address.isEmpty) return;
 
@@ -259,8 +259,18 @@ class RestaurantRevealCard extends StatelessWidget {
       );
     }
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    // 不用 canLaunchUrl 當 gate:Android 11+ 缺 queries 宣告時它會誤回 false
+    // 造成點了靜默沒反應;直接 launch,失敗給用戶明確提示
+    var ok = false;
+    try {
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('無法開啟地圖，請確認已安裝瀏覽器或地圖 App')),
+      );
     }
   }
 }

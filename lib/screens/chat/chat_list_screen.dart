@@ -283,8 +283,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-          onTap: () {
-            Navigator.pushNamed(
+          onTap: () async {
+            await Navigator.pushNamed(
               context,
               AppRoutes.chatDetail,
               arguments: {
@@ -292,6 +292,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 'otherUser': otherUser,
               },
             );
+            // 返回列表時重載:聊天室內已把未讀歸零,列表是一次性快照要刷新
+            if (!context.mounted) return;
+            final uid = context.read<AuthProvider>().uid;
+            if (uid != null) {
+              context.read<ChatProvider>().loadChatRooms(uid);
+            }
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -476,8 +482,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppColorsMinimal.radiusLG),
-          onTap: () {
-            Navigator.pushNamed(
+          onTap: () async {
+            await Navigator.pushNamed(
               context,
               AppRoutes.chatDetail,
               arguments: {
@@ -486,6 +492,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 'groupName': name,
               },
             );
+            // 返回列表時重載:聊天室內已把未讀歸零,列表是一次性快照要刷新
+            if (!context.mounted) return;
+            final uid = context.read<AuthProvider>().uid;
+            if (uid != null) {
+              context.read<ChatProvider>().loadChatRooms(uid);
+            }
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(

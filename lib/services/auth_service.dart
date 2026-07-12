@@ -203,11 +203,15 @@ class AuthService {
 
   /// 登出
   Future<void> signOut() async {
+    // Google session 清不掉不該讓整個登出失敗
+    // (Apple/Email 用戶沒有 Google session;signInWithGoogle 開頭也會再清一次)
     try {
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
+      await _googleSignIn.signOut();
+    } catch (e) {
+      // 忽略,不影響 Firebase 登出
+    }
+    try {
+      await _auth.signOut();
     } catch (e) {
       throw Exception('登出失敗: $e');
     }

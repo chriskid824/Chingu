@@ -54,12 +54,13 @@ class ProfileDetailScreen extends StatelessWidget {
                     TextButton(
                       onPressed: () async {
                         await authProvider.signOut();
-                        if (context.mounted) {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                            AppRoutes.login,
-                            (route) => false,
-                          );
-                        }
+                        // 導回 AuthGate 而非裸 LoginScreen:
+                        // 之後重新登入才有人負責換頁
+                        AppRouter.navigatorKey.currentState
+                            ?.pushNamedAndRemoveUntil(
+                          AppRoutes.authGate,
+                          (route) => false,
+                        );
                       },
                       child: const Text('強制登出'),
                     ),

@@ -109,12 +109,14 @@ class PushNotificationService {
     if (user == null) return;
 
     try {
-      final token = await _messaging.getToken();
+      // 加 timeout:離線時這裡卡住會拖死整個登出流程
+      final token =
+          await _messaging.getToken().timeout(const Duration(seconds: 3));
       if (token != null) {
         await _firestore.collection('users').doc(user.uid).update({
           'fcmToken': FieldValue.delete(),
           'fcmTokenUpdatedAt': FieldValue.delete(),
-        });
+        }).timeout(const Duration(seconds: 3));
         debugPrint('[FCM] Token removed for user ${user.uid}');
       }
     } catch (e) {

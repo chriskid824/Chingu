@@ -138,8 +138,12 @@ class ForceUpdateService {
       storeUrl = Uri.parse('https://play.google.com/store/apps/details?id=com.chingu.chingu');
     }
 
-    if (await canLaunchUrl(storeUrl)) {
+    // 不用 canLaunchUrl 當 gate(Android 11+ 缺 queries 宣告會誤回 false,
+    // 強制更新會導不去商店);直接 launch
+    try {
       await launchUrl(storeUrl, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('ForceUpdate: 開啟商店失敗 $e');
     }
   }
 

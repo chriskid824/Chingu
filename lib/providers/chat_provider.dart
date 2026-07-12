@@ -171,6 +171,15 @@ class ChatProvider with ChangeNotifier {
     });
   }
 
+  /// 監聽單一聊天室文件(未讀數、照片解鎖狀態等)
+  Stream<Map<String, dynamic>?> watchRoom(String chatRoomId) {
+    return _firestore
+        .collection('chat_rooms')
+        .doc(chatRoomId)
+        .snapshots()
+        .map((doc) => doc.data());
+  }
+
   /// 進入聊天室時清除自己的未讀數
   Future<void> markRoomRead(String chatRoomId, String userId) async {
     try {

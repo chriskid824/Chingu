@@ -37,7 +37,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   String? _currentUserId;
 
   // 群聊照片解鎖狀態(週四 19:00 由 Cloud Function 寫入 chat_rooms)
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _roomSub;
+  StreamSubscription<Map<String, dynamic>?>? _roomSub;
   Map<String, dynamic> _participantAvatars = {};
   bool _photosUnlocked = false;
 
@@ -60,21 +60,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         if (_currentUserId != null) {
           _chatProvider!.markRoomRead(_chatRoomId!, _currentUserId!);
         }
-        if (_isGroup) {
-          _roomSub = FirebaseFirestore.instance
-              .collection('chat_rooms')
-              .doc(_chatRoomId!)
-              .snapshots()
-              .listen((doc) {
-            final data = doc.data();
-            if (data == null || !mounted) return;
+        // 監聽房間文件:停留期間收到新訊息(CF 會加未讀)就立刻歸零,
+        // 群聊另外同步照片解鎖狀態
+        _roomSub = _chatProvider!.watchRoom(_chatRoomId!).listen((data) {
+          if (data == null || !mounted) return;
+          final unread = (data['unreadCount']
+              as Map<String, dynamic>?)?[_currentUserId];
+          if (_currentUserId != null && unread is num && unread > 0) {
+            _chatProvider!.markRoomRead(_chatRoomId!, _currentUserId!);
+          }
+          if (_isGroup) {
             setState(() {
               _photosUnlocked = data['photosUnlocked'] == true;
               _participantAvatars = Map<String, dynamic>.from(
                   data['participantAvatars'] ?? {});
             });
-          });
-        }
+          }
+        });
       }
       _isInit = true;
     }
