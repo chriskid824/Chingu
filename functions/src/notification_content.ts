@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 /// 通知文案 A/B 測試配置
 /// 用於測試不同通知文案對用戶參與度的影響
 export interface NotificationCopyVariant {
@@ -128,6 +130,28 @@ export const allNotificationTests: NotificationCopyTest[] = [
 ];
 
 /**
+ * 根據用戶 ID 確定性地分配一個變體
+ * 使用 MD5 哈希確保同一用戶始終分配到相同的變體
+ */
+export function getVariantForUser(testId: string, userId: string): string {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test || test.variants.length === 0) {
+        return 'control'; // Fallback
+    }
+
+    // 使用 testId + userId 的 MD5 哈希值
+    const hash = crypto.createHash('md5').update(`${testId}:${userId}`).digest('hex');
+
+    // 取哈希值的前 8 位轉換為數字
+    const hashNum = parseInt(hash.substring(0, 8), 16);
+
+    // 對變體數量取模
+    const index = hashNum % test.variants.length;
+
+    return test.variants[index].variantId;
+}
+
+/**
  * 根據用戶分配的變體獲取通知文案
  * @param testId 測試 ID
  * @param variantId 變體 ID
@@ -155,8 +179,9 @@ export function getNotificationCopy(
 
     // 替換參數
     for (const [key, value] of Object.entries(params)) {
-        title = title.replace(`{${key}}`, value);
-        body = body.replace(`{${key}}`, value);
+        // 使用正則表達式進行全局替換
+        title = title.replace(new RegExp(`{${key}}`, 'g'), value);
+        body = body.replace(new RegExp(`{${key}}`, 'g'), value);
     }
 
     // 添加 emoji
@@ -165,4 +190,21 @@ export function getNotificationCopy(
     }
 
     return { title, body };
+}
+
+/**
+ * 獲取指定用戶的通知文案，自動處理 A/B 測試分配
+ */
+export function getUserNotificationContent(
+    testId: string,
+    userId: string,
+    params: Record<string, string>
+): { title: string; body: string; variantId: string } {
+    const variantId = getVariantForUser(testId, userId);
+    const content = getNotificationCopy(testId, variantId, params);
+
+    return {
+        ...content,
+        variantId
+    };
 }
