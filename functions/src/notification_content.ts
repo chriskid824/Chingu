@@ -128,6 +128,50 @@ export const allNotificationTests: NotificationCopyTest[] = [
 ];
 
 /**
+ * Simple string hash function
+ */
+function getHash(str: string): number {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * Assigns a user to a notification variant based on their User ID
+ */
+export function assignVariant(userId: string, testId: string): NotificationCopyVariant | null {
+    const test = allNotificationTests.find((t) => t.testId === testId);
+    if (!test) return null;
+
+    const hash = getHash(userId + testId);
+    const index = hash % test.variants.length;
+    return test.variants[index];
+}
+
+function processVariant(variant: NotificationCopyVariant, params: Record<string, string>) {
+    let title = variant.title;
+    let body = variant.body;
+
+    for (const [key, value] of Object.entries(params)) {
+        // Use global replace
+        title = title.split(`{${key}}`).join(value);
+        body = body.split(`{${key}}`).join(value);
+    }
+
+    // 添加 emoji
+    if (variant.emoji) {
+        title = `${variant.emoji} ${title}`;
+    }
+
+    return { title, body };
+}
+
+/**
  * 根據用戶分配的變體獲取通知文案
  * @param testId 測試 ID
  * @param variantId 變體 ID
@@ -150,19 +194,27 @@ export function getNotificationCopy(
         return { title: 'Notification', body: '' };
     }
 
-    let title = variant.title;
-    let body = variant.body;
+    return processVariant(variant, params);
+}
 
-    // 替換參數
-    for (const [key, value] of Object.entries(params)) {
-        title = title.replace(`{${key}}`, value);
-        body = body.replace(`{${key}}`, value);
+/**
+ * Gets notification content for a specific user based on A/B test assignment
+ */
+export function getNotificationContentForUser(
+    userId: string,
+    testId: string,
+    params: Record<string, string>
+): { title: string; body: string } {
+    const variant = assignVariant(userId, testId);
+
+    if (!variant) {
+         // Fallback to default variant of the test if possible
+         const test = allNotificationTests.find((t) => t.testId === testId);
+         if (test) {
+             const defaultVar = test.variants.find(v => v.variantId === test.defaultVariantId) || test.variants[0];
+             return processVariant(defaultVar, params);
+         }
+         return { title: 'Notification', body: '' };
     }
-
-    // 添加 emoji
-    if (variant.emoji) {
-        title = `${variant.emoji} ${title}`;
-    }
-
-    return { title, body };
+    return processVariant(variant, params);
 }
